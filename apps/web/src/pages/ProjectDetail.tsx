@@ -35,7 +35,8 @@ import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import FileTree from '../components/FileTree/FileTree';
 import CodeEditor from '../components/CodeEditor/CodeEditor';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
-import { CanvasMobile } from '../components/Canvas/CanvasMobile';
+import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
+import { MobileKeyboard } from '../components/Terminal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import type { CanvasLayout } from '../hooks/useCanvasState';
 
@@ -301,7 +302,7 @@ function SessionsSidebar({
   );
 
   return (
-    <aside className="flex w-[220px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.08)] bg-[#111118]">
+    <aside className="flex flex-1 min-h-0 w-[220px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.08)] bg-[#111118]">
       {/* Header: back + project name */}
       <div className="flex shrink-0 flex-col border-b border-[rgba(255,255,255,0.08)] px-[16px] pt-[19px] pb-[12px] gap-[6px]">
         <button
@@ -716,7 +717,7 @@ function TabBar({
 
 /* ── Status bar ── */
 
-const FONT_SIZE_MIN = 8;
+const FONT_SIZE_MIN = 6;
 const FONT_SIZE_MAX = 24;
 const FONT_SIZE_DEFAULT = 13;
 const FONT_SIZE_DEFAULT_MOBILE = 12;
@@ -731,6 +732,7 @@ function TerminalStatusBar({
   onZoomOut,
   onZoomReset,
   onThemeChange,
+  mobileKeyboard,
 }: {
   connectionStatus: ConnectionStatus;
   sessionCreatedAt: number | null;
@@ -741,6 +743,7 @@ function TerminalStatusBar({
   onZoomOut: () => void;
   onZoomReset: () => void;
   onThemeChange: (id: string) => void;
+  mobileKeyboard?: React.ReactNode;
 }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -818,6 +821,13 @@ function TerminalStatusBar({
             A<span className="text-[8px] leading-none relative top-[1px]">+</span>
           </button>
         </div>
+
+        {mobileKeyboard && (
+          <>
+            <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
+            {mobileKeyboard}
+          </>
+        )}
       </div>
     </div>
   );
@@ -925,6 +935,7 @@ export default function ProjectDetailPage() {
   const [canvasFilesOpenPath, setCanvasFilesOpenPath] = useState<string | null>(null);
 
   const terminalRef = useRef<XTermTerminalHandle | null>(null);
+  const canvasMobileRef = useRef<CanvasMobileHandle | null>(null);
 
   const onResize = useDebouncedResize(activeSessionId);
 
@@ -1294,35 +1305,42 @@ export default function ProjectDetailPage() {
 
       {/* ── Main content ── */}
       <div className="flex flex-1 min-w-0 flex-col">
-        {/* Header */}
-        <TerminalHeader
-          projectName={projectName}
-          sessionName={activeSessionName}
-          connectionStatus={connectionStatus}
-          hasActiveSession={!!activeSessionId}
-          showCanvas={showCanvas}
-          canvasShowFiles={canvasShowFiles}
-          onToggleCanvasFiles={() => setCanvasShowFiles((v) => !v)}
-          canvasLayout={canvasLayout}
-          onLayoutChange={setCanvasLayout}
-          onReconnect={handleReconnect}
-          onKill={handleKillSession}
-          killing={killing}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        />
+        {/* Header — hidden on mobile canvas (CanvasMobile has its own combined header) */}
+        {!(isMobile && showCanvas) && (
+          <TerminalHeader
+            projectName={projectName}
+            sessionName={activeSessionName}
+            connectionStatus={connectionStatus}
+            hasActiveSession={!!activeSessionId}
+            showCanvas={showCanvas}
+            canvasShowFiles={canvasShowFiles}
+            onToggleCanvasFiles={() => setCanvasShowFiles((v) => !v)}
+            canvasLayout={canvasLayout}
+            onLayoutChange={setCanvasLayout}
+            onReconnect={handleReconnect}
+            onKill={handleKillSession}
+            killing={killing}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          />
+        )}
 
         {/* ── Canvas view ── */}
         {showCanvas && projectId && (
           <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="canvas-panel">
             {isMobile ? (
               <CanvasMobile
+                ref={canvasMobileRef}
                 projectId={projectId}
                 sessions={sessions}
                 fontSize={fontSize}
                 theme={getThemeById(themeId).xterm}
                 onCreateSession={handleCanvasCreateSession}
                 onRename={handleRenameSession}
+                projectName={projectName}
+                sidebarOpen={sidebarOpen}
+                onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                hideKeyboardFAB
               />
             ) : (
               <>
@@ -1450,6 +1468,7 @@ export default function ProjectDetailPage() {
                           onCreateNewSession={handleCreateSession}
                           fontSize={fontSize}
                           theme={getThemeById(themeId).xterm}
+                          hideMobileFAB={isMobile}
                         />
                       </div>
                     </div>
@@ -1506,6 +1525,32 @@ export default function ProjectDetailPage() {
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           onThemeChange={handleThemeChange}
+          mobileKeyboard={isMobile && (showCanvas || (activeTab === 'terminal' && !!activeSessionId)) ? (
+            <MobileKeyboard
+              inline
+              onKey={(seq) => {
+                if (showCanvas) canvasMobileRef.current?.sendKey(seq);
+                else terminalRef.current?.sendKey(seq);
+              }}
+              onSelectAll={() => {
+                if (showCanvas) canvasMobileRef.current?.selectAll();
+                else terminalRef.current?.selectAll();
+              }}
+              onCopy={() => {
+                const sel = showCanvas
+                  ? (canvasMobileRef.current?.getSelection() ?? '')
+                  : (terminalRef.current?.getSelection() ?? '');
+                if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+              }}
+              onPaste={() => {
+                navigator.clipboard.readText().then((text) => {
+                  if (!text) return;
+                  if (showCanvas) canvasMobileRef.current?.sendKey(text);
+                  else terminalRef.current?.sendKey(text);
+                }).catch(() => {});
+              }}
+            />
+          ) : undefined}
         />
       </div>
     </div>

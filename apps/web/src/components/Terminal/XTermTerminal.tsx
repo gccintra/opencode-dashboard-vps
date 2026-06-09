@@ -272,11 +272,14 @@ export function MobileKeyboard({
   onCopy,
   onPaste,
   onSelectAll,
+  inline = false,
 }: {
   onKey: (seq: string) => void;
   onCopy: () => void;
   onPaste: () => void;
   onSelectAll: () => void;
+  /** When true, renders as an inline button (for footer bars). Popup opens upward via absolute positioning relative to the wrapper. */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -330,66 +333,64 @@ export function MobileKeyboard({
 
   if (!isMobile) return null;
 
-  return (
-    <>
-      {open && (
-        <div className="absolute bottom-14 right-2 z-30 rounded-xl border border-white/10 bg-[#111118] p-2 shadow-2xl">
-          {/* Text input — must be onClick so iOS opens the keyboard */}
-          <button
-            type="button"
-            onClick={openNativeKeyboard}
-            className="mb-2 w-full rounded-md px-2 py-2 text-xs font-semibold text-[#aaff00] bg-[rgba(170,255,0,0.08)] border border-[rgba(170,255,0,0.25)] active:bg-[rgba(170,255,0,0.2)] transition-colors select-none"
-          >
-            ⌨ Digitar texto
-          </button>
-          {/* Copy / Paste / Select */}
-          <div className="mb-2 grid grid-cols-3 gap-1">
-            <button
-              type="button"
-              onClick={onSelectAll}
-              className="rounded-md px-2 py-2 text-xs font-semibold text-[#f1fa8c] bg-[rgba(241,250,140,0.06)] border border-[rgba(241,250,140,0.2)] active:bg-[rgba(241,250,140,0.15)] transition-colors select-none"
-            >
-              Sel. tudo
-            </button>
-            <button
-              type="button"
-              onClick={onCopy}
-              className="rounded-md px-2 py-2 text-xs font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none"
-            >
-              Copiar
-            </button>
-            <button
-              type="button"
-              onClick={onPaste}
-              className="rounded-md px-2 py-2 text-xs font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none"
-            >
-              Colar
-            </button>
-          </div>
-          {/* Special keys grid */}
-          <div className="grid grid-cols-4 gap-1">
-            {MOBILE_KEYS.map((k) => (
-              <button
-                key={k.label}
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  onKey(k.seq);
-                }}
-                className="rounded-md px-2 py-2 text-xs font-mono font-semibold text-[#f0f0f0] bg-[#1e1e2e] border border-white/10 active:bg-[#aaff00] active:text-[#0a0a0f] transition-colors select-none"
-              >
-                {k.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+  const panel = open && (
+    <div className={`${inline ? 'absolute bottom-full right-0 mb-[6px] min-w-[280px]' : 'absolute bottom-14 right-2 min-w-[280px]'} z-30 rounded-xl border border-white/10 bg-[#111118] p-3 shadow-2xl`}>
+      {/* Text input — must be onClick so iOS opens the keyboard */}
       <button
         type="button"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          setOpen((v) => !v);
-        }}
+        onClick={openNativeKeyboard}
+        className="mb-3 w-full rounded-md px-3 py-[10px] text-sm font-semibold text-[#aaff00] bg-[rgba(170,255,0,0.08)] border border-[rgba(170,255,0,0.25)] active:bg-[rgba(170,255,0,0.2)] transition-colors select-none"
+      >
+        ⌨ Digitar texto
+      </button>
+      {/* Copy / Paste / Select */}
+      <div className="mb-3 grid grid-cols-3 gap-[6px]">
+        <button type="button" onClick={onSelectAll} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#f1fa8c] bg-[rgba(241,250,140,0.06)] border border-[rgba(241,250,140,0.2)] active:bg-[rgba(241,250,140,0.15)] transition-colors select-none">Sel. tudo</button>
+        <button type="button" onClick={onCopy} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none">Copiar</button>
+        <button type="button" onClick={onPaste} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none">Colar</button>
+      </div>
+      {/* Special keys grid */}
+      <div className="grid grid-cols-4 gap-[6px]">
+        {MOBILE_KEYS.map((k) => (
+          <button
+            key={k.label}
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); onKey(k.seq); }}
+            className="rounded-md px-2 py-[10px] text-sm font-mono font-semibold text-[#f0f0f0] bg-[#1e1e2e] border border-white/10 active:bg-[#aaff00] active:text-[#0a0a0f] transition-colors select-none"
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="relative shrink-0">
+        {panel}
+        <button
+          type="button"
+          onPointerDown={(e) => { e.preventDefault(); setOpen((v) => !v); }}
+          aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
+          className={`flex items-center justify-center h-[20px] w-[20px] rounded-[3px] text-sm transition-colors select-none ${
+            open
+              ? 'text-[#aaff00] bg-[rgba(170,255,0,0.15)]'
+              : 'text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)]'
+          }`}
+        >
+          ⌨
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {panel}
+      <button
+        type="button"
+        onPointerDown={(e) => { e.preventDefault(); setOpen((v) => !v); }}
         aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
         className={`absolute bottom-2 right-2 z-30 flex size-11 items-center justify-center rounded-full border shadow-lg transition-colors text-lg select-none ${
           open
