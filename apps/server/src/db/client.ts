@@ -5,6 +5,18 @@ import { join } from 'node:path';
 const DEFAULT_DB_PATH = process.env.DATABASE_PATH || './data/opencode.db';
 
 let db: Database | null = null;
+let currentDbPath: string | null = null;
+let lastIntegrityResult: string = 'not_checked';
+
+/** Return the path of the currently open database, or null if not initialized. */
+export function getDbPath(): string | null {
+  return currentDbPath;
+}
+
+/** Return the integrity_check result from the last initDb() call. */
+export function getDbIntegrityResult(): string {
+  return lastIntegrityResult;
+}
 
 /** Return the current database singleton. Throws if initDb() hasn't been called. */
 export function getDb(): Database {
@@ -63,10 +75,30 @@ export function initDb(dbPath?: string): Database {
 
   // Enable WAL mode for better concurrent read performance
   db.exec('PRAGMA journal_mode = WAL');
+
+  if (path !== ':memory:') {
+    // Force WAL merge into the main DB file before any reads — prevents stale
+    // views that can occur after crash/restart cycles with an unflushed WAL.
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+
+    // Validate structural integrity; log a warning but never crash the server.
+    const rows = db.query('PRAGMA integrity_check').all() as Array<{ integrity_check: string }>;
+    const result = rows.map((r) => r.integrity_check).join('; ');
+    lastIntegrityResult = result === 'ok' ? 'ok' : result;
+    if (lastIntegrityResult !== 'ok') {
+      console.warn(`[db] integrity_check FAILED: ${lastIntegrityResult}`);
+    } else {
+      console.log('[db] integrity_check: ok');
+    }
+  } else {
+    lastIntegrityResult = 'not_checked';
+  }
+
   // Enable foreign key enforcement
   db.exec('PRAGMA foreign_keys = ON');
 
   runSchema(db);
+  currentDbPath = path;
 
   console.log(`[db] connected to ${path}`);
   return db;

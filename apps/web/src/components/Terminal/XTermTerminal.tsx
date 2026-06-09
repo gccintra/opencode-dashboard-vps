@@ -64,6 +64,10 @@ export interface XTermTerminalProps {
   className?: string;
   /** Font size in pixels. Defaults to 14. */
   fontSize?: number;
+  /** xterm.js colour theme. Hot-swapped without recreating the terminal. */
+  theme?: ITheme;
+  /** Suppress the built-in mobile keyboard FAB (e.g. when the parent provides its own). */
+  hideMobileFAB?: boolean;
 }
 
 /** Handle exposed to parent components via `forwardRef`. */
@@ -72,6 +76,16 @@ export interface XTermTerminalHandle {
   reconnect: () => void;
   /** Force a fit + resize notification — call when the terminal becomes visible. */
   resize: () => void;
+  /** Focus the terminal textarea — brings up the keyboard on mobile. */
+  focus: () => void;
+  /** Open the native mobile keyboard via a proxy input and forward typed text to the terminal. */
+  openKeyboard: () => void;
+  /** Send a raw key sequence to the terminal's PTY. */
+  sendKey: (seq: string) => void;
+  /** Select all text in the terminal. */
+  selectAll: () => void;
+  /** Get the current text selection. */
+  getSelection: () => string;
 }
 
 /* ── Colour theme ── */
@@ -253,7 +267,7 @@ const MOBILE_KEYS: { label: string; seq: string; wide?: boolean }[] = [
   { label: 'End',    seq: '\x1b[F' },
 ];
 
-function MobileKeyboard({
+export function MobileKeyboard({
   onKey,
   onCopy,
   onPaste,
@@ -510,6 +524,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       onCreateNewSession,
       className,
       fontSize = 14,
+      theme,
+      hideMobileFAB = false,
     },
     ref,
   ) {
@@ -543,7 +559,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       if (socket.status === 'connected') setShowLoader(false);
     }, [socket.status]);
 
-    // Expose reconnect + resize to the parent.
+    // Expose reconnect + resize + focus to the parent.
     useImperativeHandle(ref, () => ({
       reconnect: () => socket.reconnect(),
       resize: () => {
@@ -556,7 +572,46 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
         lastSentDims.current = { cols: term.cols, rows: term.rows };
         onResizeRef.current?.(term.cols, term.rows);
       },
-    }), [socket]);
+      focus: () => {
+        const term = terminalRef.current;
+        if (term) { term.focus(); return; }
+        const ta = containerRef.current?.querySelector<HTMLTextAreaElement>('textarea');
+        ta?.focus({ preventScroll: true });
+      },
+      openKeyboard: () => {
+        const proxy = document.createElement('input');
+        proxy.type = 'text';
+        proxy.setAttribute('autocomplete', 'off');
+        proxy.setAttribute('autocorrect', 'off');
+        proxy.setAttribute('autocapitalize', 'none');
+        proxy.setAttribute('spellcheck', 'false');
+        Object.assign(proxy.style, {
+          position: 'fixed', top: '0', left: '0',
+          width: '1px', height: '1px', opacity: '0', pointerEvents: 'none',
+        });
+        document.body.appendChild(proxy);
+        proxy.addEventListener('input', (e) => {
+          const ie = e as InputEvent;
+          if (ie.inputType === 'deleteContentBackward') sendKey('\x7f');
+          else if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') sendKey('\r');
+          else if (ie.data) sendKey(ie.data);
+          proxy.value = '';
+        });
+        proxy.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter')     { sendKey('\r');   e.preventDefault(); }
+          else if (e.key === 'Tab') { sendKey('\t');   e.preventDefault(); }
+          else if (e.key === 'Escape') { sendKey('\x1b'); }
+          else if (e.key === 'Backspace' && !proxy.value) { sendKey('\x7f'); }
+        });
+        proxy.addEventListener('blur', () => {
+          setTimeout(() => { if (proxy.parentNode) proxy.parentNode.removeChild(proxy); }, 0);
+        });
+        proxy.focus();
+      },
+      sendKey,
+      selectAll: () => terminalRef.current?.selectAll(),
+      getSelection: () => terminalRef.current?.getSelection() ?? '',
+    }), [socket, sendKey]);
 
     // Stable callback refs — avoid re-running the mount effect on every render.
     const onResizeRef = useRef(onResize);
@@ -585,6 +640,24 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       // The return of the effect sets cancelled=true; if setup hasn't
       // finished yet the cleanup function won't do anything extra.
       let scheduledCleanup: (() => void) | null = null;
+
+      // ── Pre-step: Subscribe to socket data BEFORE font loading ──
+      // The WebSocket connects immediately and the server sends the session
+      // buffer as soon as the WS opens (buffer replay). If we subscribe
+      // inside the font-load .then(), data arriving during font loading
+      // (up to 3s) is silently dropped — causing a blank terminal on first
+      // load that only recovers after a manual resize/reconnect.
+      // Subscribing here captures all data into pendingData; it is drained
+      // into the terminal after terminal.open() and fit() complete.
+      let terminalReady = false;
+      const pendingData: (string | Uint8Array)[] = [];
+      const unsubscribeData = socket.data((data) => {
+        if (terminalReady && terminalRef.current) {
+          terminalRef.current.write(data);
+        } else {
+          pendingData.push(data);
+        }
+      });
 
       // ── Step 1: Wait for JetBrains Mono to be available.
       // xterm.js measures character width/height at `terminal.open()` time.
@@ -619,7 +692,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
             fontWeight: '400',
             fontWeightBold: '700',
-            theme: TERMINAL_THEME,
+            theme: theme ?? TERMINAL_THEME,
             scrollback: 0,
             convertEol: false,
             allowProposedApi: true,
@@ -657,21 +730,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             // WebGL not supported — Canvas fallback is acceptable.
           }
 
-          // ── Step 4: Start buffering socket data ──
-          // The WebSocket may already be connected and receiving PTY output.
-          // Buffer data until terminal.open() completes so ANSI sequences
-          // don't leak into the DOM as raw text.
-          let terminalReady = false;
-          const pendingData: (string | Uint8Array)[] = [];
-          const unsubscribeData = socket.data((data) => {
-            if (terminalReady) {
-              terminal.write(data);
-            } else {
-              pendingData.push(data);
-            }
-          });
-
-          // ── Step 5: Open terminal in DOM ──
+          // ── Step 4: Open terminal in DOM ──
+          // pendingData is already accumulating (subscribed before font load).
           terminal.open(container);
 
           // ── Copy/paste wiring ──
@@ -753,12 +813,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             setTimeout(applyInputModeNone, 50);
           }
 
-          // ── Step 6: Fit BEFORE draining buffered data ──
-          // For existing sessions the WebSocket may have delivered terminal state
-          // into pendingData before terminal.open() was called (the socket hook
-          // starts connecting earlier than the terminal setup effect). Writing that
-          // content at xterm's default size (80×24) and fitting afterwards leaves
-          // the TUI layout corrupted and breaks mouse-click coordinate mapping.
+          // ── Step 4b: Fit BEFORE draining buffered data ──
+          // The WebSocket has been receiving PTY output since before the font loaded;
+          // all of it is in pendingData. Writing at xterm's default size (80×24) and
+          // fitting afterwards corrupts the TUI layout and breaks mouse-click coords.
           // Fitting first ensures every byte is written at the correct cols×rows.
           const notifyResizeIfChanged = () => {
             // Skip when container is hidden — fitAddon.fit() would read clientWidth=0
@@ -780,6 +838,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           notifyResizeIfChanged();
 
           // Drain buffered data at the correct terminal size.
+          // Set terminalRef.current BEFORE marking terminalReady so that
+          // any data arriving concurrently (between the two lines) is
+          // written to the terminal rather than dropped.
+          terminalRef.current = terminal;
+          fitAddonRef.current = fitAddon;
           terminalReady = true;
           for (const chunk of pendingData) {
             terminal.write(chunk);
@@ -910,14 +973,12 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           const t1 = setTimeout(notifyResizeIfChanged, 300);
           const t2 = setTimeout(notifyResizeIfChanged, 1000);
 
-          terminalRef.current = terminal;
-          fitAddonRef.current = fitAddon;
-
-          // ── Step 7: Wire socket (status + input) ──
+          // ── Step 5: Wire socket status + terminal input ──
+          // Data subscription was already wired before font loading.
           const unsubscribeStatus = socket.onStatus((st) => onStatusChangeRef.current?.(st));
           const onDataDisposable = terminal.onData((data) => socket.send(data));
 
-          // ── Step 8: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
+          // ── Step 6: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
           // Use a time-based debounce (150ms) instead of RAF so intermediate
           // layout sizes during tab switches are never sent to the backend PTY.
           let resizeTimerId: ReturnType<typeof setTimeout> | null = null;
@@ -936,7 +997,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // height, so the ResizeObserver alone may miss the first keyboard event.
           window.visualViewport?.addEventListener('resize', debouncedResize);
 
-          // ── Step 9: Visibility detection — re-fit + re-render on session switch ──
+          // ── Step 7: Visibility detection — re-fit + re-render on session switch ──
           //
           // The goal is to replicate exactly what the ResizeObserver does on window
           // resize: call notifyResizeIfChanged() (which runs fit + refresh + onResize).
@@ -994,6 +1055,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           }
 
           // ── Cleanup ──
+          // unsubscribeData is handled at effect level (registered before font load).
           scheduledCleanup = () => {
             clearTimeout(t1);
             clearTimeout(t2);
@@ -1009,7 +1071,6 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
-            unsubscribeData();
             unsubscribeStatus();
             onDataDisposable.dispose();
             terminal.dispose();
@@ -1024,6 +1085,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
       return () => {
         cancelled = true;
+        unsubscribeData(); // always cleanup: registered before font loading
         scheduledCleanup?.();
       };
       // socket.data / socket.send are stable; fontSize excluded (handled below).
@@ -1042,6 +1104,13 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       lastSentDims.current = { cols: term.cols, rows: term.rows };
       onResizeRef.current?.(term.cols, term.rows);
     }, [fontSize]);
+
+    // Hot-swap colour theme without recreating the terminal.
+    useEffect(() => {
+      const term = terminalRef.current;
+      if (!term || !theme) return;
+      term.options.theme = theme;
+    }, [theme]);
 
     // Fire a fit+refresh+mouse-sync whenever the WebSocket (re)connects so the
     // PTY always knows the true terminal dimensions and mouse tracking is active.
@@ -1128,20 +1197,22 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           />
         )}
 
-        {/* Mobile-only floating keyboard button */}
-        <MobileKeyboard
-          onKey={sendKey}
-          onSelectAll={() => terminalRef.current?.selectAll()}
-          onCopy={() => {
-            const sel = terminalRef.current?.getSelection() ?? '';
-            if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-          }}
-          onPaste={() => {
-            navigator.clipboard.readText().then((text) => {
-              if (text) socket.send(text);
-            }).catch(() => {});
-          }}
-        />
+        {/* Mobile-only floating keyboard button — suppressed when parent provides its own */}
+        {!hideMobileFAB && (
+          <MobileKeyboard
+            onKey={sendKey}
+            onSelectAll={() => terminalRef.current?.selectAll()}
+            onCopy={() => {
+              const sel = terminalRef.current?.getSelection() ?? '';
+              if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+            }}
+            onPaste={() => {
+              navigator.clipboard.readText().then((text) => {
+                if (text) socket.send(text);
+              }).catch(() => {});
+            }}
+          />
+        )}
       </div>
     );
   },

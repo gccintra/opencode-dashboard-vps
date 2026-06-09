@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { initDb, getDb, closeDb, runSchema } from './client';
+import { initDb, getDb, closeDb, runSchema, getDbPath, getDbIntegrityResult } from './client';
 import { Database } from 'bun:sqlite';
 
 // Helper: check that a table exists in sqlite_master
@@ -15,6 +15,51 @@ function tableExists(db: Database, tableName: string): boolean {
 describe('Database Client', () => {
   afterEach(() => {
     closeDb();
+  });
+
+  describe('getDbPath / getDbIntegrityResult', () => {
+    it('getDbPath returns null before initDb', () => {
+      closeDb();
+      expect(getDbPath()).toBeNull();
+    });
+
+    it('getDbPath returns :memory: path after in-memory init', () => {
+      initDb(':memory:');
+      expect(getDbPath()).toBe(':memory:');
+    });
+
+    it('getDbIntegrityResult returns not_checked for :memory: db', () => {
+      initDb(':memory:');
+      expect(getDbIntegrityResult()).toBe('not_checked');
+    });
+
+    it('getDbPath returns file path after file-based init', () => {
+      const { mkdtempSync, rmSync } = require('node:fs');
+      const { join } = require('node:path');
+      const tmpDir = mkdtempSync('/tmp/opencode-test-path-');
+      try {
+        const dbPath = join(tmpDir, 'path-test.db');
+        initDb(dbPath);
+        expect(getDbPath()).toBe(dbPath);
+      } finally {
+        closeDb();
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    it('getDbIntegrityResult returns ok for a healthy file-based db', () => {
+      const { mkdtempSync, rmSync } = require('node:fs');
+      const { join } = require('node:path');
+      const tmpDir = mkdtempSync('/tmp/opencode-test-integrity-');
+      try {
+        const dbPath = join(tmpDir, 'integrity-test.db');
+        initDb(dbPath);
+        expect(getDbIntegrityResult()).toBe('ok');
+      } finally {
+        closeDb();
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
   });
 
   describe('in-memory database (:memory:)', () => {

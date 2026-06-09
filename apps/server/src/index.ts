@@ -1,8 +1,8 @@
 import { Elysia } from 'elysia';
 import { join } from 'node:path';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { validateAuthEnv } from './auth/env';
-import { initDb } from './db/client';
+import { initDb, getDb, getDbPath, getDbIntegrityResult } from './db/client';
 import { scanResources } from './routes/resources';
 import { tasksRoutes } from './routes/tasks';
 import { githubRoutes, startGithubPolling } from './routes/github';
@@ -143,6 +143,19 @@ if (isProduction()) {
 // Observability — server metrics + db stats
 app.get('/api/status', () => {
   const mem = process.memoryUsage();
+
+  const dbPath = getDbPath();
+  let walSizeBytes = 0;
+  if (dbPath && dbPath !== ':memory:') {
+    try { walSizeBytes = statSync(dbPath + '-wal').size; } catch { /* wal file absent */ }
+  }
+
+  let sessionCount = 0;
+  try {
+    const row = getDb().query('SELECT COUNT(*) as count FROM sessions').get() as { count: number };
+    sessionCount = row.count;
+  } catch { /* db not ready */ }
+
   return {
     status: 'ok',
     uptime: Math.round(process.uptime()),
@@ -153,6 +166,12 @@ app.get('/api/status', () => {
     },
     runtime: typeof Bun !== 'undefined' ? `Bun ${Bun.version}` : `Node ${process.version}`,
     timestamp: new Date().toISOString(),
+    database: {
+      path: dbPath,
+      walSizeBytes,
+      integrity: getDbIntegrityResult(),
+      sessionCount,
+    },
   };
 });
 

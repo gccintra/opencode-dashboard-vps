@@ -10,6 +10,7 @@ import SessionTerminalPage from './pages/SessionTerminal';
 import EmergencyPage from './pages/Emergency';
 import KanbanPage from './pages/Kanban';
 import SessionsPage from './pages/Sessions';
+import CanvasPage from './pages/Canvas';
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -71,6 +72,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SessionTerminalPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Global canvas: full-screen multi-project canvas, opened in new tab from Sessions */}
+      <Route
+        path="/canvas"
+        element={
+          <ProtectedRoute>
+            <CanvasPage />
           </ProtectedRoute>
         }
       />

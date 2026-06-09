@@ -676,14 +676,31 @@ export default function SessionsPage() {
               )}
             </div>
 
-            <button
-              onClick={() => fetchAll(true)}
-              disabled={refreshing}
-              className="flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-40"
-              aria-label="Refresh"
-            >
-              <RefreshIcon spinning={refreshing} />
-            </button>
+            <div className="flex items-center gap-[6px] shrink-0">
+              {/* Canvas — opens in new tab (full-screen, no sidebars) */}
+              <button
+                onClick={() => window.open('/canvas', '_blank')}
+                className="flex items-center gap-[5px] rounded-[7px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+                title="Abrir canvas em nova aba"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <rect x="0.6" y="0.6" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                  <rect x="7.2" y="0.6" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                  <rect x="0.6" y="7.2" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                  <rect x="7.2" y="7.2" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                </svg>
+                Canvas
+              </button>
+
+              <button
+                onClick={() => fetchAll(true)}
+                disabled={refreshing}
+                className="flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-40"
+                aria-label="Refresh"
+              >
+                <RefreshIcon spinning={refreshing} />
+              </button>
+            </div>
           </div>
 
           {/* Mobile: horizontal project filter pills */}
@@ -747,7 +764,6 @@ export default function SessionsPage() {
               {allActiveSessions.length === 0 ? (
                 <EmptyState />
               ) : filteredSessions.length === 0 ? (
-                /* Project selected but no active sessions */
                 <div className="flex flex-col items-center justify-center py-[64px] text-center">
                   <p className="font-['Inter'] text-[14px] text-[#889]">
                     No active sessions in this project
@@ -771,7 +787,6 @@ export default function SessionsPage() {
                   </div>
                 </div>
               ) : (
-                /* Session cards grid */
                 <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 xl:grid-cols-3">
                   {filteredSessions.map((s) => (
                     <SessionCard
@@ -804,12 +819,7 @@ export default function SessionsPage() {
                 <div className="size-[14px] animate-spin rounded-full border-2 border-[#0a0a0f] border-t-transparent" />
               ) : (
                 <svg width="14" height="14" viewBox="0 0 10 10" fill="none">
-                  <path
-                    d="M5 1.5v7M1.5 5h7"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
+                  <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
               )}
               {creating ? 'Starting…' : 'New Session'}
