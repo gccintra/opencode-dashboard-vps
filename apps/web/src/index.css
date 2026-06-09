@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+/* ── Self-hosted Fonts (no external CDN dependency) ── */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+/* Bold weight required for terminal bold characters (e.g. opencode headers) */
+@import '@fontsource/jetbrains-mono/700.css';
+
+.editor-syntax-ts,
+.editor-syntax-tsx {
+  caret-color: #3178c6;
+}
+
+.editor-syntax-js,
+.editor-syntax-jsx {
+  caret-color: #f0db4f;
+}
+
+.editor-syntax-json {
+  caret-color: #f0db4f;
+}
+
+.editor-syntax-md {
+  caret-color: #af0;
+}
+
+.editor-syntax-css {
+  caret-color: #42a5f5;
+}
+
+.editor-syntax-html {
+  caret-color: #e65100;
+}
+
+/* ── Scrollbar Styling ── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Editor Syntax Highlighting ── */
+
+/* ── xterm.js viewport override (prevents scroll conflict with @opentui) ── */
+.xterm .xterm-viewport {
+  overflow-y: hidden !important;
+}
+
+/* ── Font metric isolation for xterm.js canvas ──
+   xterm.js calculates cell dimensions from font metrics. Any external
+   line-height, letter-spacing, or box-sizing on xterm elements causes
+   misaligned block glyphs (▀ ▄ █ — used by the opencode logo) by
+   creating sub-pixel gaps between adjacent character cells. */
+.xterm {
+  line-height: 1 !important;
+}
+.xterm canvas {
+  /* WebGL canvas: force block-level to avoid descender space */
+  display: block;
+}
+.xterm .xterm-screen {
+  line-height: 1 !important;
+}

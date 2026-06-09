@@ -1,0 +1,26 @@
+/* Pulse animation for "waiting" sessions */
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0px 0px 4px 0px rgba(255, 170, 0, 0.5);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0px 0px 8px 0px rgba(255, 170, 0, 0.8);
+  }
+}
+
+.status-badge-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Glow for active sessions */
+.status-badge-active {
+  box-shadow: 0px 0px 5px 0px rgba(34, 221, 136, 0.5);
+}
+
+/* Emergency/warning glow */
+.status-badge-emergency {
+  box-shadow: 0px 0px 5px 0px rgba(255, 50, 80, 0.6);
+}

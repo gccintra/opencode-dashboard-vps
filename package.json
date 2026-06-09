@@ -1,0 +1,39 @@
+{
+  "name": "opencode-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "apps/web",
+    "apps/pty-worker"
+  ],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "dev:server": "bun run --filter @opencode/server dev",
+    "dev:web": "bun run --filter @opencode/web dev",
+    "dev:pty-worker": "bun run --filter @opencode/pty-worker dev",
+    "build": "bun run build:web && bun run build:server",
+    "build:web": "bun run --filter @opencode/web build",
+    "build:server": "bun run --filter @opencode/server build",
+    "start": "NODE_ENV=production bun run apps/server/dist/index.js",
+    "lint": "bun run --filter '*' lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:bun": "bun test",
+    "test:fast": "vitest run --reporter=dot --bail=1",
+    "test:pty-worker": "cd apps/pty-worker && bunx vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@vitest/coverage-v8": "3.2.6",
+    "eslint": "^9.30.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0",
+    "vitest": "3.2.6"
+  }
+}

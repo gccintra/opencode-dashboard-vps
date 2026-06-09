@@ -1,0 +1,15 @@
+# Generated coverage reports
+coverage/
+
+# Logs
+logs/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Lock files (binary, large)
+bun.lock
+

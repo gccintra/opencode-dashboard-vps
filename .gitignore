@@ -1,4 +1,39 @@
-.opencode
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+
+# Logs
+logs/
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode internal
+.opencode
+
+# Images
 images
-PROJECT_CONTEXT.md
+
+# Python cache (if any)
+__pycache__/

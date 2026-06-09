@@ -1,0 +1,50 @@
+module.exports = {
+  apps: [
+    // ── Produção ────────────────────────────────────────────────
+    {
+      name: 'opencode-dashboard',
+      script: 'apps/server/dist/index.js',
+      interpreter: 'bun',
+      env: {
+        NODE_ENV: 'production',
+        SERVER_PORT: '3001',
+        DATABASE_PATH: './data/opencode.db',
+        // Secrets: AUTH_PASSWORD + JWT_SECRET must be in the shell
+        // environment. Source your .env or export them before pm2 start.
+      },
+      max_memory_restart: '500M',
+      error_file: './logs/prod-err.log',
+      out_file: './logs/prod-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      max_size: '10M',
+      retain: 5,
+      autorestart: true,
+      watch: false,
+    },
+
+    // ── Desenvolvimento ─────────────────────────────────────────
+    {
+      name: 'opencode-dashboard-dev',
+      script: 'apps/server/src/index.ts',
+      interpreter: 'bun',
+      interpreter_args: '--watch',
+      env: {
+        NODE_ENV: 'development',
+        SERVER_PORT: '3002',
+        DATABASE_PATH: './data/opencode_dev.db',
+        // Secrets: AUTH_PASSWORD + JWT_SECRET must be in the shell
+        // environment. Source your .env or export them before pm2 start.
+      },
+      max_memory_restart: '500M',
+      error_file: './logs/dev-err.log',
+      out_file: './logs/dev-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      max_size: '10M',
+      retain: 5,
+      autorestart: true,
+      watch: false,
+    },
+  ],
+};
