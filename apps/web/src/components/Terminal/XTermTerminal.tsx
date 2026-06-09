@@ -1017,7 +1017,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
           const scheduleVisibilityFit = () => {
             // Debounce so rapid attribute flips (e.g. React batched updates) collapse
-            // into a single fit+refresh, exactly like the ResizeObserver debounce.
+            // into a single fit+refresh. 300ms also covers CSS transitions on parent
+            // containers (e.g. MobileSlot collapses with a 200ms transition) — fitting
+            // at 50ms would read intermediate dimensions and send wrong cols/rows to the PTY.
             if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
             visibilityTimerId = setTimeout(() => {
               visibilityTimerId = null;
@@ -1025,7 +1027,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               // regardless of whether dims appear to have changed — xterm's
               // WebGL renderer can stay visually stale even with stable dims.
               notifyResizeIfChanged();
-            }, 50);
+            }, 300);
           };
 
           // IntersectionObserver: catches display:none toggled at any ancestor depth.
