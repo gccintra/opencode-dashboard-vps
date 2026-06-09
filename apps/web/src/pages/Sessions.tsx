@@ -22,7 +22,9 @@ interface SessionGroup {
   sessions: SessionItem[];
 }
 
-type FilterMode = 'all' | 'active' | 'waiting' | 'finished';
+const DEAD_STATUSES = new Set(['exited', 'killed', 'finished']);
+
+type FilterMode = 'all' | 'active' | 'waiting';
 
 interface FilterTab {
   mode: FilterMode;
@@ -31,14 +33,9 @@ interface FilterTab {
 }
 
 const FILTER_TABS: FilterTab[] = [
-  { mode: 'all', label: 'All', matches: () => true },
+  { mode: 'all', label: 'All', matches: (s) => !DEAD_STATUSES.has(s.status) },
   { mode: 'active', label: 'Active', matches: (s) => s.status === 'active' },
   { mode: 'waiting', label: 'Waiting', matches: (s) => s.status === 'waiting' },
-  {
-    mode: 'finished',
-    label: 'Finished',
-    matches: (s) => s.status === 'exited' || s.status === 'killed',
-  },
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -148,7 +145,12 @@ export default function SessionsPage() {
   }, [fetchAll]);
 
   const allSessions = useMemo(
-    () => groups.flatMap((g) => g.sessions.map((s) => ({ ...s, projectName: g.project.name }))),
+    () =>
+      groups.flatMap((g) =>
+        g.sessions
+          .filter((s) => !DEAD_STATUSES.has(s.status))
+          .map((s) => ({ ...s, projectName: g.project.name })),
+      ),
     [groups],
   );
 
@@ -158,11 +160,12 @@ export default function SessionsPage() {
   }, [allSessions, filter]);
 
   const counts = useMemo(() => {
-    const c: Record<FilterMode, number> = { all: 0, active: 0, waiting: 0, finished: 0 };
+    const c: Record<FilterMode, number> = { all: 0, active: 0, waiting: 0 };
     for (const s of allSessions) {
-      c.all++;
-      for (const tab of FILTER_TABS) {
-        if (tab.mode !== 'all' && tab.matches(s)) c[tab.mode]++;
+      if (!DEAD_STATUSES.has(s.status)) {
+        c.all++;
+        if (s.status === 'active') c.active++;
+        if (s.status === 'waiting') c.waiting++;
       }
     }
     return c;

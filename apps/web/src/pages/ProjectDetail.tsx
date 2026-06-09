@@ -839,6 +839,15 @@ export default function ProjectDetailPage() {
             : null;
 
         if (resolvedId) {
+          // Pre-size before the terminal WS connects so the PTY starts at the
+          // correct dimensions rather than the node-pty default 80×24.
+          const isMob = window.innerWidth < 640;
+          const dims = estimateTerminalDims(isMob ? 12 : 13, isMob);
+          apiFetch(`/api/sessions/${resolvedId}/resize`, {
+            method: 'POST',
+            body: JSON.stringify(dims),
+          }).catch(() => {});
+
           setActiveSessionId((prev) => prev ?? resolvedId);
           if (!urlSession || DEAD_STATUSES.has(urlSession.status)) {
             setSearchParams({ session: resolvedId }, { replace: true });
