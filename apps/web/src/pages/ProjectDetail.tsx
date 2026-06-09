@@ -27,9 +27,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
 import {
   XTermTerminal,
+  ThemePicker,
   type XTermTerminalHandle,
   type ConnectionStatus,
 } from '../components/Terminal';
+import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import FileTree from '../components/FileTree/FileTree';
 import CodeEditor from '../components/CodeEditor/CodeEditor';
 
@@ -640,17 +642,21 @@ function TerminalStatusBar({
   sessionCreatedAt,
   fontSize,
   defaultFontSize,
+  themeId,
   onZoomIn,
   onZoomOut,
   onZoomReset,
+  onThemeChange,
 }: {
   connectionStatus: ConnectionStatus;
   sessionCreatedAt: number | null;
   fontSize: number;
   defaultFontSize: number;
+  themeId: string;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  onThemeChange: (id: string) => void;
 }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -684,12 +690,16 @@ function TerminalStatusBar({
         </span>
       </div>
 
-      <div className="flex items-center gap-[6px]">
+      <div className="flex items-center gap-[8px]">
         {startMs && (
-          <span className="hidden sm:block font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)] mr-[8px]" key={tick}>
+          <span className="hidden sm:block font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)]" key={tick}>
             uptime {formatUptime(startMs)}
           </span>
         )}
+
+        <ThemePicker themeId={themeId} onChange={onThemeChange} />
+
+        <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
 
         {/* Zoom controls */}
         <div className="flex items-center gap-[2px]">
@@ -1117,6 +1127,13 @@ export default function ProjectDetailPage() {
     setFontSize(isMobile ? FONT_SIZE_DEFAULT_MOBILE : FONT_SIZE_DEFAULT);
   }, [isMobile]);
 
+  /* ── Theme (shared across all terminal views via localStorage) ── */
+  const [themeId, setThemeId] = useState<string>(() => getThemeId());
+  const handleThemeChange = useCallback((id: string) => {
+    setThemeId(id);
+    saveThemeId(id);
+  }, []);
+
   // Keyboard shortcuts: Ctrl+= (zoom in), Ctrl+- (zoom out), Ctrl+0 (reset)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1279,6 +1296,7 @@ export default function ProjectDetailPage() {
                     onStatusChange={handleSessionStatusChange}
                     onCreateNewSession={handleCreateSession}
                     fontSize={fontSize}
+                    theme={getThemeById(themeId).xterm}
                   />
                 </div>
               </div>
@@ -1329,9 +1347,11 @@ export default function ProjectDetailPage() {
             sessionCreatedAt={activeSessionCreatedAt}
             fontSize={fontSize}
             defaultFontSize={defaultFontSize}
+            themeId={themeId}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
+            onThemeChange={handleThemeChange}
           />
         )}
       </div>

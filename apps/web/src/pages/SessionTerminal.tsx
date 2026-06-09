@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { XTermTerminal, type XTermTerminalHandle, type ConnectionStatus } from '../components/Terminal';
+import { XTermTerminal, ThemePicker, type XTermTerminalHandle, type ConnectionStatus } from '../components/Terminal';
 import { apiFetch } from '../lib/api';
+import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 
 /* ── Constants ── */
 
@@ -66,17 +67,21 @@ function StatusBar({
   sessionName,
   fontSize,
   defaultFontSize,
+  themeId,
   onZoomIn,
   onZoomOut,
   onZoomReset,
+  onThemeChange,
 }: {
   connStatus: ConnectionStatus;
   sessionName: string;
   fontSize: number;
   defaultFontSize: number;
+  themeId: string;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  onThemeChange: (id: string) => void;
 }) {
   const isConnected = connStatus === 'connected';
   const isDefault = fontSize === defaultFontSize;
@@ -105,37 +110,43 @@ function StatusBar({
         )}
       </div>
 
-      {/* Right: zoom controls */}
-      <div className="flex items-center gap-[2px]">
-        <button
-          onClick={onZoomOut}
-          disabled={fontSize <= FONT_SIZE_MIN}
-          title="Diminuir fonte (Ctrl+-)"
-          className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] transition-colors hover:bg-[rgba(170,255,0,0.1)] hover:text-[rgba(170,255,0,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          A<span className="relative top-[1px] text-[8px] leading-none">-</span>
-        </button>
+      {/* Right: theme picker + zoom controls */}
+      <div className="flex items-center gap-[8px]">
+        <ThemePicker themeId={themeId} onChange={onThemeChange} />
 
-        <button
-          onClick={onZoomReset}
-          title={`Fonte: ${fontSize}px — clique para resetar (Ctrl+0)`}
-          className={`flex h-[20px] min-w-[28px] select-none items-center justify-center rounded-[3px] px-[4px] font-['JetBrains_Mono'] text-[10px] transition-colors ${
-            isDefault
-              ? 'text-[rgba(170,255,0,0.3)] hover:bg-[rgba(170,255,0,0.06)] hover:text-[rgba(170,255,0,0.6)]'
-              : 'bg-[rgba(170,255,0,0.08)] text-[rgba(170,255,0,0.8)] hover:bg-[rgba(170,255,0,0.14)] hover:text-[rgba(170,255,0,1)]'
-          }`}
-        >
-          {fontSize}px
-        </button>
+        <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
 
-        <button
-          onClick={onZoomIn}
-          disabled={fontSize >= FONT_SIZE_MAX}
-          title="Aumentar fonte (Ctrl++)"
-          className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] transition-colors hover:bg-[rgba(170,255,0,0.1)] hover:text-[rgba(170,255,0,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          A<span className="relative top-[1px] text-[8px] leading-none">+</span>
-        </button>
+        <div className="flex items-center gap-[2px]">
+          <button
+            onClick={onZoomOut}
+            disabled={fontSize <= FONT_SIZE_MIN}
+            title="Diminuir fonte (Ctrl+-)"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] transition-colors hover:bg-[rgba(170,255,0,0.1)] hover:text-[rgba(170,255,0,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            A<span className="relative top-[1px] text-[8px] leading-none">-</span>
+          </button>
+
+          <button
+            onClick={onZoomReset}
+            title={`Fonte: ${fontSize}px — clique para resetar (Ctrl+0)`}
+            className={`flex h-[20px] min-w-[28px] select-none items-center justify-center rounded-[3px] px-[4px] font-['JetBrains_Mono'] text-[10px] transition-colors ${
+              isDefault
+                ? 'text-[rgba(170,255,0,0.3)] hover:bg-[rgba(170,255,0,0.06)] hover:text-[rgba(170,255,0,0.6)]'
+                : 'bg-[rgba(170,255,0,0.08)] text-[rgba(170,255,0,0.8)] hover:bg-[rgba(170,255,0,0.14)] hover:text-[rgba(170,255,0,1)]'
+            }`}
+          >
+            {fontSize}px
+          </button>
+
+          <button
+            onClick={onZoomIn}
+            disabled={fontSize >= FONT_SIZE_MAX}
+            title="Aumentar fonte (Ctrl++)"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] transition-colors hover:bg-[rgba(170,255,0,0.1)] hover:text-[rgba(170,255,0,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            A<span className="relative top-[1px] text-[8px] leading-none">+</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +189,13 @@ export default function SessionTerminalPage() {
   useEffect(() => {
     localStorage.setItem('terminalFontSize', String(fontSize));
   }, [fontSize]);
+
+  /* ── Theme (shared across all terminal views via localStorage) ── */
+  const [themeId, setThemeId] = useState<string>(() => getThemeId());
+  const handleThemeChange = useCallback((id: string) => {
+    setThemeId(id);
+    saveThemeId(id);
+  }, []);
 
   // Re-fit after font change (needs one frame for DOM update)
   useEffect(() => {
@@ -306,20 +324,23 @@ export default function SessionTerminalPage() {
             onResize={handleResize}
             onConnectionStatus={setConnStatus}
             fontSize={fontSize}
+            theme={getThemeById(themeId).xterm}
             className="absolute inset-0"
           />
         )}
       </div>
 
-      {/* ══ Status bar with zoom ══ */}
+      {/* ══ Status bar with zoom + theme ══ */}
       <StatusBar
         connStatus={connStatus}
         sessionName={sessionName}
         fontSize={fontSize}
         defaultFontSize={defaultFontSize}
+        themeId={themeId}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
+        onThemeChange={handleThemeChange}
       />
     </div>
   );

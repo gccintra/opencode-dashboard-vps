@@ -8,7 +8,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
-import { XTermTerminal } from '../components/Terminal';
+import { XTermTerminal, ThemePicker } from '../components/Terminal';
+import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 
 /* ── Types ── */
 
@@ -130,6 +131,12 @@ export default function EmergencyPage() {
   const onResize = useDebouncedResize(session?.sessionId ?? null);
   const isMobile = useIsMobile();
 
+  const [themeId, setThemeId] = useState<string>(() => getThemeId());
+  const handleThemeChange = useCallback((id: string) => {
+    setThemeId(id);
+    saveThemeId(id);
+  }, []);
+
   const handleClose = useCallback(async () => {
     if (!session || closing) return;
     setClosing(true);
@@ -202,7 +209,8 @@ export default function EmergencyPage() {
           Emergency Terminal
         </span>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-[10px]">
+          <ThemePicker themeId={themeId} onChange={handleThemeChange} direction="down" />
           <button
             onClick={handleClose}
             disabled={closing}
@@ -235,6 +243,7 @@ export default function EmergencyPage() {
             sessionId={session.sessionId}
             onResize={onResize}
             fontSize={isMobile ? 12 : 14}
+            theme={getThemeById(themeId).xterm}
           />
         </div>
       </main>
