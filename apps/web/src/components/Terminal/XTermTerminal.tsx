@@ -604,19 +604,16 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           terminal.focus();
 
           // ── Mouse tracking sync ──
-          // TUI apps (opencode, claude-code, etc.) enable mouse tracking at
-          // startup by writing escape sequences to the PTY (\x1b[?1000h etc.).
-          // When we reconnect to an existing session the PTY already has these
-          // modes set, but the fresh xterm instance doesn't. Writing the
-          // sequences directly to xterm's parser mirrors what the PTY told the
-          // previous xterm, so clicks and scroll work without waiting for a
-          // SIGWINCH-triggered full redraw.
+          // Button events only (?1002h). Hover tracking (?1003h) is
+          // intentionally disabled to avoid mouse-move escape spam in
+          // terminal output when not using a TUI app.
           // • ?1002h — button + drag events
-          // • ?1006h — SGR extended coordinate encoding (required for wide terminals)
+          // • ?1006h — SGR extended coordinate encoding
           const syncMouseTracking = () => {
             try {
-              // ?1002h — button+drag, ?1003h — any-event (hover), ?1006h — SGR coords
-              terminal.write('\x1b[?1002h\x1b[?1003h\x1b[?1006h');
+              // ?1002h — button events only (no mouse-move spam)
+              // ?1006h — SGR extended coordinate encoding
+              terminal.write('\x1b[?1002h\x1b[?1006h');
             } catch {
               /* disposed */
             }
@@ -850,9 +847,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           return; /* addon disposed */
         }
         try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
-        // Re-sync mouse tracking state: the PTY has these modes but the fresh
-        // xterm instance may not (modes are not replayed on reconnect).
-        try { term.write('\x1b[?1002h\x1b[?1003h\x1b[?1006h'); } catch { /* disposed */ }
+        // Re-sync mouse tracking: button events only, no hover spam
+        try { term.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
         lastSentDims.current = { cols: term.cols, rows: term.rows };
         console.log(`[XTermTerminal] WS reconnect resize: ${term.cols}x${term.rows}`);
         onResizeRef.current?.(term.cols, term.rows);

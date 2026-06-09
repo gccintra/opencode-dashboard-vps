@@ -140,6 +140,22 @@ if (isProduction()) {
   app.get('/', () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 }
 
+// Observability — server metrics + db stats
+app.get('/api/status', () => {
+  const mem = process.memoryUsage();
+  return {
+    status: 'ok',
+    uptime: Math.round(process.uptime()),
+    memory: {
+      rss: Math.round(mem.rss / 1024 / 1024),
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+    },
+    runtime: typeof Bun !== 'undefined' ? `Bun ${Bun.version}` : `Node ${process.version}`,
+    timestamp: new Date().toISOString(),
+  };
+});
+
 app.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
   getPtyManager().startStatusMonitor(1000);
