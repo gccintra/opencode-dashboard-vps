@@ -3,7 +3,7 @@ module.exports = {
     // ── Produção ────────────────────────────────────────────────
     {
       name: 'opencode-dashboard',
-      cwd: '/root/code_projects/opencode-dashboard',
+      cwd: '/root/production/opencode-dashboard-vps',
       script: 'apps/server/dist/index.js',
       interpreter: 'bun',
       env: {

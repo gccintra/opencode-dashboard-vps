@@ -9,10 +9,10 @@ jobs:
     runs-on: prod
     steps:
       - name: Pull latest changes
-        working-directory: /root/code_projects/opencode-dashboard
+        working-directory: /root/production/opencode-dashboard-vps
         run: git pull origin main
       - name: Install & Build
-        working-directory: /root/code_projects/opencode-dashboard
+        working-directory: /root/production/opencode-dashboard-vps
         run: |
           bun install --frozen-lockfile
           bun run build
