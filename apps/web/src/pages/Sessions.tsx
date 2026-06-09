@@ -677,11 +677,11 @@ export default function SessionsPage() {
             </div>
 
             <div className="flex items-center gap-[6px] shrink-0">
-              {/* Canvas — opens in new tab (full-screen, no sidebars) */}
+              {/* Canvas — navigates in the same tab */}
               <button
-                onClick={() => window.open('/canvas', '_blank')}
+                onClick={() => navigate('/canvas')}
                 className="flex items-center gap-[5px] rounded-[7px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
-                title="Abrir canvas em nova aba"
+                title="Abrir canvas"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <rect x="0.6" y="0.6" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
