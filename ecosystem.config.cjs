@@ -24,8 +24,10 @@ module.exports = {
     },
 
     // ── Desenvolvimento ─────────────────────────────────────────
+    // Diretório isolado: /root/code_projects/opencode-dashboard-dev
     {
       name: 'opencode-dashboard-dev',
+      cwd: '/root/code_projects/opencode-dashboard-dev',
       script: 'apps/server/src/index.ts',
       interpreter: 'bun',
       interpreter_args: '--watch',
@@ -37,8 +39,8 @@ module.exports = {
         // environment. Source your .env or export them before pm2 start.
       },
       max_memory_restart: '500M',
-      error_file: './logs/dev-err.log',
-      out_file: './logs/dev-out.log',
+      error_file: '/root/code_projects/opencode-dashboard-dev/logs/dev-err.log',
+      out_file: '/root/code_projects/opencode-dashboard-dev/logs/dev-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       max_size: '10M',
