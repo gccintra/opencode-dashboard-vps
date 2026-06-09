@@ -156,31 +156,6 @@ app.get('/api/status', () => {
   };
 });
 
-// Deploy webhook — triggered by GitHub Actions on push to main.
-// Protected by DEPLOY_TOKEN; set this in .env and as GitHub secret.
-// Runs the deploy sequence in background so the response is sent before
-// pm2 restart kills this process.
-app.post('/api/deploy', async ({ request, set }) => {
-  const token = request.headers.get('x-deploy-token');
-  if (!token || token !== process.env.DEPLOY_TOKEN) {
-    set.status = 401;
-    return { error: 'unauthorized' };
-  }
-
-  const DEPLOY_SCRIPT = `
-    cd "$HOME/code_projects/opencode-dashboard" || exit 1
-    git pull origin main || exit 1
-    bun install --frozen-lockfile || exit 1
-    bun run build || exit 1
-    pm2 restart opencode-dashboard
-  `;
-
-  // Fire and forget — the response goes out before the shell finishes
-  Bun.spawn({ cmd: ['sh', '-c', DEPLOY_SCRIPT], stdout: 'ignore', stderr: 'ignore' });
-
-  return { status: 'deploy_started' };
-});
-
 app.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
   getPtyManager().startStatusMonitor(1000);

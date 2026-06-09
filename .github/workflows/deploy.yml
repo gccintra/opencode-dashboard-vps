@@ -6,10 +6,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: prod
     steps:
-      - name: Trigger deploy webhook
+      - uses: actions/checkout@v4
+      - name: Install & Build
         run: |
-          curl -X POST https://gcsoftware.tech/api/deploy \
-            -H "x-deploy-token: ${{ secrets.DEPLOY_TOKEN }}" \
-            -f --max-time 180
+          bun install --frozen-lockfile
+          bun run build
+      - name: Restart production
+        run: pm2 restart opencode-dashboard
