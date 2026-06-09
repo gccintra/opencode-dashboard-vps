@@ -1,3 +1,3 @@
-export { XTermTerminal } from './XTermTerminal';
+export { XTermTerminal, MobileKeyboard } from './XTermTerminal';
 export type { XTermTerminalProps, XTermTerminalHandle, ConnectionStatus } from './XTermTerminal';
 export { ThemePicker } from './ThemePicker';

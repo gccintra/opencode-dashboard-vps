@@ -66,6 +66,8 @@ export interface XTermTerminalProps {
   fontSize?: number;
   /** xterm.js colour theme. Hot-swapped without recreating the terminal. */
   theme?: ITheme;
+  /** Suppress the built-in mobile keyboard FAB (e.g. when the parent provides its own). */
+  hideMobileFAB?: boolean;
 }
 
 /** Handle exposed to parent components via `forwardRef`. */
@@ -74,6 +76,16 @@ export interface XTermTerminalHandle {
   reconnect: () => void;
   /** Force a fit + resize notification — call when the terminal becomes visible. */
   resize: () => void;
+  /** Focus the terminal textarea — brings up the keyboard on mobile. */
+  focus: () => void;
+  /** Open the native mobile keyboard via a proxy input and forward typed text to the terminal. */
+  openKeyboard: () => void;
+  /** Send a raw key sequence to the terminal's PTY. */
+  sendKey: (seq: string) => void;
+  /** Select all text in the terminal. */
+  selectAll: () => void;
+  /** Get the current text selection. */
+  getSelection: () => string;
 }
 
 /* ── Colour theme ── */
@@ -255,7 +267,7 @@ const MOBILE_KEYS: { label: string; seq: string; wide?: boolean }[] = [
   { label: 'End',    seq: '\x1b[F' },
 ];
 
-function MobileKeyboard({
+export function MobileKeyboard({
   onKey,
   onCopy,
   onPaste,
@@ -513,6 +525,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       className,
       fontSize = 14,
       theme,
+      hideMobileFAB = false,
     },
     ref,
   ) {
@@ -546,7 +559,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       if (socket.status === 'connected') setShowLoader(false);
     }, [socket.status]);
 
-    // Expose reconnect + resize to the parent.
+    // Expose reconnect + resize + focus to the parent.
     useImperativeHandle(ref, () => ({
       reconnect: () => socket.reconnect(),
       resize: () => {
@@ -559,7 +572,46 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
         lastSentDims.current = { cols: term.cols, rows: term.rows };
         onResizeRef.current?.(term.cols, term.rows);
       },
-    }), [socket]);
+      focus: () => {
+        const term = terminalRef.current;
+        if (term) { term.focus(); return; }
+        const ta = containerRef.current?.querySelector<HTMLTextAreaElement>('textarea');
+        ta?.focus({ preventScroll: true });
+      },
+      openKeyboard: () => {
+        const proxy = document.createElement('input');
+        proxy.type = 'text';
+        proxy.setAttribute('autocomplete', 'off');
+        proxy.setAttribute('autocorrect', 'off');
+        proxy.setAttribute('autocapitalize', 'none');
+        proxy.setAttribute('spellcheck', 'false');
+        Object.assign(proxy.style, {
+          position: 'fixed', top: '0', left: '0',
+          width: '1px', height: '1px', opacity: '0', pointerEvents: 'none',
+        });
+        document.body.appendChild(proxy);
+        proxy.addEventListener('input', (e) => {
+          const ie = e as InputEvent;
+          if (ie.inputType === 'deleteContentBackward') sendKey('\x7f');
+          else if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') sendKey('\r');
+          else if (ie.data) sendKey(ie.data);
+          proxy.value = '';
+        });
+        proxy.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter')     { sendKey('\r');   e.preventDefault(); }
+          else if (e.key === 'Tab') { sendKey('\t');   e.preventDefault(); }
+          else if (e.key === 'Escape') { sendKey('\x1b'); }
+          else if (e.key === 'Backspace' && !proxy.value) { sendKey('\x7f'); }
+        });
+        proxy.addEventListener('blur', () => {
+          setTimeout(() => { if (proxy.parentNode) proxy.parentNode.removeChild(proxy); }, 0);
+        });
+        proxy.focus();
+      },
+      sendKey,
+      selectAll: () => terminalRef.current?.selectAll(),
+      getSelection: () => terminalRef.current?.getSelection() ?? '',
+    }), [socket, sendKey]);
 
     // Stable callback refs — avoid re-running the mount effect on every render.
     const onResizeRef = useRef(onResize);
@@ -1145,20 +1197,22 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           />
         )}
 
-        {/* Mobile-only floating keyboard button */}
-        <MobileKeyboard
-          onKey={sendKey}
-          onSelectAll={() => terminalRef.current?.selectAll()}
-          onCopy={() => {
-            const sel = terminalRef.current?.getSelection() ?? '';
-            if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-          }}
-          onPaste={() => {
-            navigator.clipboard.readText().then((text) => {
-              if (text) socket.send(text);
-            }).catch(() => {});
-          }}
-        />
+        {/* Mobile-only floating keyboard button — suppressed when parent provides its own */}
+        {!hideMobileFAB && (
+          <MobileKeyboard
+            onKey={sendKey}
+            onSelectAll={() => terminalRef.current?.selectAll()}
+            onCopy={() => {
+              const sel = terminalRef.current?.getSelection() ?? '';
+              if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+            }}
+            onPaste={() => {
+              navigator.clipboard.readText().then((text) => {
+                if (text) socket.send(text);
+              }).catch(() => {});
+            }}
+          />
+        )}
       </div>
     );
   },
