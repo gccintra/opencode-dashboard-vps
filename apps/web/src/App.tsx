@@ -6,6 +6,7 @@ import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
 import ProjectsPage from './pages/Projects';
 import ProjectDetailPage from './pages/ProjectDetail';
+import SessionTerminalPage from './pages/SessionTerminal';
 import EmergencyPage from './pages/Emergency';
 import KanbanPage from './pages/Kanban';
 import SessionsPage from './pages/Sessions';
@@ -54,13 +55,22 @@ function AppRoutes() {
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
 
-      {/* Project detail: full-screen layout — no global sidebar.
-          The page renders its own session-scoped navigation panel. */}
+      {/* Project detail: full-screen layout — no global sidebar. */}
       <Route
         path="/projects/:id"
         element={
           <ProtectedRoute>
             <ProjectDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Session terminal: opened from Sessions hub — full-screen, back → /sessions */}
+      <Route
+        path="/session/:projectId/:sessionId"
+        element={
+          <ProtectedRoute>
+            <SessionTerminalPage />
           </ProtectedRoute>
         }
       />

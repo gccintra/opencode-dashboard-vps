@@ -37,7 +37,7 @@ export interface SessionGroup {
 }
 
 export interface UseSessionsReturn {
-  /** Sessions grouped by project. */
+  /** Sessions grouped by project (dead sessions excluded). */
   groups: SessionGroup[];
   /** Whether the initial fetch is in progress. */
   loading: boolean;
@@ -50,8 +50,10 @@ export interface UseSessionsReturn {
   /** Close/kill a session via DELETE /api/sessions/:id. */
   closeSession: (sessionId: string) => Promise<void>;
   /** Create a new session for a project via POST /api/projects/:id/sessions. */
-  createSession: (projectId: string) => Promise<SessionItem>;
+  createSession: (projectId: string, dims?: { cols: number; rows: number }) => Promise<SessionItem>;
 }
+
+const DEAD_STATUSES = new Set(['exited', 'killed', 'finished']);
 
 /* ── Helpers ── */
 
@@ -102,7 +104,9 @@ export function useSessions(): UseSessionsReturn {
               );
               return {
                 project,
-                sessions: Array.isArray(sessions) ? sessions : [],
+                sessions: Array.isArray(sessions)
+                  ? sessions.filter((s) => !DEAD_STATUSES.has(s.status))
+                  : [],
               };
             })(),
           ];
@@ -184,17 +188,19 @@ export function useSessions(): UseSessionsReturn {
     );
   }, []);
 
-  const createSession = useCallback(async (projectId: string): Promise<SessionItem> => {
+  const createSession = useCallback(async (projectId: string, dims?: { cols: number; rows: number }): Promise<SessionItem> => {
     const created = await apiFetch<SessionItem>(`/api/projects/${projectId}/sessions`, {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify(dims ?? {}),
     });
-    // Add the new session to local state.
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.project.id === projectId ? { ...g, sessions: [...g.sessions, created] } : g,
-      ),
-    );
+    // Add the new session to local state (only if not already dead, which shouldn't happen).
+    if (!DEAD_STATUSES.has(created.status)) {
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.project.id === projectId ? { ...g, sessions: [...g.sessions, created] } : g,
+        ),
+      );
+    }
     return created;
   }, []);
 

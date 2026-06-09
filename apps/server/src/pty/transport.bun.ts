@@ -27,8 +27,7 @@
  *   that. We assert the stream types once at the call site.
  */
 
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import type { WorkerTransport } from './transport';
 import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
 
@@ -47,11 +46,12 @@ export class BunWorkerTransport implements WorkerTransport {
   start(): void {
     if (this.started) return;
 
-    // Bun bundles everything to apps/server/dist/index.js, so import.meta.url
-    // resolves to apps/server/dist/ at runtime — two levels up reaches apps/.
-    const here = dirname(fileURLToPath(import.meta.url));
-    const workerSrc = resolve(here, '../../pty-worker/src/index.ts');
-    const workerDir = resolve(here, '../../pty-worker');
+    // Resolve the pty-worker from the project root (process.cwd()), which PM2
+    // sets via the ecosystem cwd field. This works in both dev (--watch, source
+    // files) and prod (bundled dist) modes, unlike import.meta.url-relative
+    // paths that differ between the two layouts.
+    const workerDir = resolve(process.cwd(), 'apps/pty-worker');
+    const workerSrc = resolve(workerDir, 'src/index.ts');
     const tsxBin = resolve(workerDir, 'node_modules/.bin/tsx');
 
     // Node 18 LTS is REQUIRED for node-pty ABI compatibility (§3, §10).

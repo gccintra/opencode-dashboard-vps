@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { NavLink, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessions, type SessionItem, type SessionGroup } from '../../hooks/useSessions';
 import StatusBadge from '../StatusBadge/StatusBadge';
-import { apiFetch } from '../../lib/api';
 
 /* ── Inline SVG icons ── */
 
@@ -36,59 +35,6 @@ function SessionsIcon() {
       />
       <path d="M5 13.5h6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
       <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="currentColor" strokeWidth="1.25" />
-    </svg>
-  );
-}
-
-function TasksIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect
-        x="3"
-        y="1.5"
-        width="10"
-        height="13"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.25"
-      />
-      <path
-        d="M5.5 1.5v2a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-2"
-        stroke="currentColor"
-        strokeWidth="1.25"
-      />
-      <path
-        d="M5.5 8.5L7 10l3.5-3.5"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.25" />
-      <path
-        d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function DashboardIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" fill="currentColor" />
-      <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" fill="currentColor" />
-      <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" fill="currentColor" />
-      <rect x="9" y="9" width="5.5" height="5.5" rx="1" fill="currentColor" />
     </svg>
   );
 }
@@ -151,12 +97,24 @@ const navLinkBase =
 
 /* ── Sidebar ── */
 
+const DEAD_STATUSES = new Set(['exited', 'killed', 'finished']);
+
+function estimateSidebarTerminalDims() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const fontSize = w < 640 ? 12 : 13;
+  const charW = fontSize * 0.6;
+  const availW = Math.max(40, w - 240 - 34);
+  const availH = Math.max(10, h - 50 - 42 - 26 - 34);
+  return {
+    cols: Math.floor(availW / charW),
+    rows: Math.floor(availH / fontSize),
+  };
+}
+
 export default function Sidebar() {
   const { groups, loading, renameSession, closeSession, createSession } = useSessions();
   const navigate = useNavigate();
-  const { id: activeProjectId } = useParams<{ id: string }>();
-  const location = useLocation();
-  const activeSessionId = new URLSearchParams(location.search).get('session');
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -164,46 +122,7 @@ export default function Sidebar() {
   const [renameValue, setRenameValue] = useState('');
   const [confirmClose, setConfirmClose] = useState<string | null>(null);
   const [creating, setCreating] = useState<Set<string>>(new Set());
-  const [emergencySessions, setEmergencySessions] = useState<SessionItem[]>([]);
   const renameInputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch emergency sessions on mount.
-  useEffect(() => {
-    let cancelled = false;
-    apiFetch('/api/emergency-terminal', { method: 'POST' })
-      .then((data) => {
-        if (!cancelled && data && typeof data === 'object' && 'sessionId' in data) {
-          const es = data as unknown as SessionItem & { type?: string };
-          if (es.type === 'emergency') {
-            setEmergencySessions([{ ...es, projectId: '' }]);
-          }
-        }
-      })
-      .catch(() => {
-        // No emergency session exists.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Auto-expand the currently active project.
-  useEffect(() => {
-    if (activeProjectId) {
-      setExpandedProjects((prev) => new Set(prev).add(activeProjectId));
-    }
-  }, [activeProjectId]);
-
-  useEffect(() => {
-    if (activeSessionId) {
-      for (const group of groups) {
-        if (group.sessions.some((s) => s.sessionId === activeSessionId)) {
-          setExpandedProjects((prev) => new Set([...prev, group.project.id]));
-          return;
-        }
-      }
-    }
-  }, [activeSessionId, groups]);
 
   // Focus the rename input when it appears.
   useEffect(() => {
@@ -276,9 +195,8 @@ export default function Sidebar() {
       if (creating.has(projectId)) return;
       setCreating((prev) => new Set(prev).add(projectId));
       try {
-        const session = await createSession(projectId);
-        // Navigate with the new session ID so ProjectDetail mounts the correct
-        // terminal immediately without needing an extra round-trip to discover it.
+        const dims = estimateSidebarTerminalDims();
+        const session = await createSession(projectId, dims);
         handleNavigate(`/projects/${projectId}?session=${session.sessionId}`);
       } catch {
         // Silently fail.
@@ -292,10 +210,9 @@ export default function Sidebar() {
     [creating, createSession, handleNavigate],
   );
 
-  // Count active sessions for the badge.
   const totalActive = groups
     .flatMap((g) => g.sessions)
-    .filter((s) => !['exited', 'killed'].includes(s.status)).length;
+    .filter((s) => !DEAD_STATUSES.has(s.status)).length;
 
   const sidebarContent = (
     <>
@@ -314,54 +231,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* ══════ Emergency sessions section ══════ */}
-      {emergencySessions.length > 0 && (
-        <div className="border-b border-[rgba(255,85,68,0.15)] bg-[rgba(255,85,68,0.04)]">
-          <div className="px-[16px] py-[8px] font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.6px] text-[#f54]">
-            Emergency
-          </div>
-          {emergencySessions.map((s) => (
-            <div
-              key={s.sessionId}
-              className="flex cursor-pointer items-center gap-[8px] px-[16px] py-[6px] font-['Inter'] text-[12px] text-[#f54] hover:bg-[rgba(255,85,68,0.08)] transition-colors"
-              onClick={() => navigate('/emergency')}
-              data-testid={`emergency-session-${s.sessionId}`}
-            >
-              <StatusBadge status="emergency" size="sm" />
-              <span className="truncate">{s.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* ══════ Navigation ══════ */}
       <nav className="flex flex-col py-[8px]">
-        {/* Dashboard */}
-        <NavLink
-          to="/dashboard"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
-            }`
-          }
-          onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <DashboardIcon />
-              </span>
-              <span>Dashboard</span>
-            </>
-          )}
-        </NavLink>
-
         {/* Projects */}
         <NavLink
           to="/projects"
@@ -391,47 +262,37 @@ export default function Sidebar() {
         {/* Sessions */}
         <NavLink
           to="/sessions"
-          className={`${navLinkBase} text-[#889]`}
+          end
+          className={({ isActive }) =>
+            `${navLinkBase} ${
+              isActive
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
+                : 'text-[#889]'
+            }`
+          }
           onClick={() => setMobileOpen(false)}
         >
-          <span className="flex size-[16px] shrink-0 items-center justify-center">
-            <SessionsIcon />
-          </span>
-          <span>Sessions</span>
-          {totalActive > 0 && (
-            <span className="ml-auto rounded-[10px] border border-[rgba(255,170,0,0.2)] bg-[rgba(255,170,0,0.12)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] font-medium tracking-[0.135px] text-[#fa0]">
-              {totalActive}
-            </span>
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+              )}
+              <span className="flex size-[16px] shrink-0 items-center justify-center">
+                <SessionsIcon />
+              </span>
+              <span>Sessions</span>
+              {totalActive > 0 && (
+                <span className="ml-auto rounded-[10px] border border-[rgba(255,170,0,0.2)] bg-[rgba(255,170,0,0.12)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] font-medium tracking-[0.135px] text-[#fa0]">
+                  {totalActive}
+                </span>
+              )}
+            </>
           )}
-        </NavLink>
-
-        {/* Tasks */}
-        <NavLink
-          to="/tasks"
-          className={`${navLinkBase} text-[#889]`}
-          onClick={() => setMobileOpen(false)}
-        >
-          <span className="flex size-[16px] shrink-0 items-center justify-center">
-            <TasksIcon />
-          </span>
-          <span>Tasks</span>
-        </NavLink>
-
-        {/* Settings */}
-        <NavLink
-          to="/settings"
-          className={`${navLinkBase} text-[#889]`}
-          onClick={() => setMobileOpen(false)}
-        >
-          <span className="flex size-[16px] shrink-0 items-center justify-center">
-            <SettingsIcon />
-          </span>
-          <span>Settings</span>
         </NavLink>
       </nav>
 
-      {/* ══════ Dynamic Session List ══════ */}
-      <div className="flex-1 overflow-y-auto border-t border-[rgba(255,255,255,0.08)]">
+      {/* ══════ Dynamic Session List (commented — not needed for now) ══════ */}
+      {/* <div className="flex-1 overflow-y-auto border-t border-[rgba(255,255,255,0.08)]">
         {loading ? (
           <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#556]">
             Loading sessions…
@@ -445,8 +306,8 @@ export default function Sidebar() {
             <ProjectSection
               key={group.project.id}
               group={group}
-              activeProjectId={activeProjectId}
-              activeSessionId={activeSessionId}
+              activeProjectId={undefined}
+              activeSessionId={null}
               expanded={expandedProjects.has(group.project.id)}
               renaming={renaming}
               renameValue={renameValue}
@@ -468,7 +329,8 @@ export default function Sidebar() {
             />
           ))
         )}
-      </div>
+      </div> */}
+      <div className="flex-1" />
 
       {/* ══════ User Profile ══════ */}
       <div className="border-t border-[rgba(255,255,255,0.08)] px-[8px] pt-[11px]">
@@ -500,15 +362,17 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ══════ Mobile hamburger ══════ */}
-      <button
-        className="fixed left-[12px] top-[16px] z-50 flex size-[36px] items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:text-[#f0f0f0] lg:hidden"
-        onClick={() => setMobileOpen((o) => !o)}
-        aria-label={mobileOpen ? 'Close sidebar' : 'Open sidebar'}
-        data-testid="hamburger-button"
-      >
-        <HamburgerIcon />
-      </button>
+      {/* ══════ Mobile hamburger — hidden while sidebar is open (close via overlay) ══════ */}
+      {!mobileOpen && (
+        <button
+          className="fixed left-[12px] top-[7px] z-50 flex size-[36px] items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:text-[#f0f0f0] lg:hidden"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open sidebar"
+          data-testid="hamburger-button"
+        >
+          <HamburgerIcon />
+        </button>
+      )}
 
       {/* ══════ Mobile overlay ══════ */}
       {mobileOpen && (

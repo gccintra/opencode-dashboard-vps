@@ -33,7 +33,7 @@
  *      flex/grid constraints — this is the most reliable sizing strategy.
  */
 
-import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo, type RefObject } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
 import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -389,6 +389,115 @@ function MobileKeyboard({
   );
 }
 
+/* ── Clipboard helper ── */
+
+/**
+ * Copy text to clipboard with a synchronous execCommand fallback.
+ * navigator.clipboard.writeText requires a user-gesture context and HTTPS/localhost.
+ * execCommand('copy') is synchronous and works even when the async API is restricted.
+ */
+function writeClipboard(text: string, onDone?: () => void): void {
+  if (!text) return;
+
+  const fallback = () => {
+    const el = document.createElement('textarea');
+    el.value = text;
+    Object.assign(el.style, {
+      position: 'fixed', left: '-9999px', top: '-9999px',
+      width: '1px', height: '1px', opacity: '0', fontSize: '12pt',
+    });
+    document.body.appendChild(el);
+    el.focus({ preventScroll: true });
+    el.select();
+    try { document.execCommand('copy'); onDone?.(); } catch { /* ignore */ }
+    document.body.removeChild(el);
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(onDone).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+/* ── Context menu ── */
+
+function ContextMenu({
+  x,
+  y,
+  sel,
+  onCopy,
+  onPaste,
+  onSelectAll,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  sel: string;        // selection captured at right-click time
+  onCopy: () => void;
+  onPaste: () => void;
+  onSelectAll: () => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Clamp menu to viewport edges
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const { right, bottom } = el.getBoundingClientRect();
+    if (right > window.innerWidth)  el.style.left = `${window.innerWidth  - el.offsetWidth  - 8}px`;
+    if (bottom > window.innerHeight) el.style.top  = `${window.innerHeight - el.offsetHeight - 8}px`;
+  }, []);
+
+  const hasSel = sel.length > 0;
+
+  const item = (label: string, shortcut: string, onClick: () => void, disabled = false) => (
+    <button
+      className={`flex w-full items-center gap-[8px] px-[14px] py-[7px] text-left font-['Inter'] text-[13px] transition-colors ${
+        disabled
+          ? 'cursor-default text-[#445]'
+          : 'text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.07)] active:bg-[rgba(255,255,255,0.12)]'
+      }`}
+      onMouseDown={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
+    >
+      <span className="flex-1">{label}</span>
+      <span className="font-['JetBrains_Mono'] text-[10px] text-[#445]">{shortcut}</span>
+    </button>
+  );
+
+  return (
+    <>
+      {/* Invisible backdrop — click outside closes menu */}
+      <div
+        className="fixed inset-0 z-[100]"
+        onMouseDown={onClose}
+        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+      />
+      <div
+        ref={menuRef}
+        className="fixed z-[101] min-w-[180px] overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#1a1a23] py-[4px] shadow-2xl"
+        style={{ left: x, top: y }}
+      >
+        {item('Copiar', 'Ctrl+Shift+C', onCopy, !hasSel)}
+        {item('Colar', 'Ctrl+Shift+V', onPaste)}
+        <div className="mx-[8px] my-[3px] h-px bg-[rgba(255,255,255,0.06)]" />
+        {item('Selecionar tudo', 'Ctrl+A', onSelectAll)}
+      </div>
+    </>
+  );
+}
+
+/* ── Copied toast ── */
+
+function CopiedToast() {
+  return (
+    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(170,255,0,0.25)] bg-[#111118] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#af0] shadow-lg">
+      Copiado!
+    </div>
+  );
+}
+
 /* ── Component ── */
 
 export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalProps>(
@@ -413,6 +522,17 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
     const sendKey = useCallback((seq: string) => {
       socket.send(seq);
     }, [socket]);
+
+    // Context menu (right-click) state — sel captured at click time so it
+    // survives the mousedown event that would otherwise clear xterm selection.
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; sel: string } | null>(null);
+    // Brief "Copiado!" feedback toast
+    const [showCopied, setShowCopied] = useState(false);
+
+    const flashCopied = useCallback(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 1500);
+    }, []);
 
     // Loading overlay: shown while the socket hasn't connected yet.
     // Reset to true on every session change so switching sessions always
@@ -554,6 +674,73 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // ── Step 5: Open terminal in DOM ──
           terminal.open(container);
 
+          // ── Copy/paste wiring ──
+          //
+          // IMPORTANT: With mouse tracking enabled (?1002h), normal drag sends
+          // mouse events to the PTY app, not xterm selection. To select text
+          // while tracking is active the user must hold Shift while dragging.
+          //
+          // Key bindings (intercepted before xterm processes them):
+          //   Ctrl+C  with selection → copy (don't send \x03 interrupt)
+          //   Ctrl+C  without selection → normal interrupt (passes through)
+          //   Ctrl+Shift+C → copy selection
+          //   Ctrl+Shift+V → paste from clipboard
+          terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+            if (e.type !== 'keydown') return true;
+            const ctrl = e.ctrlKey || e.metaKey;
+            if (!ctrl) return true;
+
+            // Ctrl+Shift+C — copy (always)
+            if (e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+              const sel = terminal.getSelection();
+              if (sel) writeClipboard(sel, flashCopied);
+              return false;
+            }
+
+            // Ctrl+Shift+V — paste
+            if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+              navigator.clipboard.readText().then((text) => {
+                if (text) socket.send(text);
+              }).catch(() => {});
+              return false;
+            }
+
+            // Ctrl+C — copy if there's a selection, otherwise pass through as interrupt
+            if (!e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+              const sel = terminal.getSelection();
+              if (sel) {
+                writeClipboard(sel, flashCopied);
+                return false; // don't also send \x03
+              }
+              // no selection → let xterm send the interrupt
+            }
+
+            return true;
+          });
+
+          // Right-click context menu — capture selection TEXT here (not just a bool)
+          // because xterm may clear the selection by the time the menu button fires.
+          const onContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
+            setCtxMenu({ x: e.clientX, y: e.clientY, sel: terminal.getSelection() });
+          };
+          container.addEventListener('contextmenu', onContextMenu);
+
+          // Native copy event — catches browser-level Ctrl+C / Edit→Copy when
+          // the xterm textarea has focus, and forwards xterm's selection instead
+          // of whatever the browser thinks is selected (which is nothing, since
+          // xterm uses canvas, not DOM text nodes).
+          const onNativeCopy = (e: ClipboardEvent) => {
+            const active = document.activeElement;
+            if (!container.contains(active)) return;
+            const sel = terminal.getSelection();
+            if (!sel) return;
+            e.preventDefault();
+            e.clipboardData?.setData('text/plain', sel);
+            flashCopied();
+          };
+          document.addEventListener('copy', onNativeCopy);
+
           // On touch devices, suppress the native virtual keyboard on tap.
           // Users open it explicitly via the MobileKeyboard FAB "Digitar" button.
           if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
@@ -640,13 +827,28 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             lastTouchY = e.touches[0].clientY;
             touchMoved = false;
 
-            // Long-press → select all visible terminal text so the user can copy it.
-            // Setting touchMoved=true prevents the subsequent touchend from also
-            // firing a tap (which would send a PTY mouse event and clear selection).
+            // Long-press → simulate dblclick at the touch position for word
+            // selection (same as desktop double-click). touchMoved=true prevents
+            // touchend from dispatching a tap that would clear the selection.
             longPressTimer = setTimeout(() => {
               longPressTimer = null;
               touchMoved = true;
-              terminal.selectAll();
+              const screen = container.querySelector('.xterm-screen') ?? container;
+              // A dblclick event is what xterm.js uses for word selection.
+              screen.dispatchEvent(new MouseEvent('dblclick', {
+                clientX: touchStartX,
+                clientY: touchStartY,
+                bubbles: true,
+                cancelable: true,
+                button: 0,
+                detail: 2,
+                view: window,
+              }));
+              // Give xterm one frame to update the selection, then copy.
+              requestAnimationFrame(() => {
+                const sel = terminal.getSelection();
+                if (sel) writeClipboard(sel, flashCopied);
+              });
             }, LONG_PRESS_MS);
           };
 
@@ -729,6 +931,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           const resizeObserver = new ResizeObserver(debouncedResize);
           resizeObserver.observe(container);
 
+          // Re-fit when the mobile virtual keyboard opens/closes.
+          // visualViewport.resize fires before the CSS layout reflects the new
+          // height, so the ResizeObserver alone may miss the first keyboard event.
+          window.visualViewport?.addEventListener('resize', debouncedResize);
+
           // ── Step 9: Visibility detection — re-fit + re-render on session switch ──
           //
           // The goal is to replicate exactly what the ResizeObserver does on window
@@ -796,6 +1003,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             resizeObserver.disconnect();
             intersectionObserver.disconnect();
             mutationObserver.disconnect();
+            window.visualViewport?.removeEventListener('resize', debouncedResize);
+            container.removeEventListener('contextmenu', onContextMenu);
+            document.removeEventListener('copy', onNativeCopy);
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
@@ -888,6 +1098,35 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           data-testid="xterm-container"
           className="absolute inset-0 [contain:strict]"
         />
+
+        {/* "Copiado!" toast — shown after any copy action */}
+        {showCopied && <CopiedToast />}
+
+        {/* Right-click context menu */}
+        {ctxMenu && (
+          <ContextMenu
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            sel={ctxMenu.sel}
+            onClose={() => setCtxMenu(null)}
+            onCopy={() => {
+              // Use selection captured at right-click time — it may have been
+              // cleared by xterm before this button's mousedown fires.
+              writeClipboard(ctxMenu.sel, flashCopied);
+              setCtxMenu(null);
+            }}
+            onPaste={() => {
+              navigator.clipboard.readText().then((text) => {
+                if (text) socket.send(text);
+              }).catch(() => {});
+              setCtxMenu(null);
+            }}
+            onSelectAll={() => {
+              terminalRef.current?.selectAll();
+              setCtxMenu(null);
+            }}
+          />
+        )}
 
         {/* Mobile-only floating keyboard button */}
         <MobileKeyboard

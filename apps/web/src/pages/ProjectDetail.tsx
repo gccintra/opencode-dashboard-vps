@@ -467,7 +467,6 @@ function TerminalHeader({
   onReconnect,
   onKill,
   killing,
-  isMobile,
   sidebarOpen,
   onToggleSidebar,
 }: {
@@ -478,7 +477,6 @@ function TerminalHeader({
   onReconnect: () => void;
   onKill: () => void;
   killing: boolean;
-  isMobile: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 }) {
@@ -491,24 +489,23 @@ function TerminalHeader({
     >
       {/* Breadcrumb + connection status */}
       <div className="flex items-center gap-[6px] min-w-0">
-        {isMobile && (
-          <button
-            onClick={onToggleSidebar}
-            className="flex items-center justify-center size-[32px] shrink-0 rounded-[5px] text-[#889] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-            aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
-            data-testid="sidebar-toggle"
-          >
-            {sidebarOpen ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-        )}
+        {/* Hamburger — visible only below md breakpoint */}
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden flex items-center justify-center size-[32px] shrink-0 rounded-[5px] text-[#889] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+          aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
+          data-testid="sidebar-toggle"
+        >
+          {sidebarOpen ? (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
         <span className="font-['Inter'] text-[13px] text-[#889] shrink-0 truncate">{projectName}</span>
         {sessionName && (
           <>
@@ -619,12 +616,27 @@ function TabBar({
 
 /* ── Status bar ── */
 
+const FONT_SIZE_MIN = 8;
+const FONT_SIZE_MAX = 24;
+const FONT_SIZE_DEFAULT = 13;
+const FONT_SIZE_DEFAULT_MOBILE = 12;
+
 function TerminalStatusBar({
   connectionStatus,
   sessionCreatedAt,
+  fontSize,
+  defaultFontSize,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
 }: {
   connectionStatus: ConnectionStatus;
   sessionCreatedAt: number | null;
+  fontSize: number;
+  defaultFontSize: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
 }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -642,6 +654,8 @@ function TerminalStatusBar({
       : sessionCreatedAt * 1000
     : null;
 
+  const isDefault = fontSize === defaultFontSize;
+
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-[rgba(170,255,0,0.1)] bg-[rgba(170,255,0,0.06)] px-[20px] py-[5px]">
       <div className="flex items-center gap-[10px]">
@@ -655,11 +669,47 @@ function TerminalStatusBar({
           </span>
         </span>
       </div>
-      {startMs && (
-        <span className="hidden sm:block font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)]" key={tick}>
-          uptime {formatUptime(startMs)}
-        </span>
-      )}
+
+      <div className="flex items-center gap-[6px]">
+        {startMs && (
+          <span className="hidden sm:block font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)] mr-[8px]" key={tick}>
+            uptime {formatUptime(startMs)}
+          </span>
+        )}
+
+        {/* Zoom controls */}
+        <div className="flex items-center gap-[2px]">
+          <button
+            onClick={onZoomOut}
+            disabled={fontSize <= FONT_SIZE_MIN}
+            title="Diminuir fonte (Ctrl+-)"
+            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
+          >
+            A<span className="text-[8px] leading-none relative top-[1px]">-</span>
+          </button>
+
+          <button
+            onClick={onZoomReset}
+            title={`Fonte: ${fontSize}px — clique para resetar (Ctrl+0)`}
+            className={`flex items-center justify-center h-[20px] min-w-[28px] px-[4px] rounded-[3px] font-['JetBrains_Mono'] text-[10px] transition-colors select-none ${
+              isDefault
+                ? 'text-[rgba(170,255,0,0.3)] hover:text-[rgba(170,255,0,0.6)] hover:bg-[rgba(170,255,0,0.06)]'
+                : 'text-[rgba(170,255,0,0.8)] hover:text-[rgba(170,255,0,1)] bg-[rgba(170,255,0,0.08)] hover:bg-[rgba(170,255,0,0.14)]'
+            }`}
+          >
+            {fontSize}px
+          </button>
+
+          <button
+            onClick={onZoomIn}
+            disabled={fontSize >= FONT_SIZE_MAX}
+            title="Aumentar fonte (Ctrl++)"
+            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
+          >
+            A<span className="text-[8px] leading-none relative top-[1px]">+</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -839,6 +889,15 @@ export default function ProjectDetailPage() {
             : null;
 
         if (resolvedId) {
+          // Pre-size before the terminal WS connects so the PTY starts at the
+          // correct dimensions rather than the node-pty default 80×24.
+          const isMob = window.innerWidth < 640;
+          const dims = estimateTerminalDims(fontSizeRef.current, isMob);
+          apiFetch(`/api/sessions/${resolvedId}/resize`, {
+            method: 'POST',
+            body: JSON.stringify(dims),
+          }).catch(() => {});
+
           setActiveSessionId((prev) => prev ?? resolvedId);
           if (!urlSession || DEAD_STATUSES.has(urlSession.status)) {
             setSearchParams({ session: resolvedId }, { replace: true });
@@ -882,7 +941,7 @@ export default function ProjectDetailPage() {
       // sessions — dead sessions can't accept resize and would just log noise.
       const session = sessionsRef.current.find((s) => s.sessionId === sessionId);
       if (session && !DEAD_STATUSES.has(session.status)) {
-        const { cols, rows } = estimateTerminalDims(isMobile ? 12 : 13, isMobile);
+        const { cols, rows } = estimateTerminalDims(fontSizeRef.current, isMobile);
         apiFetch(`/api/sessions/${sessionId}/resize`, {
           method: 'POST',
           body: JSON.stringify({ cols, rows }),
@@ -901,7 +960,7 @@ export default function ProjectDetailPage() {
     if (!projectId || creating) return;
     setCreating(true);
     try {
-      const { cols, rows } = estimateTerminalDims(isMobile ? 12 : 13, isMobile);
+      const { cols, rows } = estimateTerminalDims(fontSizeRef.current, isMobile);
       const created = await apiFetch<Session>(`/api/projects/${projectId}/sessions`, {
         method: 'POST',
         body: JSON.stringify({ cols, rows }),
@@ -999,51 +1058,104 @@ export default function ProjectDetailPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on mobile when a session is selected
+  /* ── Font size / zoom ── */
+  const defaultFontSize = isMobile ? FONT_SIZE_DEFAULT_MOBILE : FONT_SIZE_DEFAULT;
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const stored = localStorage.getItem('terminalFontSize');
+    if (stored) {
+      const n = parseInt(stored, 10);
+      if (!Number.isNaN(n) && n >= FONT_SIZE_MIN && n <= FONT_SIZE_MAX) return n;
+    }
+    return isMobile ? FONT_SIZE_DEFAULT_MOBILE : FONT_SIZE_DEFAULT;
+  });
+
+  // Ref so pre-sizing closures always read the current font size without
+  // being added to dependency arrays that would retrigger heavy effects.
+  const fontSizeRef = useRef(fontSize);
+  useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
+
+  // Persist font size changes
+  useEffect(() => {
+    localStorage.setItem('terminalFontSize', String(fontSize));
+  }, [fontSize]);
+
+  const handleZoomIn = useCallback(() => {
+    setFontSize((prev) => Math.min(prev + 1, FONT_SIZE_MAX));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setFontSize((prev) => Math.max(prev - 1, FONT_SIZE_MIN));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setFontSize(isMobile ? FONT_SIZE_DEFAULT_MOBILE : FONT_SIZE_DEFAULT);
+  }, [isMobile]);
+
+  // Keyboard shortcuts: Ctrl+= (zoom in), Ctrl+- (zoom out), Ctrl+0 (reset)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        handleZoomIn();
+      } else if (e.key === '-') {
+        e.preventDefault();
+        handleZoomOut();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        handleZoomReset();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleZoomIn, handleZoomOut, handleZoomReset]);
+
+  // Always close the overlay sidebar when a session is selected.
+  // On desktop (≥md) the sidebar is always visible via CSS so this is a no-op.
   const handleSelectSessionMobile = useCallback(
     (sessionId: string) => {
       handleSelectSession(sessionId);
-      if (isMobile) setSidebarOpen(false);
+      setSidebarOpen(false);
     },
-    [handleSelectSession, isMobile],
+    [handleSelectSession],
   );
 
   return (
     <div className="flex overflow-hidden bg-[#0a0a0f]" style={{ height: `${viewportHeight}px` }}>
-      {/* ── Sessions sidebar (desktop: always visible, mobile: overlay) ── */}
-      {!isMobile ? (
+
+      {/* ── Backdrop (mobile only, always in DOM for fade animation) ── */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 md:hidden ${
+          sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* ── Sessions sidebar ──
+           Mobile  (<md): fixed overlay, slides in/out with translate-x.
+           Desktop (≥md): static flex child, always visible. ── */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 flex w-[220px] shrink-0 flex-col
+          border-r border-[rgba(255,255,255,0.08)] bg-[#111118]
+          transition-transform duration-200 ease-out
+          md:relative md:inset-auto md:z-auto md:translate-x-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        aria-label="Sessions"
+      >
         <SessionsSidebar
           projectName={projectName}
           sessions={sessions}
           activeSessionId={activeSessionId}
           creating={creating}
           onBack={() => navigate('/projects')}
-          onSelectSession={handleSelectSession}
+          onSelectSession={handleSelectSessionMobile}
           onCreateSession={handleCreateSession}
           onRenameSession={handleRenameSession}
         />
-      ) : sidebarOpen ? (
-        <>
-          {/* Backdrop to close sidebar on click outside */}
-          <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden="true"
-          />
-          <aside className="fixed inset-y-0 left-0 z-50 w-[220px] transform transition-transform duration-200 ease-out">
-            <SessionsSidebar
-              projectName={projectName}
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              creating={creating}
-              onBack={() => navigate('/projects')}
-              onSelectSession={handleSelectSessionMobile}
-              onCreateSession={handleCreateSession}
-              onRenameSession={handleRenameSession}
-            />
-          </aside>
-        </>
-      ) : null}
+      </aside>
 
       {/* ── Main content ── */}
       <div className="flex flex-1 min-w-0 flex-col">
@@ -1056,7 +1168,6 @@ export default function ProjectDetailPage() {
           onReconnect={handleReconnect}
           onKill={handleKillSession}
           killing={killing}
-          isMobile={isMobile}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
@@ -1140,7 +1251,7 @@ export default function ProjectDetailPage() {
                     onConnectionStatus={setConnectionStatus}
                     onStatusChange={handleSessionStatusChange}
                     onCreateNewSession={handleCreateSession}
-                    fontSize={isMobile ? 12 : 13}
+                    fontSize={fontSize}
                   />
                 </div>
               </div>
@@ -1189,6 +1300,11 @@ export default function ProjectDetailPage() {
           <TerminalStatusBar
             connectionStatus={connectionStatus}
             sessionCreatedAt={activeSessionCreatedAt}
+            fontSize={fontSize}
+            defaultFontSize={defaultFontSize}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
           />
         )}
       </div>
