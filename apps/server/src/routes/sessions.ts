@@ -607,16 +607,39 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
     })
 
     // ── DELETE /api/sessions/:id ───────────────────────────────
-    // Kills the PTY and removes the metadata. The PTY Manager
-    // gracefully terminates the underlying process.
+    // Kills the PTY (if still running) and removes all metadata.
+    // Idempotent: finished/missing PTY sessions are cleaned from DB and succeed.
     .delete('/api/sessions/:id', async ({ params, set }) => {
       try {
         const sessionId = params.id;
+
+        // Verify the session exists at all (memory or DB).
         if (!sessionMeta.has(sessionId)) {
-          set.status = 404;
-          return { error: 'Session not found' };
+          const row = getDb().query('SELECT id FROM sessions WHERE id = ?').get(sessionId) as { id: string } | null;
+          if (!row) {
+            set.status = 404;
+            return { error: 'Session not found' };
+          }
+          // Known to DB but not in memory — PTY is already gone, just clean up.
+          getDb().run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+          return { success: true };
         }
-        await getPtyManager().killSession(sessionId);
+
+        // Attempt to kill the live PTY. If the PTY process has already exited
+        // (session is 'finished'), killSession throws "session not found: id".
+        // In that case we still clean up metadata — the goal is removal.
+        try {
+          await getPtyManager().killSession(sessionId);
+        } catch (killErr) {
+          const msg = (killErr as Error).message ?? '';
+          if (!msg.includes('session not found')) {
+            // Unexpected error — surface it.
+            set.status = 500;
+            return { error: msg };
+          }
+          // PTY already dead — fall through to cleanup.
+        }
+
         sessionMeta.delete(sessionId);
         try {
           getDb().run('DELETE FROM sessions WHERE id = ?', [sessionId]);
