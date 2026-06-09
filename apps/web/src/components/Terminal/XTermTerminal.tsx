@@ -64,6 +64,8 @@ export interface XTermTerminalProps {
   className?: string;
   /** Font size in pixels. Defaults to 14. */
   fontSize?: number;
+  /** xterm.js colour theme. Hot-swapped without recreating the terminal. */
+  theme?: ITheme;
 }
 
 /** Handle exposed to parent components via `forwardRef`. */
@@ -510,6 +512,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       onCreateNewSession,
       className,
       fontSize = 14,
+      theme,
     },
     ref,
   ) {
@@ -637,7 +640,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
             fontWeight: '400',
             fontWeightBold: '700',
-            theme: TERMINAL_THEME,
+            theme: theme ?? TERMINAL_THEME,
             scrollback: 0,
             convertEol: false,
             allowProposedApi: true,
@@ -1049,6 +1052,13 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       lastSentDims.current = { cols: term.cols, rows: term.rows };
       onResizeRef.current?.(term.cols, term.rows);
     }, [fontSize]);
+
+    // Hot-swap colour theme without recreating the terminal.
+    useEffect(() => {
+      const term = terminalRef.current;
+      if (!term || !theme) return;
+      term.options.theme = theme;
+    }, [theme]);
 
     // Fire a fit+refresh+mouse-sync whenever the WebSocket (re)connects so the
     // PTY always knows the true terminal dimensions and mouse tracking is active.
