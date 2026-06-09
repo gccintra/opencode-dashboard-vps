@@ -415,6 +415,18 @@ export function CanvasMobile({
     }
   }, [slots, focusedSlot]);
 
+  // When focus changes, the flex layout shifts (slots collapse/expand).
+  // Slots that gain/lose space don't trigger their internal ResizeObserver
+  // reliably, so we explicitly ask every visible terminal to re-fit.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      for (const ref of terminalRefs.current) {
+        ref.current?.resize();
+      }
+    }, 150);
+    return () => clearTimeout(t);
+  }, [focusedSlot]);
+
   const handleFocus = useCallback((i: number) => setFocusedSlot((prev) => prev === i ? null : i), []);
   const handleRemove = useCallback((i: number) => clearSlot(i), [clearSlot]);
 
