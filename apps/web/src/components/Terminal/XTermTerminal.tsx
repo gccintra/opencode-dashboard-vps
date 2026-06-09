@@ -586,6 +586,24 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       // finished yet the cleanup function won't do anything extra.
       let scheduledCleanup: (() => void) | null = null;
 
+      // ── Pre-step: Subscribe to socket data BEFORE font loading ──
+      // The WebSocket connects immediately and the server sends the session
+      // buffer as soon as the WS opens (buffer replay). If we subscribe
+      // inside the font-load .then(), data arriving during font loading
+      // (up to 3s) is silently dropped — causing a blank terminal on first
+      // load that only recovers after a manual resize/reconnect.
+      // Subscribing here captures all data into pendingData; it is drained
+      // into the terminal after terminal.open() and fit() complete.
+      let terminalReady = false;
+      const pendingData: (string | Uint8Array)[] = [];
+      const unsubscribeData = socket.data((data) => {
+        if (terminalReady && terminalRef.current) {
+          terminalRef.current.write(data);
+        } else {
+          pendingData.push(data);
+        }
+      });
+
       // ── Step 1: Wait for JetBrains Mono to be available.
       // xterm.js measures character width/height at `terminal.open()` time.
       // If the font isn't loaded yet, it falls back to the system monospace,
@@ -657,21 +675,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             // WebGL not supported — Canvas fallback is acceptable.
           }
 
-          // ── Step 4: Start buffering socket data ──
-          // The WebSocket may already be connected and receiving PTY output.
-          // Buffer data until terminal.open() completes so ANSI sequences
-          // don't leak into the DOM as raw text.
-          let terminalReady = false;
-          const pendingData: (string | Uint8Array)[] = [];
-          const unsubscribeData = socket.data((data) => {
-            if (terminalReady) {
-              terminal.write(data);
-            } else {
-              pendingData.push(data);
-            }
-          });
-
-          // ── Step 5: Open terminal in DOM ──
+          // ── Step 4: Open terminal in DOM ──
+          // pendingData is already accumulating (subscribed before font load).
           terminal.open(container);
 
           // ── Copy/paste wiring ──
@@ -753,12 +758,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             setTimeout(applyInputModeNone, 50);
           }
 
-          // ── Step 6: Fit BEFORE draining buffered data ──
-          // For existing sessions the WebSocket may have delivered terminal state
-          // into pendingData before terminal.open() was called (the socket hook
-          // starts connecting earlier than the terminal setup effect). Writing that
-          // content at xterm's default size (80×24) and fitting afterwards leaves
-          // the TUI layout corrupted and breaks mouse-click coordinate mapping.
+          // ── Step 4b: Fit BEFORE draining buffered data ──
+          // The WebSocket has been receiving PTY output since before the font loaded;
+          // all of it is in pendingData. Writing at xterm's default size (80×24) and
+          // fitting afterwards corrupts the TUI layout and breaks mouse-click coords.
           // Fitting first ensures every byte is written at the correct cols×rows.
           const notifyResizeIfChanged = () => {
             // Skip when container is hidden — fitAddon.fit() would read clientWidth=0
@@ -780,6 +783,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           notifyResizeIfChanged();
 
           // Drain buffered data at the correct terminal size.
+          // Set terminalRef.current BEFORE marking terminalReady so that
+          // any data arriving concurrently (between the two lines) is
+          // written to the terminal rather than dropped.
+          terminalRef.current = terminal;
+          fitAddonRef.current = fitAddon;
           terminalReady = true;
           for (const chunk of pendingData) {
             terminal.write(chunk);
@@ -910,14 +918,12 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           const t1 = setTimeout(notifyResizeIfChanged, 300);
           const t2 = setTimeout(notifyResizeIfChanged, 1000);
 
-          terminalRef.current = terminal;
-          fitAddonRef.current = fitAddon;
-
-          // ── Step 7: Wire socket (status + input) ──
+          // ── Step 5: Wire socket status + terminal input ──
+          // Data subscription was already wired before font loading.
           const unsubscribeStatus = socket.onStatus((st) => onStatusChangeRef.current?.(st));
           const onDataDisposable = terminal.onData((data) => socket.send(data));
 
-          // ── Step 8: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
+          // ── Step 6: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
           // Use a time-based debounce (150ms) instead of RAF so intermediate
           // layout sizes during tab switches are never sent to the backend PTY.
           let resizeTimerId: ReturnType<typeof setTimeout> | null = null;
@@ -936,7 +942,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // height, so the ResizeObserver alone may miss the first keyboard event.
           window.visualViewport?.addEventListener('resize', debouncedResize);
 
-          // ── Step 9: Visibility detection — re-fit + re-render on session switch ──
+          // ── Step 7: Visibility detection — re-fit + re-render on session switch ──
           //
           // The goal is to replicate exactly what the ResizeObserver does on window
           // resize: call notifyResizeIfChanged() (which runs fit + refresh + onResize).
@@ -994,6 +1000,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           }
 
           // ── Cleanup ──
+          // unsubscribeData is handled at effect level (registered before font load).
           scheduledCleanup = () => {
             clearTimeout(t1);
             clearTimeout(t2);
@@ -1009,7 +1016,6 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
-            unsubscribeData();
             unsubscribeStatus();
             onDataDisposable.dispose();
             terminal.dispose();
@@ -1024,6 +1030,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
       return () => {
         cancelled = true;
+        unsubscribeData(); // always cleanup: registered before font loading
         scheduledCleanup?.();
       };
       // socket.data / socket.send are stable; fontSize excluded (handled below).

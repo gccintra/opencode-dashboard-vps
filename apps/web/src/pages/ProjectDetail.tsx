@@ -250,6 +250,7 @@ function SessionsSidebar({
   onSelectSession,
   onCreateSession,
   onRenameSession,
+  onClearFinished,
 }: {
   projectName: string;
   sessions: Session[];
@@ -259,8 +260,10 @@ function SessionsSidebar({
   onSelectSession: (id: string) => void;
   onCreateSession: () => void;
   onRenameSession: (sessionId: string, name: string) => Promise<void>;
+  onClearFinished: () => void;
 }) {
   const liveCount = sessions.filter((s) => !DEAD_STATUSES.has(s.status)).length;
+  const deadCount = sessions.filter((s) => DEAD_STATUSES.has(s.status)).length;
 
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -337,7 +340,7 @@ function SessionsSidebar({
       </div>
 
       {/* New Session button */}
-      <div className="shrink-0 px-[16px] pt-[12px] pb-[8px]">
+      <div className="shrink-0 px-[16px] pt-[12px] pb-[8px] flex flex-col gap-[6px]">
         <button
           onClick={onCreateSession}
           disabled={creating}
@@ -365,6 +368,17 @@ function SessionsSidebar({
           )}
           {creating ? 'Criando…' : 'Nova Sessão'}
         </button>
+        {deadCount > 0 && (
+          <button
+            onClick={onClearFinished}
+            className="flex w-full items-center justify-center gap-[5px] rounded-[5px] border border-[rgba(255,255,255,0.07)] py-[6px] font-['Inter'] text-[12px] font-medium text-[#556] hover:border-[rgba(255,85,85,0.25)] hover:text-[#f54] transition-colors"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M2 2.5h7M4.5 2.5V2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v.5M3 2.5l.5 6h4l.5-6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Limpar {deadCount} finalizada{deadCount !== 1 ? 's' : ''}
+          </button>
+        )}
       </div>
 
       {/* Session list */}
@@ -1000,6 +1014,18 @@ export default function ProjectDetailPage() {
     }
   }, [activeSessionId, killing, fetchSessions]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── Clear finished sessions ── */
+  const handleClearFinished = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      await apiFetch(`/api/projects/${projectId}/sessions/finished`, { method: 'DELETE' });
+      window.dispatchEvent(new CustomEvent('sessions-changed'));
+      await fetchSessions();
+    } catch (err) {
+      console.error('[ProjectDetail] clear finished failed', (err as ApiError).message);
+    }
+  }, [projectId, fetchSessions]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Rename session ── */
   const handleRenameSession = useCallback(async (sessionId: string, name: string) => {
     try {
@@ -1154,6 +1180,7 @@ export default function ProjectDetailPage() {
           onSelectSession={handleSelectSessionMobile}
           onCreateSession={handleCreateSession}
           onRenameSession={handleRenameSession}
+          onClearFinished={handleClearFinished}
         />
       </aside>
 
