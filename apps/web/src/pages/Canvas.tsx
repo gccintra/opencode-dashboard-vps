@@ -13,13 +13,13 @@
  *   └───────────────────────────────────────────────────────────────┘
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
-import { ThemePicker } from '../components/Terminal';
+import { ThemePicker, MobileKeyboard } from '../components/Terminal';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
-import { CanvasMobile } from '../components/Canvas/CanvasMobile';
+import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { useCanvasState } from '../hooks/useCanvasState';
 
 /* ── Types ── */
@@ -48,7 +48,7 @@ const CANVAS_LAYOUTS = [
   { cols: 2, rows: 3, label: '2×3' },
 ];
 
-const FONT_SIZE_MIN = 8;
+const FONT_SIZE_MIN = 6;
 const FONT_SIZE_MAX = 24;
 const FONT_SIZE_DEFAULT = 13;
 const FONT_SIZE_DEFAULT_MOBILE = 12;
@@ -88,6 +88,7 @@ export default function CanvasPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const viewportHeight = useViewportHeight();
+  const canvasMobileRef = useRef<CanvasMobileHandle | null>(null);
 
   /* ── Sessions data ── */
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -190,8 +191,8 @@ export default function CanvasPage() {
   return (
     <div className="flex flex-col overflow-hidden bg-[#0a0a0f]" style={{ height: `${viewportHeight}px` }}>
 
-      {/* Header */}
-      <header className="flex shrink-0 items-center justify-between gap-[12px] border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px] py-[10px]">
+      {/* Header — hidden on mobile (CanvasMobile TopBar takes over) */}
+      <header className={`${isMobile ? 'hidden' : 'flex'} shrink-0 items-center justify-between gap-[12px] border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px] py-[10px]`}>
         {/* Left: back + title */}
         <div className="flex items-center gap-[8px] min-w-0">
           <button
@@ -251,11 +252,15 @@ export default function CanvasPage() {
           </div>
         ) : isMobile ? (
           <CanvasMobile
+            ref={canvasMobileRef}
             projectId="__sessions__"
             sessions={sessions}
             fontSize={fontSize}
             theme={getThemeById(themeId).xterm}
             onRename={handleRenameSession}
+            projectName="Canvas"
+            onToggleSidebar={() => navigate('/sessions')}
+            hideKeyboardFAB
           />
         ) : (
           <CanvasGrid
@@ -272,7 +277,7 @@ export default function CanvasPage() {
         )}
       </div>
 
-      {/* Footer: font size + theme */}
+      {/* Footer: font size + theme + keyboard (mobile, rightmost) */}
       <div className="flex shrink-0 items-center justify-end gap-[8px] border-t border-[rgba(170,255,0,0.1)] bg-[rgba(170,255,0,0.06)] px-[20px] py-[5px]">
         <ThemePicker themeId={themeId} onChange={handleThemeChange} />
         <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
@@ -305,6 +310,25 @@ export default function CanvasPage() {
             A<span className="text-[8px] leading-none relative top-[1px]">+</span>
           </button>
         </div>
+        {isMobile && (
+          <>
+            <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
+            <MobileKeyboard
+              inline
+              onKey={(seq) => canvasMobileRef.current?.sendKey(seq)}
+              onSelectAll={() => canvasMobileRef.current?.selectAll()}
+              onCopy={() => {
+                const sel = canvasMobileRef.current?.getSelection() ?? '';
+                if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+              }}
+              onPaste={() => {
+                navigator.clipboard.readText().then((text) => {
+                  if (text) canvasMobileRef.current?.sendKey(text);
+                }).catch(() => {});
+              }}
+            />
+          </>
+        )}
       </div>
     </div>
   );

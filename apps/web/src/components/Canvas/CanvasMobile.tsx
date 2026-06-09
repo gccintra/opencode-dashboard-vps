@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, type RefObject } from 'react';
+import { useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle, type RefObject } from 'react';
 import { XTermTerminal, MobileKeyboard, type XTermTerminalHandle } from '../Terminal';
 import { apiFetch } from '../../lib/api';
 import type { ITheme } from '@xterm/xterm';
@@ -11,6 +11,12 @@ interface Session {
   status: string;
 }
 
+export interface CanvasMobileHandle {
+  sendKey: (seq: string) => void;
+  selectAll: () => void;
+  getSelection: () => string;
+}
+
 interface CanvasMobileProps {
   projectId: string;
   sessions: Session[];
@@ -18,6 +24,12 @@ interface CanvasMobileProps {
   theme?: ITheme;
   onCreateSession?: () => Promise<string | null>;
   onRename?: (sessionId: string, newName: string) => Promise<void>;
+  /** Props for the combined single header (replaces page-level TerminalHeader on mobile) */
+  projectName?: string;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+  /** Suppress the built-in floating keyboard FAB (parent provides its own in a footer bar). */
+  hideKeyboardFAB?: boolean;
 }
 
 /* ── Persistence ── */
@@ -175,14 +187,14 @@ function MobileSlot({
       className="flex flex-col overflow-hidden border-b border-[rgba(255,255,255,0.06)] transition-all duration-200 ease-out"
       style={
         collapsed
-          ? { flexGrow: 0, flexShrink: 0, height: '40px' }
+          ? { flexGrow: 0, flexShrink: 0, height: '52px' }
           : { flexGrow: isFocused ? 1 : 1, flexShrink: 1, flexBasis: 0, minHeight: '96px' }
       }
       data-testid={`mobile-slot-${slotIndex}`}
     >
       {/* Header — tap to toggle focus */}
       <div
-        className={`flex shrink-0 w-full items-center gap-[10px] px-[14px] h-[40px] transition-colors cursor-pointer select-none ${
+        className={`flex shrink-0 w-full items-center gap-[10px] px-[14px] h-[52px] transition-colors cursor-pointer select-none ${
           isFocused ? 'bg-[rgba(170,255,0,0.07)]' : 'bg-[#0d0d14] active:bg-[rgba(255,255,255,0.04)]'
         }`}
         onClick={() => onToggleFocus(slotIndex)}
@@ -295,7 +307,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
       />
       {/* Dropdown panel — anchors below the top bar */}
       <div
-        className="absolute top-[40px] right-0 z-20 w-[240px] flex flex-col rounded-b-[10px] rounded-tl-[10px] border border-[rgba(255,255,255,0.08)] bg-[#111118] shadow-xl overflow-hidden"
+        className="absolute top-[44px] right-0 z-20 w-[240px] flex flex-col rounded-b-[10px] rounded-tl-[10px] border border-[rgba(255,255,255,0.08)] bg-[#111118] shadow-xl overflow-hidden"
         data-testid="add-dropdown"
       >
         <div className="px-[12px] pt-[12px] pb-[4px]">
@@ -344,40 +356,76 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
   );
 }
 
-/* ── Top bar ── */
+/* ── Top bar (single combined header for mobile canvas) ── */
 
 function TopBar({
-  filledCount,
   canAdd,
   showDropdown,
   onToggleDropdown,
+  projectName,
+  sidebarOpen,
+  onToggleSidebar,
 }: {
-  filledCount: number;
   canAdd: boolean;
   showDropdown: boolean;
   onToggleDropdown: () => void;
+  projectName?: string;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }) {
   return (
-    <div className="relative flex shrink-0 items-center justify-between px-[14px] h-[40px] border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] z-10">
-      <span className="font-['Inter'] text-[11px] text-[#445]">
-        {filledCount} de {SLOT_COUNT} terminal{filledCount !== 1 ? 'is' : ''}
-      </span>
+    <div className="relative flex shrink-0 items-center gap-[4px] px-[10px] h-[44px] border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] z-10">
+      {/* Left button: back arrow (no sidebar context) or hamburger/close (sidebar context) */}
+      {onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          className="flex items-center justify-center size-[30px] shrink-0 rounded-[5px] text-[#778] active:text-[#f0f0f0] active:bg-[rgba(255,255,255,0.08)] transition-colors"
+          aria-label={sidebarOpen === undefined ? 'Voltar' : sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
+          data-testid="sidebar-toggle"
+        >
+          {sidebarOpen === undefined ? (
+            /* Back arrow — used when there is no sidebar (e.g. Canvas global page) */
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M12 4L6 10l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : sidebarOpen ? (
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {/* Project name */}
+      {projectName ? (
+        <span className="font-['Inter'] text-[12px] text-[#556] truncate flex-1 min-w-0 ml-[2px]">
+          {projectName}
+        </span>
+      ) : (
+        <div className="flex-1" />
+      )}
+
+      {/* Add button */}
       {canAdd && (
         <button
           onClick={onToggleDropdown}
           aria-expanded={showDropdown}
           aria-label="Adicionar terminal"
-          className={`flex items-center gap-[5px] rounded-[6px] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium transition-colors ${
+          className={`flex items-center gap-[4px] rounded-[6px] px-[8px] py-[5px] font-['Inter'] text-[12px] font-medium transition-colors shrink-0 ${
             showDropdown
               ? 'bg-[rgba(170,255,0,0.15)] text-[#af0]'
               : 'bg-[rgba(170,255,0,0.08)] text-[#af0] active:bg-[rgba(170,255,0,0.15)]'
           }`}
           data-testid="canvas-mobile-add-btn"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
             <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          Adicionar
+          Add
         </button>
       )}
     </div>
@@ -386,14 +434,18 @@ function TopBar({
 
 /* ── Main ── */
 
-export function CanvasMobile({
+export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(function CanvasMobile({
   projectId,
   sessions,
   fontSize,
   theme,
   onCreateSession,
   onRename,
-}: CanvasMobileProps) {
+  projectName,
+  sidebarOpen,
+  onToggleSidebar,
+  hideKeyboardFAB = false,
+}, ref) {
   const { slots, assignSlot, clearSlot } = useMobileSlots(projectId, sessions);
   const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -403,10 +455,23 @@ export function CanvasMobile({
     Array.from({ length: SLOT_COUNT }, () => ({ current: null })),
   );
 
+  // Always-fresh getTarget — updated inline every render so useImperativeHandle stays stable.
+  const getTargetRef = useRef<() => number>(() => 0);
+
   const sessionMap = new Map(sessions.map((s) => [s.sessionId, s]));
   const filledSlots = slots
     .map((id, i) => ({ id, i }))
     .filter((x): x is { id: string; i: number } => x.id !== null);
+
+  // Update getTarget every render so the imperative handle always resolves the latest focused slot.
+  getTargetRef.current = () =>
+    focusedSlot !== null ? focusedSlot : (filledSlots[0]?.i ?? 0);
+
+  useImperativeHandle(ref, () => ({
+    sendKey: (seq) => terminalRefs.current[getTargetRef.current()]?.current?.sendKey(seq),
+    selectAll: () => terminalRefs.current[getTargetRef.current()]?.current?.selectAll(),
+    getSelection: () => terminalRefs.current[getTargetRef.current()]?.current?.getSelection() ?? '',
+  }), []);
 
   // Clear focused slot if it was removed; don't auto-select another
   useEffect(() => {
@@ -461,22 +526,21 @@ export function CanvasMobile({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 bg-[#0a0a0f]" data-testid="canvas-mobile">
-      {/* Top bar — always visible, keyboard can't cover it */}
-      {filledSlots.length > 0 && (
-        <TopBar
-          filledCount={filledSlots.length}
-          canAdd={canAddMore}
-          showDropdown={showDropdown}
-          onToggleDropdown={() => setShowDropdown((v) => !v)}
-        />
-      )}
+      {/* Single combined header — always visible, keyboard can't cover it */}
+      <TopBar
+        canAdd={canAddMore}
+        showDropdown={showDropdown}
+        onToggleDropdown={() => setShowDropdown((v) => !v)}
+        projectName={projectName}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={onToggleSidebar}
+      />
 
-      {/* Add dropdown — drops downward from top bar, safe from keyboard */}
+      {/* Add dropdown — always anchors below the top bar (top-[44px]) */}
       {showDropdown && (
         <AddDropdown
           availableSessions={availableSessions}
           onAssign={handleAssign}
-          onCreate={handleCreate}
           onDismiss={() => setShowDropdown(false)}
         />
       )}
@@ -495,23 +559,14 @@ export function CanvasMobile({
             </p>
           </div>
           {(availableSessions.length > 0 || onCreateSession) && (
-          <button
-            onClick={() => setShowDropdown(true)}
-            className="flex items-center gap-[6px] rounded-[8px] bg-[#af0] px-[20px] py-[11px] font-['Inter'] text-[14px] font-semibold text-black active:bg-[#9e0] transition-colors"
-            data-testid="canvas-mobile-empty-add-btn"
-          >
-            <span className="text-[18px] leading-none font-light">+</span>
-            Adicionar Terminal
-          </button>
-        )}
-          {/* Dropdown anchored to the button area when open from empty state */}
-          {showDropdown && (
-            <AddDropdown
-              availableSessions={availableSessions}
-              onAssign={handleAssign}
-              onCreate={handleCreate}
-              onDismiss={() => setShowDropdown(false)}
-            />
+            <button
+              onClick={() => setShowDropdown(true)}
+              className="flex items-center gap-[6px] rounded-[8px] bg-[#af0] px-[20px] py-[11px] font-['Inter'] text-[14px] font-semibold text-black active:bg-[#9e0] transition-colors"
+              data-testid="canvas-mobile-empty-add-btn"
+            >
+              <span className="text-[18px] leading-none font-light">+</span>
+              Adicionar Terminal
+            </button>
           )}
         </div>
       ) : (
@@ -541,30 +596,22 @@ export function CanvasMobile({
         </div>
       )}
 
-      {/* Single MobileKeyboard FAB for the whole canvas — delegates to focused terminal */}
-      {filledSlots.length > 0 && (
+      {/* Floating keyboard FAB — suppressed when the parent renders it inline in a footer bar */}
+      {!hideKeyboardFAB && filledSlots.length > 0 && (
         <MobileKeyboard
-          onKey={(seq) => {
-            const target = focusedSlot !== null ? focusedSlot : filledSlots[0].i;
-            terminalRefs.current[target]?.current?.sendKey(seq);
-          }}
-          onSelectAll={() => {
-            const target = focusedSlot !== null ? focusedSlot : filledSlots[0].i;
-            terminalRefs.current[target]?.current?.selectAll();
-          }}
+          onKey={(seq) => terminalRefs.current[getTargetRef.current()]?.current?.sendKey(seq)}
+          onSelectAll={() => terminalRefs.current[getTargetRef.current()]?.current?.selectAll()}
           onCopy={() => {
-            const target = focusedSlot !== null ? focusedSlot : filledSlots[0].i;
-            const sel = terminalRefs.current[target]?.current?.getSelection() ?? '';
+            const sel = terminalRefs.current[getTargetRef.current()]?.current?.getSelection() ?? '';
             if (sel) navigator.clipboard.writeText(sel).catch(() => {});
           }}
           onPaste={() => {
-            const target = focusedSlot !== null ? focusedSlot : filledSlots[0].i;
             navigator.clipboard.readText().then((text) => {
-              if (text) terminalRefs.current[target]?.current?.sendKey(text);
+              if (text) terminalRefs.current[getTargetRef.current()]?.current?.sendKey(text);
             }).catch(() => {});
           }}
         />
       )}
     </div>
   );
-}
+});
