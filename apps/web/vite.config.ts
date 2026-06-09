@@ -44,11 +44,11 @@ export default defineConfig({
     port: parseInt(process.env.WEB_PORT || '5173', 10),
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${process.env.SERVER_PORT || '3001'}`,
         changeOrigin: true,
       },
       '/terminal': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${process.env.SERVER_PORT || '3001'}`,
         ws: true,
         changeOrigin: true,
       },

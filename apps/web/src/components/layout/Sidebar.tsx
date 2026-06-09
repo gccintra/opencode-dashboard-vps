@@ -291,8 +291,8 @@ export default function Sidebar() {
         </NavLink>
       </nav>
 
-      {/* ══════ Dynamic Session List ══════ */}
-      <div className="flex-1 overflow-y-auto border-t border-[rgba(255,255,255,0.08)]">
+      {/* ══════ Dynamic Session List (commented — not needed for now) ══════ */}
+      {/* <div className="flex-1 overflow-y-auto border-t border-[rgba(255,255,255,0.08)]">
         {loading ? (
           <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#556]">
             Loading sessions…
@@ -329,7 +329,8 @@ export default function Sidebar() {
             />
           ))
         )}
-      </div>
+      </div> */}
+      <div className="flex-1" />
 
       {/* ══════ User Profile ══════ */}
       <div className="border-t border-[rgba(255,255,255,0.08)] px-[8px] pt-[11px]">
@@ -361,15 +362,17 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ══════ Mobile hamburger ══════ */}
-      <button
-        className="fixed left-[12px] top-[16px] z-50 flex size-[36px] items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:text-[#f0f0f0] lg:hidden"
-        onClick={() => setMobileOpen((o) => !o)}
-        aria-label={mobileOpen ? 'Close sidebar' : 'Open sidebar'}
-        data-testid="hamburger-button"
-      >
-        <HamburgerIcon />
-      </button>
+      {/* ══════ Mobile hamburger — hidden while sidebar is open (close via overlay) ══════ */}
+      {!mobileOpen && (
+        <button
+          className="fixed left-[12px] top-[7px] z-50 flex size-[36px] items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:text-[#f0f0f0] lg:hidden"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open sidebar"
+          data-testid="hamburger-button"
+        >
+          <HamburgerIcon />
+        </button>
+      )}
 
       {/* ══════ Mobile overlay ══════ */}
       {mobileOpen && (
