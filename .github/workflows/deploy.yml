@@ -8,16 +8,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /root/code_projects/opencode-dashboard
-            git pull origin main
-            bun install --frozen-lockfile
-            bun run build
-            pm2 restart opencode-dashboard
-            echo "Deploy concluído — $(date)"
+      - name: Trigger deploy webhook
+        run: |
+          curl -X POST https://gcsoftware.tech/api/deploy \
+            -H "x-deploy-token: ${{ secrets.DEPLOY_TOKEN }}" \
+            -f --max-time 180
