@@ -161,7 +161,22 @@ function handleSpawn(
     write({ type: 'exit', id: msg.id, code });
   });
 
-  write({ type: 'spawned', id: msg.id, pid: proc.pid });
+  // Defer 'spawned' by one event-loop turn. When multiple spawns arrive in the
+  // same readline batch (single pipe chunk), Node.js fires all 'line' events
+  // synchronously — meaning pty.spawn() is called N times without the event
+  // loop running between them. If any child process exits immediately (e.g.
+  // `claude` crash before exec-bash fallback), node-pty's onExit callback has
+  // no chance to fire during the synchronous batch. setImmediate runs AFTER the
+  // current I/O phase, so any pending onExit callbacks fire first. If the
+  // session was already removed from the map by onExit, we skip 'spawned' so
+  // the manager never sees a zombie session.
+  setImmediate(() => {
+    if (!map.has(msg.id)) {
+      // Process died before we declared success — onExit already sent 'exit'.
+      return;
+    }
+    write({ type: 'spawned', id: msg.id, pid: proc.pid });
+  });
 }
 
 function handleWrite(
@@ -191,7 +206,19 @@ function handleResize(
     console.error(`[pty-worker] handleResize: ${msg.id} -> ${msg.cols}x${msg.rows}`);
     proc.resize(msg.cols, msg.rows);
   } catch (err) {
-    write({ type: 'error', id: msg.id, message: `resize failed: ${(err as Error).message}` });
+    const message = (err as Error).message;
+    write({ type: 'error', id: msg.id, message: `resize failed: ${message}` });
+    // PTY fd is dead (EBADF/EIO) — process exited without triggering onExit
+    // due to a node-pty race on rapid concurrent spawns. Emit a synthetic exit
+    // so the manager can mark the session dead and stop forwarding resizes.
+    if (message.includes('EBADF') || message.includes('EIO')) {
+      if (map.get(msg.id) === proc) map.delete(msg.id);
+      // kill() releases node-pty's internal master PTY fd — without this the fd
+      // leaks, and accumulated leaked fds exhaust the process fd table, causing
+      // all subsequent spawns to fail until the worker restarts.
+      try { proc.kill(); } catch { /* best-effort */ }
+      write({ type: 'exit', id: msg.id, code: -1 });
+    }
   }
 }
 
