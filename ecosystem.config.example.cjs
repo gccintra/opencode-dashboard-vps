@@ -11,11 +11,10 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         SERVER_PORT: '3001',
-        DATABASE_PATH: '/var/lib/opencode/opencode.db',  // outside the repo — safe from git pull
         // Hint Bun's GC heap limit to 1 GiB (prevents 100% heap usage with tiny default)
         BUN_JSC_forceRAMSize: '1073741824',
-        // Secrets must come from .env or the shell environment:
-        // AUTH_PASSWORD, JWT_SECRET, JWT_EXPIRY, DEPLOY_TOKEN
+        // DATABASE_PATH and secrets (AUTH_PASSWORD, JWT_SECRET, etc.) come from
+        // the .env file in CWD — Bun loads it automatically on startup.
       },
       // 300 MB RSS threshold — Bun pre-allocates ~130 GB virtual space (V8 JIT),
       // so PM2's VmSize-based monitoring triggers false-positive restarts at lower values.
