@@ -13,10 +13,16 @@ BACKUP_SCRIPT=/usr/local/bin/opencode-backup.sh
 CRON_FILE=/etc/cron.d/opencode-backup
 
 if [ -z "$DB_PATH" ]; then
-  # Derive from DATABASE_PATH in the .env next to this script
-  ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+  # Derive from DATABASE_PATH in the .env at the repo root
+  REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  ENV_FILE="$REPO_ROOT/.env"
   if [ -f "$ENV_FILE" ]; then
-    DB_PATH=$(grep '^DATABASE_PATH=' "$ENV_FILE" | cut -d= -f2-)
+    RAW=$(grep '^DATABASE_PATH=' "$ENV_FILE" | cut -d= -f2-)
+    # Resolve relative paths against the repo root
+    case "$RAW" in
+      /*) DB_PATH="$RAW" ;;
+      *)  DB_PATH="$REPO_ROOT/$RAW" ;;
+    esac
   fi
 fi
 
