@@ -19,6 +19,16 @@ const mockTerminal = {
   unicode: { activeVersion: '' },
   cols: 80,
   rows: 24,
+  // Additional xterm methods used by XTermTerminal
+  parser: { registerOscHandler: vi.fn() },
+  attachCustomKeyEventHandler: vi.fn(),
+  onSelectionChange: vi.fn(() => ({ dispose: vi.fn() })),
+  refresh: vi.fn(),
+  focus: vi.fn(),
+  reset: vi.fn(),
+  selectAll: vi.fn(),
+  getSelection: vi.fn(() => ''),
+  buffer: { active: { viewportY: 0, getLine: vi.fn(() => null) } },
 };
 const mockFit = { fit: vi.fn(), proposeDimensions: vi.fn(), activate: vi.fn(), dispose: vi.fn() };
 
@@ -161,6 +171,8 @@ beforeEach(() => {
   mockTerminal.cols = 80;
   mockTerminal.rows = 24;
   mockTerminal.unicode.activeVersion = '';
+  // Ensure onSelectionChange always returns a fresh disposable after clearAllMocks
+  mockTerminal.onSelectionChange.mockImplementation(() => ({ dispose: vi.fn() }));
   resetOnDataMock();
 });
 
@@ -572,12 +584,12 @@ describe('XTermTerminal', () => {
 
   /* ── Opentui / xterm fix: constructor options ── */
 
-  it('passes lineHeight=1.0 to the Terminal constructor', async () => {
+  it('passes lineHeight=1.2 to the Terminal constructor', async () => {
     render(<XTermTerminal sessionId="s1" />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(lastTerminalOptions).toHaveProperty('lineHeight', 1.0);
+    expect(lastTerminalOptions).toHaveProperty('lineHeight', 1.2);
   });
 
   it('passes scrollback=0 to the Terminal constructor', async () => {
@@ -623,5 +635,79 @@ describe('XTermTerminal', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(mockTerminal.unicode.activeVersion).toBe('11');
+  });
+
+  /* ── Bug 4: Mouse tracking reset on session end ── */
+
+  describe('Bug 4: mouse tracking reset', () => {
+    const MOUSE_RESET = '\x1b[?1000l\x1b[?1002l\x1b[?1003l';
+
+    it('writes mouse reset sequences when PTY status transitions to "finished"', async () => {
+      render(<XTermTerminal sessionId="s1" />);
+      await flushOpen();
+      mockTerminal.write.mockClear();
+
+      await act(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (wsInstances[0] as any).onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ type: 'status', status: 'finished' }),
+          }),
+        );
+      });
+
+      expect(mockTerminal.write).toHaveBeenCalledWith(MOUSE_RESET);
+    });
+
+    it('writes mouse reset sequences when PTY status transitions to "exited"', async () => {
+      render(<XTermTerminal sessionId="s1" />);
+      await flushOpen();
+      mockTerminal.write.mockClear();
+
+      await act(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (wsInstances[0] as any).onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ type: 'status', status: 'exited' }),
+          }),
+        );
+      });
+
+      expect(mockTerminal.write).toHaveBeenCalledWith(MOUSE_RESET);
+    });
+
+    it('writes mouse reset sequences on PTY exit event', async () => {
+      render(<XTermTerminal sessionId="s1" />);
+      await flushOpen();
+      mockTerminal.write.mockClear();
+
+      await act(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (wsInstances[0] as any).onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ type: 'exit', code: 0 }),
+          }),
+        );
+      });
+
+      expect(mockTerminal.write).toHaveBeenCalledWith(MOUSE_RESET);
+    });
+
+    it('does NOT write mouse reset for non-terminal status values', async () => {
+      render(<XTermTerminal sessionId="s1" />);
+      await flushOpen();
+      mockTerminal.write.mockClear();
+
+      await act(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (wsInstances[0] as any).onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ type: 'status', status: 'active' }),
+          }),
+        );
+      });
+
+      expect(mockTerminal.write).not.toHaveBeenCalledWith(MOUSE_RESET);
+    });
   });
 });
