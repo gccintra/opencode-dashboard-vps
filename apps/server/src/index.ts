@@ -4,6 +4,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { validateAuthEnv } from './auth/env';
 import { initDb, getDb, getDbPath, getDbIntegrityResult } from './db/client';
 import { scanResources } from './routes/resources';
+import { healthRoutes } from './routes/health';
 import { tasksRoutes } from './routes/tasks';
 import { githubRoutes, startGithubPolling } from './routes/github';
 import { authRoutes } from './auth';
@@ -22,6 +23,11 @@ function isProduction(): boolean {
   const env = typeof Bun !== 'undefined' ? Bun.env.NODE_ENV : process.env.NODE_ENV;
   return env === 'production';
 }
+
+// Reduce OOM-killer priority so SSH/DBus are killed before this process
+try {
+  Bun.write('/proc/self/oom_score_adj', '-500');
+} catch { /* non-fatal: may lack permission in some environments */ }
 
 // Validate required environment variables before starting
 validateAuthEnv();
@@ -122,6 +128,7 @@ if (webDistExists) {
 }
 
 app
+  .use(healthRoutes)
   .use(authRoutes)
   .use(projectsRoutes)
   .use(harnessesRoutes)
@@ -133,12 +140,6 @@ app
   .use(filesBaseRoutes)
   .use(githubRoutes)
   .use(wsRoutes);
-
-if (isProduction()) {
-  app.get('/api/health', () => ({ status: 'ok', timestamp: new Date().toISOString() }));
-} else {
-  app.get('/', () => ({ status: 'ok', timestamp: new Date().toISOString() }));
-}
 
 // Observability — server metrics + db stats
 app.get('/api/status', () => {
@@ -179,4 +180,6 @@ app.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
   getPtyManager().startStatusMonitor(1000);
   startGithubPolling();
+  // Signal PM2 that the process is ready (required when wait_ready: true)
+  if (typeof process.send === 'function') process.send('ready');
 });

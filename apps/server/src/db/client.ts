@@ -4,6 +4,11 @@ import { join } from 'node:path';
 
 const DEFAULT_DB_PATH = process.env.DATABASE_PATH || './data/opencode.db';
 
+// In Vitest, never allow initDb() to open a real on-disk database unless the
+// caller explicitly passes a path. This prevents test code from accidentally
+// writing to a production database when DATABASE_PATH is set in the environment.
+const RUNNING_IN_VITEST = process.env.VITEST === 'true';
+
 let db: Database | null = null;
 let currentDbPath: string | null = null;
 let lastIntegrityResult: string = 'not_checked';
@@ -62,7 +67,9 @@ export function runSchema(database: Database): void {
  * @returns The opened Database instance.
  */
 export function initDb(dbPath?: string): Database {
-  const path = dbPath || DEFAULT_DB_PATH;
+  // Guard: in Vitest, fall back to :memory: when no explicit path is given.
+  // Prevents tests from writing to the production database if DATABASE_PATH is set.
+  const path = dbPath ?? (RUNNING_IN_VITEST ? ':memory:' : DEFAULT_DB_PATH);
 
   // Close any previously open database before re-initializing
   if (db) {

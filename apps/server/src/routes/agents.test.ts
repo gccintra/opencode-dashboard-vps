@@ -72,7 +72,7 @@ describe('Agents API', () => {
     const { initDb, getDb } = await import('../db/client');
 
     try {
-      initDb();
+      initDb(':memory:');
     } catch {
       /* already */
     }
