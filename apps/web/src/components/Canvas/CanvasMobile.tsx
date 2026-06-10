@@ -259,6 +259,17 @@ function MobileSlot({
             <path d="M7.5 1.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        {/* Ajustar layout */}
+        <button
+          onClick={(e) => { e.stopPropagation(); terminalRef.current?.resize(); }}
+          className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#6af] active:bg-[rgba(100,160,255,0.1)] transition-colors"
+          aria-label="Ajustar layout do terminal"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+        </button>
         {/* Remove */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(slotIndex); }}

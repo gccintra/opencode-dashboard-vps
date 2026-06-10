@@ -97,9 +97,12 @@ function makeContext(opts: { fake?: FakePty; map?: Map<string, IPty> } = {}): Ct
 // ── spawn ──────────────────────────────────────────────────────────
 
 describe('handleMessage — spawn', () => {
-  it('creates a PTY and emits a `spawned` response with the pid', () => {
+  it('creates a PTY and emits a `spawned` response with the pid', async () => {
     const { deps, responses, map, fake } = makeContext();
     handleMessage({ type: 'spawn', id: 's1', cwd: '/srv/p1', command: 'bash' }, deps);
+    // `spawned` is deferred via setImmediate so the event loop can process any
+    // immediate exits before declaring the spawn successful.
+    await new Promise<void>((r) => setImmediate(r));
 
     expect(pty.spawn).toHaveBeenCalledTimes(1);
     expect(responses[0]).toEqual({ type: 'spawned', id: 's1', pid: 12345 });
@@ -237,7 +240,7 @@ describe('handleMessage — resize', () => {
       throw new Error('EINVAL');
     };
     handleMessage({ type: 'resize', id: 's1', cols: 0, rows: 0 }, deps);
-    // responses[0] is the `spawned` response; the error is the second entry.
+    // `spawned` is deferred via setImmediate; only the error is synchronous here.
     expect(responses.at(-1)).toEqual({
       type: 'error',
       id: 's1',

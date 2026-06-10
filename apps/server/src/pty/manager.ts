@@ -435,6 +435,17 @@ export class PtyManager {
   }
 
   private onExit(msg: ExitResponse): void {
+    // If the process exits before 'spawned' arrives (setImmediate race in worker),
+    // reject the pending spawn promise immediately instead of waiting for timeout.
+    const pendingSpawn = this.pendingSpawns.get(msg.id);
+    if (pendingSpawn) {
+      clearTimeout(pendingSpawn.timer);
+      this.pendingSpawns.delete(msg.id);
+      this.sessions.delete(msg.id);
+      pendingSpawn.reject(new Error(`process exited before spawn completed (code=${msg.code})`));
+      return;
+    }
+
     const session = this.sessions.get(msg.id);
     if (!session) return;
     session.status = 'exited';
@@ -466,9 +477,19 @@ export class PtyManager {
         kp.reject(new Error(msg.message));
         return;
       }
-      // Not a tracked request — could be a write/resize on a dead
-      // session. Log so it's not invisible.
+      // Not a tracked request — could be a write/resize on a dead session.
       console.error(`[pty-manager] worker error for ${msg.id}: ${msg.message}`);
+      // Dead PTY fd (EBADF/EIO): node-pty's onExit missed the exit event.
+      // Mark locally so future resize/write calls are dropped by the guard.
+      if (msg.message.includes('EBADF') || msg.message.includes('EIO')) {
+        const session = this.sessions.get(msg.id);
+        if (session && session.status !== 'exited' && session.status !== 'killed') {
+          session.status = 'exited';
+          for (const cb of session.exitCallbacks) {
+            try { cb(-1); } catch { /* best-effort */ }
+          }
+        }
+      }
       return;
     }
     if (this.pendingList) {
