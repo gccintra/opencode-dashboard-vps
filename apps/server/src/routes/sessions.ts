@@ -253,7 +253,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
               sessionId,
               directory,
               'bash',
-              ['-c', 'opencode; exec bash'],
+              ['-c', 'claude; exec zsh 2>/dev/null || exec bash'],
               extraEnv,
               cols,
               rows,
