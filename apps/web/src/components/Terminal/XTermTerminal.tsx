@@ -407,101 +407,59 @@ export function MobileKeyboard({
 /* ── Clipboard helper ── */
 
 /**
- * Copy text to clipboard with a synchronous execCommand fallback.
- * navigator.clipboard.writeText requires a user-gesture context and HTTPS/localhost.
- * execCommand('copy') is synchronous and works even when the async API is restricted.
+ * Copy text to clipboard.
+ *
+ * Strategy: try execCommand synchronously first — it works inside any
+ * user-gesture event handler (keydown, mouseup, touchend, click) without
+ * needing HTTPS or a clipboard-write permission grant. Only fall back to
+ * the async Clipboard API when execCommand is unavailable (modern
+ * browsers in non-user-gesture contexts, e.g. a setTimeout callback).
+ *
+ * Why execCommand first: navigator.clipboard.writeText is async and its
+ * .catch() fires outside the original event handler, breaking the
+ * user-gesture chain and causing the fallback to fail on Safari/Firefox.
  */
 function writeClipboard(text: string, onDone?: () => void): void {
   if (!text) return;
 
-  const fallback = () => {
-    const el = document.createElement('textarea');
-    el.value = text;
-    Object.assign(el.style, {
-      position: 'fixed', left: '-9999px', top: '-9999px',
-      width: '1px', height: '1px', opacity: '0', fontSize: '12pt',
-    });
-    document.body.appendChild(el);
-    el.focus({ preventScroll: true });
-    el.select();
-    try { document.execCommand('copy'); onDone?.(); } catch { /* ignore */ }
-    document.body.removeChild(el);
-  };
+  // Synchronous path — works in every user-gesture context.
+  const el = document.createElement('textarea');
+  el.value = text;
+  Object.assign(el.style, {
+    position: 'fixed', left: '-9999px', top: '-9999px',
+    width: '1px', height: '1px', opacity: '0', fontSize: '12pt',
+  });
+  document.body.appendChild(el);
+  // Capture focus BEFORE stealing it so we can restore it after the copy.
+  // Without this, removing the textarea leaves focus on document.body and
+  // the terminal loses keyboard control (xterm stops receiving keystrokes).
+  const prevActive = document.activeElement as HTMLElement | null;
+  el.focus({ preventScroll: true });
+  el.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* ignore */ }
+  document.body.removeChild(el);
+  // Restore focus to whichever element was active before (usually xterm's
+  // internal textarea) so the terminal keeps capturing keyboard input.
+  if (prevActive && prevActive !== document.body) {
+    prevActive.focus({ preventScroll: true });
+  }
 
+  if (ok) {
+    onDone?.();
+    return;
+  }
+
+  // Async path — fallback for contexts where execCommand is unavailable
+  // (e.g. Firefox with clipboard.execCommand removed, or timer callbacks
+  // where navigator.clipboard is available and the page is trusted).
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(onDone).catch(fallback);
-  } else {
-    fallback();
+    navigator.clipboard.writeText(text).then(onDone).catch(() => {});
   }
 }
 
 /* ── Context menu ── */
 
-function ContextMenu({
-  x,
-  y,
-  sel,
-  onCopy,
-  onPaste,
-  onSelectAll,
-  onClose,
-}: {
-  x: number;
-  y: number;
-  sel: string;        // selection captured at right-click time
-  onCopy: () => void;
-  onPaste: () => void;
-  onSelectAll: () => void;
-  onClose: () => void;
-}) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Clamp menu to viewport edges
-  useEffect(() => {
-    const el = menuRef.current;
-    if (!el) return;
-    const { right, bottom } = el.getBoundingClientRect();
-    if (right > window.innerWidth)  el.style.left = `${window.innerWidth  - el.offsetWidth  - 8}px`;
-    if (bottom > window.innerHeight) el.style.top  = `${window.innerHeight - el.offsetHeight - 8}px`;
-  }, []);
-
-  const hasSel = sel.length > 0;
-
-  const item = (label: string, shortcut: string, onClick: () => void, disabled = false) => (
-    <button
-      className={`flex w-full items-center gap-[8px] px-[14px] py-[7px] text-left font-['Inter'] text-[13px] transition-colors ${
-        disabled
-          ? 'cursor-default text-[#445]'
-          : 'text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.07)] active:bg-[rgba(255,255,255,0.12)]'
-      }`}
-      onMouseDown={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
-    >
-      <span className="flex-1">{label}</span>
-      <span className="font-['JetBrains_Mono'] text-[10px] text-[#445]">{shortcut}</span>
-    </button>
-  );
-
-  return (
-    <>
-      {/* Invisible backdrop — click outside closes menu */}
-      <div
-        className="fixed inset-0 z-[100]"
-        onMouseDown={onClose}
-        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
-      />
-      <div
-        ref={menuRef}
-        className="fixed z-[101] min-w-[180px] overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#1a1a23] py-[4px] shadow-2xl"
-        style={{ left: x, top: y }}
-      >
-        {item('Copiar', 'Ctrl+Shift+C', onCopy, !hasSel)}
-        {item('Colar', 'Ctrl+Shift+V', onPaste)}
-        <div className="mx-[8px] my-[3px] h-px bg-[rgba(255,255,255,0.06)]" />
-        {item('Selecionar tudo', 'Ctrl+A', onSelectAll)}
-      </div>
-    </>
-  );
-}
 
 /* ── Copied toast ── */
 
@@ -540,9 +498,6 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       socket.send(seq);
     }, [socket]);
 
-    // Context menu (right-click) state — sel captured at click time so it
-    // survives the mousedown event that would otherwise clear xterm selection.
-    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; sel: string } | null>(null);
     // Brief "Copiado!" feedback toast
     const [showCopied, setShowCopied] = useState(false);
 
@@ -735,6 +690,24 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // pendingData is already accumulating (subscribed before font load).
           terminal.open(container);
 
+          // ── OSC 52 clipboard handler ──
+          // TUI apps (opencode, Claude Code) use OSC 52 to write to the terminal
+          // clipboard: \x1b]52;c;<base64text>\x07. xterm.js receives the sequence
+          // but does NOT forward it to the browser clipboard by default. We register
+          // a handler here so that any OSC 52 write from the PTY reaches the user's
+          // system clipboard via the Clipboard API.
+          terminal.parser.registerOscHandler(52, (data) => {
+            const semi = data.indexOf(';');
+            if (semi === -1) return false;
+            const b64 = data.slice(semi + 1);
+            if (!b64 || b64 === '?') return false; // ignore read-requests
+            try {
+              const text = atob(b64);
+              if (text) writeClipboard(text, flashCopied);
+            } catch { /* ignore malformed base64 */ }
+            return true; // consumed — don't let xterm process it further
+          });
+
           // ── Copy/paste wiring ──
           //
           // IMPORTANT: With mouse tracking enabled (?1002h), normal drag sends
@@ -779,11 +752,68 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             return true;
           });
 
-          // Right-click context menu — capture selection TEXT here (not just a bool)
-          // because xterm may clear the selection by the time the menu button fires.
+          // Auto-copy on mouseup — fires synchronously inside a user-gesture
+          // event handler, so execCommand/Clipboard API both work on all
+          // browsers (Chrome, Firefox, Safari). xterm finalises its selection
+          // on mouseup, so getSelection() is accurate here. Works for both
+          // normal drag (when mouse tracking is off) and Shift+drag (the only
+          // way to select text while a TUI app has ?1002h mouse tracking on,
+          // e.g. Claude Code / opencode).
+          // isTrusted=false means this mouseup was dispatched synthetically (e.g. by
+          // our touch→mouse translation code). We only auto-copy on real user events;
+          // touch drag selection is handled explicitly in onTouchEnd.
+          const onMouseUp = (e: MouseEvent) => {
+            if (!e.isTrusted) return;
+            const sel = terminal.getSelection();
+            if (sel) writeClipboard(sel, flashCopied);
+          };
+          container.addEventListener('mouseup', onMouseUp);
+
+          // Auto-copy on selection change — covers edge cases where selection
+          // is created without a mouseup (e.g. keyboard-driven selection,
+          // programmatic select). Uses async Clipboard API which works on
+          // Chrome when the page is focused (clipboard-write is auto-granted).
+          let selectionCopyTimer: ReturnType<typeof setTimeout> | null = null;
+          const selectionDisposable = terminal.onSelectionChange(() => {
+            if (selectionCopyTimer !== null) clearTimeout(selectionCopyTimer);
+            selectionCopyTimer = setTimeout(() => {
+              selectionCopyTimer = null;
+              const sel = terminal.getSelection();
+              if (sel) navigator.clipboard?.writeText(sel).catch(() => {});
+            }, 300);
+          });
+
+          // Right-click / long-press handler.
+          // No popup — selection + copy happens automatically:
+          //   • If there's already a selection, copy it immediately.
+          //   • Otherwise dispatch a dblclick to select the word under the pointer,
+          //     wait one frame for xterm to finalise it, then copy.
+          //   • If the finger is still down (touchActive), enter drag-to-extend mode
+          //     so subsequent touchmove events extend the selection.
+          let touchActive = false;
           const onContextMenu = (e: MouseEvent) => {
             e.preventDefault();
-            setCtxMenu({ x: e.clientX, y: e.clientY, sel: terminal.getSelection() });
+            if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+            const existing = terminal.getSelection();
+            if (existing && !touchActive) {
+              writeClipboard(existing, flashCopied);
+              return;
+            }
+
+            // Haptic feedback so the user knows the long-press was recognised.
+            if (touchActive && 'vibrate' in navigator) { try { navigator.vibrate(50); } catch { /* ignore */ } }
+
+            // selectWordAtPoint runs synchronously inside a contextmenu event
+            // (user-gesture context), so writeClipboard via execCommand works.
+            const sel = selectWordAtPoint(e.clientX, e.clientY);
+            if (touchActive) {
+              touchMoved = true;
+              isSelectionDrag = true;
+              if (sel) writeClipboard(sel, flashCopied);
+            } else if (sel) {
+              writeClipboard(sel, flashCopied);
+            }
           };
           container.addEventListener('contextmenu', onContextMenu);
 
@@ -814,11 +844,12 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             setTimeout(applyInputModeNone, 50);
           }
 
-          // ── Step 4b: Fit BEFORE draining buffered data ──
-          // The WebSocket has been receiving PTY output since before the font loaded;
-          // all of it is in pendingData. Writing at xterm's default size (80×24) and
-          // fitting afterwards corrupts the TUI layout and breaks mouse-click coords.
-          // Fitting first ensures every byte is written at the correct cols×rows.
+          // ── Step 4b: Fit + deferred buffer drain ──
+          // Set refs now so external callers (resize(), focus()) work immediately
+          // even though the buffer hasn't been drained yet.
+          terminalRef.current = terminal;
+          fitAddonRef.current = fitAddon;
+
           const notifyResizeIfChanged = () => {
             // Skip when container is hidden — fitAddon.fit() would read clientWidth=0
             // and resize the PTY to 0 cols, corrupting the TUI.
@@ -836,41 +867,43 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             console.log(`[XTermTerminal] resize: ${terminal.cols}x${terminal.rows}`);
             onResizeRef.current?.(terminal.cols, terminal.rows);
           };
+
+          // Buffer flush: drains pendingData AFTER a successful fit so the TUI
+          // is rendered at the correct cols×rows, not at xterm's default 80×24.
+          // Idempotent — safe to call multiple times.
+          let bufferFlushed = false;
+          const flushBuffer = () => {
+            if (bufferFlushed) return;
+            bufferFlushed = true;
+            terminalReady = true;
+            for (const chunk of pendingData) {
+              terminal.write(chunk);
+            }
+            // Give the terminal focus after the content is rendered.
+            terminal.focus();
+          };
+
+          // Immediate fit attempt. If the container is already visible, drain
+          // the buffer right away at the correct size.
           notifyResizeIfChanged();
-
-          // Drain buffered data at the correct terminal size.
-          // Set terminalRef.current BEFORE marking terminalReady so that
-          // any data arriving concurrently (between the two lines) is
-          // written to the terminal rather than dropped.
-          terminalRef.current = terminal;
-          fitAddonRef.current = fitAddon;
-          terminalReady = true;
-          for (const chunk of pendingData) {
-            terminal.write(chunk);
+          if (container.clientWidth > 0) {
+            flushBuffer();
           }
-
-          // Give the terminal keyboard + mouse focus so that xterm captures
-          // pointer events (clicks, scroll, Option+key) and key events
-          // immediately, without requiring an explicit click on the canvas first.
-          terminal.focus();
+          // If container is hidden (clientWidth=0), flushBuffer() is deferred
+          // to the first poll step that finds a non-zero container width.
 
           // ── Mouse tracking sync ──
-          // Button events only (?1002h). Hover tracking (?1003h) is
-          // intentionally disabled to avoid mouse-move escape spam in
-          // terminal output when not using a TUI app.
-          // • ?1002h — button + drag events
-          // • ?1006h — SGR extended coordinate encoding
-          const syncMouseTracking = () => {
-            try {
-              // ?1002h — button events only (no mouse-move spam)
-              // ?1006h — SGR extended coordinate encoding
-              terminal.write('\x1b[?1002h\x1b[?1006h');
-            } catch {
-              /* disposed */
-            }
-          };
+          // Enable button+drag tracking (?1002h) + SGR coords (?1006h) so that
+          // TUI apps (opencode, Claude Code) receive mouse clicks and drags.
+          // TUI apps send these sequences themselves at startup; we also send them
+          // here to cover reconnects where the PTY's startup output is no longer
+          // in the circular buffer.
+          // With ?1002h active, normal drag sends events to the PTY — to select
+          // text the user must hold Shift while dragging (Shift bypasses tracking).
+          // Copying is handled via OSC 52 (TUI auto-copy), Shift+drag, Ctrl+C,
+          // or the right-click context menu.
           if (socket.status === 'connected') {
-            syncMouseTracking();
+            try { terminal.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
           }
 
           // ── Touch event support (mobile) ──
@@ -878,46 +911,123 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           //   • single tap   → mousedown + mouseup on the xterm screen element
           //   • swipe up/dn  → wheel events so xterm/PTY handle scrolling
           const SWIPE_THRESHOLD = 10;
-          const LONG_PRESS_MS = 600;
+          // Long-press is cancelled only if the finger moves more than this many pixels.
+          // Using the same threshold as SWIPE_THRESHOLD so a deliberate hold isn't
+          // disrupted by the micro-jitter that always occurs on touch screens.
+          const LONG_PRESS_CANCEL_THRESHOLD = 10;
           let touchStartX = 0;
           let touchStartY = 0;
           let lastTouchY = 0;
           let touchMoved = false;
+          let isSelectionDrag = false; // true while extending selection by dragging
           let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+
+          // Converts client (pixel) coordinates to terminal cell {col, row}.
+          // Used by both word selection and drag extension.
+          const clientToCell = (clientX: number, clientY: number): { col: number; row: number } => {
+            let cellW = 0, cellH = 0;
+            try {
+              const dims = (terminal as any)._core?._renderService?.dimensions?.css?.cell;
+              if (dims?.width > 0) { cellW = dims.width; cellH = dims.height; }
+            } catch { /* ignore */ }
+            if (!cellW) {
+              cellW = fontSize * 0.6;
+              cellH = fontSize * (terminal.options.lineHeight ?? 1.0);
+            }
+            const rect = container.getBoundingClientRect();
+            return {
+              col: Math.max(0, Math.floor((clientX - rect.left) / cellW)),
+              row: Math.max(0, Math.floor((clientY - rect.top) / cellH)) + terminal.buffer.active.viewportY,
+            };
+          };
+
+          // Anchor of the initial long-press word selection.
+          // Used by extendSelectionToPoint to know which direction to grow.
+          let dragAnchorStart: { col: number; row: number } | null = null;
+          let dragAnchorEnd: { col: number; row: number } | null = null;
+
+          // Select the word at the given client coordinates using xterm's public API.
+          // Synthetic mouse events (dblclick/mousedown) are unreliable because ?1002h
+          // tracking forwards them to the PTY. Instead: pixel → cell, walk buffer for
+          // word boundaries, call terminal.select() — tracking-agnostic.
+          const selectWordAtPoint = (clientX: number, clientY: number): string => {
+            const { col, row } = clientToCell(clientX, clientY);
+            const line = terminal.buffer.active.getLine(row);
+            if (!line) return '';
+
+            const isWordChar = (ch: string) => !!ch && !/[\s\x00]/.test(ch);
+            let sc = col;
+            while (sc > 0 && isWordChar(line.getCell(sc - 1)?.getChars() ?? '')) sc--;
+            let ec = col;
+            while (ec < line.length && isWordChar(line.getCell(ec)?.getChars() ?? '')) ec++;
+
+            if (ec <= sc) return '';
+            dragAnchorStart = { col: sc, row };
+            dragAnchorEnd = { col: ec - 1, row }; // inclusive end
+            terminal.select(sc, row, ec - sc);
+            return terminal.getSelection();
+          };
+
+          // Extend the selection from the anchor word to the current finger position.
+          // Called on every touchmove while isSelectionDrag is true.
+          const extendSelectionToPoint = (clientX: number, clientY: number) => {
+            if (!dragAnchorStart) return;
+            const { col, row } = clientToCell(clientX, clientY);
+            const aStart = dragAnchorStart;
+            const aEnd = dragAnchorEnd ?? aStart;
+            const afterAnchor = row > aEnd.row || (row === aEnd.row && col >= aEnd.col);
+            if (afterAnchor) {
+              // Dragging forward: anchor start → current
+              const len = (row - aStart.row) * terminal.cols + (col - aStart.col) + 1;
+              terminal.select(aStart.col, aStart.row, Math.max(1, len));
+            } else {
+              // Dragging backward: current → anchor end
+              const len = (aEnd.row - row) * terminal.cols + (aEnd.col - col) + 1;
+              terminal.select(col, row, Math.max(1, len));
+            }
+          };
 
           const onTouchStart = (e: TouchEvent) => {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
             lastTouchY = e.touches[0].clientY;
             touchMoved = false;
+            isSelectionDrag = false;
+            touchActive = true;
+            dragAnchorStart = null;
+            dragAnchorEnd = null;
 
-            // Long-press → simulate dblclick at the touch position for word
-            // selection (same as desktop double-click). touchMoved=true prevents
-            // touchend from dispatching a tap that would clear the selection.
+            // Fallback long-press timer for browsers that don't fire `contextmenu`
+            // on long-press (some WebViews / iOS configurations). The primary path
+            // is onContextMenu which fires first on most mobile browsers (~500 ms).
+            // NOTE: setTimeout callbacks are not a user-gesture context, so we
+            // can only select the word here; clipboard write requires the Clipboard
+            // API with clipboard-write permission (auto-granted on trusted HTTPS pages).
             longPressTimer = setTimeout(() => {
               longPressTimer = null;
+              if (isSelectionDrag) return; // contextmenu already handled this
               touchMoved = true;
-              const screen = container.querySelector('.xterm-screen') ?? container;
-              // A dblclick event is what xterm.js uses for word selection.
-              screen.dispatchEvent(new MouseEvent('dblclick', {
-                clientX: touchStartX,
-                clientY: touchStartY,
-                bubbles: true,
-                cancelable: true,
-                button: 0,
-                detail: 2,
-                view: window,
-              }));
-              // Give xterm one frame to update the selection, then copy.
-              requestAnimationFrame(() => {
-                const sel = terminal.getSelection();
-                if (sel) writeClipboard(sel, flashCopied);
-              });
-            }, LONG_PRESS_MS);
+              isSelectionDrag = true;
+              // Haptic feedback so the user knows the long-press was recognised.
+              if ('vibrate' in navigator) { try { navigator.vibrate(50); } catch { /* ignore */ } }
+              const sel = selectWordAtPoint(touchStartX, touchStartY);
+              if (sel) navigator.clipboard?.writeText(sel).then(flashCopied).catch(() => {});
+            }, 500);
           };
 
           const onTouchMove = (e: TouchEvent) => {
-            if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+            // Cancel the long-press timer only when the finger has moved beyond the
+            // threshold. On touch screens, micro-jitter of 1–3 px is normal during a
+            // hold gesture, so cancelling on any movement would prevent selection.
+            if (longPressTimer !== null) {
+              const touch0 = e.touches[0];
+              const dx = touch0.clientX - touchStartX;
+              const dy = touch0.clientY - touchStartY;
+              if (dx * dx + dy * dy > LONG_PRESS_CANCEL_THRESHOLD * LONG_PRESS_CANCEL_THRESHOLD) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+              }
+            }
             e.preventDefault();
             const touch = e.touches[0];
             const deltaY = lastTouchY - touch.clientY;
@@ -925,6 +1035,14 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             if (Math.abs(touch.clientY - touchStartY) > SWIPE_THRESHOLD) {
               touchMoved = true;
             }
+
+            if (isSelectionDrag) {
+              // Extend selection via terminal.select() — no synthetic mouse events.
+              // Synthetic shift+mousedown events are still intercepted by ?1002h tracking.
+              extendSelectionToPoint(touch.clientX, touch.clientY);
+              return; // don't scroll while in selection-drag mode
+            }
+
             const screen = container.querySelector('.xterm-screen') ?? container;
             // clientX/Y are required so xterm can compute the correct terminal
             // cell coordinates and emit the right escape sequence to the PTY.
@@ -943,10 +1061,20 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
           const onTouchEnd = (e: TouchEvent) => {
             if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+            touchActive = false;
             // Prevent the browser from synthesising native mousedown/mouseup/click
             // events for this touch — xterm's click handler would otherwise trigger
             // word-selection. We dispatch our own controlled events instead.
             e.preventDefault();
+
+            if (isSelectionDrag) {
+              // Drag-to-select ended — copy whatever is now selected.
+              isSelectionDrag = false;
+              const sel = terminal.getSelection();
+              if (sel) writeClipboard(sel, flashCopied);
+              return;
+            }
+
             if (touchMoved) return;
             const touch = e.changedTouches[0];
             const screen = container.querySelector('.xterm-screen') ?? container;
@@ -971,8 +1099,34 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           container.addEventListener('touchmove', onTouchMove, { passive: false });
           container.addEventListener('touchend', onTouchEnd, { passive: false });
 
-          const t1 = setTimeout(notifyResizeIfChanged, 300);
-          const t2 = setTimeout(notifyResizeIfChanged, 1000);
+          // Polling fit: retries every 100 ms until the container has real
+          // dimensions (max 50 attempts = 5 s).  Handles terminals that mount
+          // while their parent is display:none (e.g. collapsed CanvasMobile
+          // slot, canvas panel not yet shown) where a one-shot timeout would
+          // read clientWidth=0 and silently do nothing.
+          let pollAttempt = 0;
+          let pollTimerId: ReturnType<typeof setTimeout> | null = null;
+
+          const doPollStep = () => {
+            pollTimerId = null;
+            if (cancelled) return;
+            notifyResizeIfChanged();
+            if (container.clientWidth > 0) {
+              // Container is now visible — drain the buffer at the correct size.
+              flushBuffer();
+            } else if (pollAttempt++ < 50) {
+              // Still hidden — keep retrying.
+              pollTimerId = setTimeout(doPollStep, 100);
+            }
+          };
+
+          const startPollFit = () => {
+            if (pollTimerId !== null) { clearTimeout(pollTimerId); pollTimerId = null; }
+            pollAttempt = 0;
+            pollTimerId = setTimeout(doPollStep, 100);
+          };
+
+          startPollFit();
 
           // ── Step 5: Wire socket status + terminal input ──
           // Data subscription was already wired before font loading.
@@ -1018,16 +1172,15 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
           const scheduleVisibilityFit = () => {
             // Debounce so rapid attribute flips (e.g. React batched updates) collapse
-            // into a single fit+refresh. 300ms also covers CSS transitions on parent
-            // containers (e.g. MobileSlot collapses with a 200ms transition) — fitting
-            // at 50ms would read intermediate dimensions and send wrong cols/rows to the PTY.
+            // into one poll cycle start. 300ms covers CSS transitions on parent
+            // containers (e.g. MobileSlot collapses with a 200ms transition).
             if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
             visibilityTimerId = setTimeout(() => {
               visibilityTimerId = null;
-              // Always run fit+refresh when triggered by a visibility event,
-              // regardless of whether dims appear to have changed — xterm's
-              // WebGL renderer can stay visually stale even with stable dims.
-              notifyResizeIfChanged();
+              // Restart the polling cycle so we keep retrying until the
+              // container becomes visible (handles display:none toggling on any
+              // ancestor, and CSS transitions that briefly give wrong dims).
+              startPollFit();
             }, 300);
           };
 
@@ -1060,15 +1213,17 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // ── Cleanup ──
           // unsubscribeData is handled at effect level (registered before font load).
           scheduledCleanup = () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
+            if (pollTimerId !== null) clearTimeout(pollTimerId);
             if (longPressTimer !== null) clearTimeout(longPressTimer);
             if (resizeTimerId !== null) clearTimeout(resizeTimerId);
             if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
+            if (selectionCopyTimer !== null) clearTimeout(selectionCopyTimer);
+            selectionDisposable.dispose();
             resizeObserver.disconnect();
             intersectionObserver.disconnect();
             mutationObserver.disconnect();
             window.visualViewport?.removeEventListener('resize', debouncedResize);
+            container.removeEventListener('mouseup', onMouseUp);
             container.removeEventListener('contextmenu', onContextMenu);
             document.removeEventListener('copy', onNativeCopy);
             container.removeEventListener('touchstart', onTouchStart);
@@ -1175,31 +1330,6 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
         {showCopied && <CopiedToast />}
 
         {/* Right-click context menu */}
-        {ctxMenu && (
-          <ContextMenu
-            x={ctxMenu.x}
-            y={ctxMenu.y}
-            sel={ctxMenu.sel}
-            onClose={() => setCtxMenu(null)}
-            onCopy={() => {
-              // Use selection captured at right-click time — it may have been
-              // cleared by xterm before this button's mousedown fires.
-              writeClipboard(ctxMenu.sel, flashCopied);
-              setCtxMenu(null);
-            }}
-            onPaste={() => {
-              navigator.clipboard.readText().then((text) => {
-                if (text) socket.send(text);
-              }).catch(() => {});
-              setCtxMenu(null);
-            }}
-            onSelectAll={() => {
-              terminalRef.current?.selectAll();
-              setCtxMenu(null);
-            }}
-          />
-        )}
-
         {/* Mobile-only floating keyboard button — suppressed when parent provides its own */}
         {!hideMobileFAB && (
           <MobileKeyboard

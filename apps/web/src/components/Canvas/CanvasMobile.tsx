@@ -481,19 +481,24 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
   }, [slots, focusedSlot]);
 
   // When focus changes, the flex layout shifts (slots collapse/expand via a
-  // 200ms CSS transition). We must wait for the transition to settle before
-  // calling fit() — otherwise we measure intermediate dimensions and send
-  // the wrong cols/rows to the PTY. 300ms = 200ms transition + 100ms buffer.
-  // A second pass at 600ms catches any residual layout settling.
+  // 200ms CSS transition). Poll every 100 ms starting at 300 ms (after the
+  // transition settles) until all terminal refs have responded, for up to 2 s.
+  // Each terminal's own internal polling also runs concurrently — this is a
+  // supplementary signal from the parent that a layout change happened.
   useEffect(() => {
-    const doResize = () => {
+    let attempt = 0;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    const tryResize = () => {
+      timerId = null;
       for (const ref of terminalRefs.current) {
         ref.current?.resize();
       }
+      if (attempt++ < 20) {
+        timerId = setTimeout(tryResize, 100);
+      }
     };
-    const t1 = setTimeout(doResize, 300);
-    const t2 = setTimeout(doResize, 600);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    timerId = setTimeout(tryResize, 300);
+    return () => { if (timerId !== null) clearTimeout(timerId); };
   }, [focusedSlot]);
 
   const handleFocus = useCallback((i: number) => setFocusedSlot((prev) => prev === i ? null : i), []);
