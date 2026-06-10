@@ -31,6 +31,10 @@ logs/
 .DS_Store
 Thumbs.db
 
+# PM2 ecosystem config — contains deployment-specific paths and secrets
+# Copy ecosystem.config.example.cjs to create your own.
+ecosystem.config.cjs
+
 # OpenCode internal
 .opencode
 
