@@ -28,8 +28,20 @@
  */
 
 import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 import type { WorkerTransport } from './transport';
 import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+
+/** Resolve Node 18 binary. Prefers PTY_NODE_BIN env var, then tries common paths. */
+function resolveNodeBin(): string {
+  if (process.env.PTY_NODE_BIN) return process.env.PTY_NODE_BIN;
+  // Ubuntu/Debian: nodejs = system Node (v18), node may be nvm/n override.
+  // Check both so the right v18 ABI binary is used regardless of distro.
+  for (const p of ['/usr/bin/nodejs', '/usr/bin/node', '/usr/local/bin/node']) {
+    if (existsSync(p)) return p;
+  }
+  return 'node'; // last resort: PATH lookup
+}
 
 const SHUTDOWN_GRACE_MS = 2000;
 
@@ -46,17 +58,17 @@ export class BunWorkerTransport implements WorkerTransport {
   start(): void {
     if (this.started) return;
 
-    // Resolve the pty-worker from the project root (process.cwd()), which PM2
-    // sets via the ecosystem cwd field. This works in both dev (--watch, source
-    // files) and prod (bundled dist) modes, unlike import.meta.url-relative
-    // paths that differ between the two layouts.
-    const workerDir = resolve(process.cwd(), 'apps/pty-worker');
+    // Resolve the pty-worker relative to the project root. PM2 sets cwd to
+    // the project root, but dev runs from apps/server/ — fall back two levels.
+    let workerDir = resolve(process.cwd(), 'apps/pty-worker');
+    if (!existsSync(workerDir)) {
+      workerDir = resolve(process.cwd(), '../../apps/pty-worker');
+    }
     const workerSrc = resolve(workerDir, 'src/index.ts');
     const tsxBin = resolve(workerDir, 'node_modules/.bin/tsx');
 
     // Node 18 LTS is REQUIRED for node-pty ABI compatibility (§3, §10).
-    // /usr/bin/nodejs is v18.19.1 on Ubuntu 24.04 (apt package).
-    const nodeBin = process.env.PTY_NODE_BIN || '/usr/bin/nodejs';
+    const nodeBin = resolveNodeBin();
 
     this.proc = Bun.spawn([nodeBin, tsxBin, workerSrc], {
       cwd: workerDir,
@@ -74,13 +86,20 @@ export class BunWorkerTransport implements WorkerTransport {
     // Stream worker stdout → JSON line parser.
     void this.readStdoutLoop();
 
-    // Surface worker exit to the manager.
+    // Surface worker exit to the manager. Reset state so start() can
+    // respawn the worker when ensureStarted() is called on next request.
     void this.proc.exited
       .then((code) => {
+        this.proc = null;
+        this.started = false;
+        this.buf = '';
         if (this.exitCb) this.exitCb(code);
       })
       .catch((err) => {
         console.error('[pty-manager] worker exit promise rejected:', err);
+        this.proc = null;
+        this.started = false;
+        this.buf = '';
         if (this.exitCb) this.exitCb(null);
       });
   }

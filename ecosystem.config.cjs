@@ -9,7 +9,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         SERVER_PORT: '3001',
-        DATABASE_PATH: './data/opencode.db',
+        DATABASE_PATH: '/root/production/opencode-dashboard-vps/data/opencode.db',
         // Secrets: AUTH_PASSWORD + JWT_SECRET must be in the shell
         // environment. Source your .env or export them before pm2 start.
       },
