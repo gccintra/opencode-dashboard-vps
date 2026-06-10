@@ -498,6 +498,7 @@ function TerminalHeader({
   canvasLayout,
   onLayoutChange,
   onReconnect,
+  onRefresh,
   onKill,
   killing,
   sidebarOpen,
@@ -513,6 +514,7 @@ function TerminalHeader({
   canvasLayout: Pick<CanvasLayout, 'cols' | 'rows'>;
   onLayoutChange: (dims: { cols: number; rows: number }) => void;
   onReconnect: () => void;
+  onRefresh: () => void;
   onKill: () => void;
   killing: boolean;
   sidebarOpen: boolean;
@@ -654,6 +656,17 @@ function TerminalHeader({
                 />
               </svg>
               <span className="hidden sm:inline">Reconnect</span>
+            </button>
+            <button
+              onClick={onRefresh}
+              title="Fit/Refresh terminal layout"
+              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <span className="hidden sm:inline">Fit</span>
             </button>
             <button
               onClick={onKill}
@@ -1171,6 +1184,11 @@ export default function ProjectDetailPage() {
     terminalRef.current?.reconnect();
   }, []);
 
+  /* ── Fit/refresh terminal layout ── */
+  const handleRefresh = useCallback(() => {
+    terminalRef.current?.resize();
+  }, []);
+
   /* ── Resize on tab focus ── */
   useEffect(() => {
     if (showCanvas || activeTab !== 'terminal') return;
@@ -1325,6 +1343,7 @@ export default function ProjectDetailPage() {
             canvasLayout={canvasLayout}
             onLayoutChange={setCanvasLayout}
             onReconnect={handleReconnect}
+            onRefresh={handleRefresh}
             onKill={handleKillSession}
             killing={killing}
             sidebarOpen={sidebarOpen}

@@ -63,6 +63,16 @@
   overflow-y: hidden !important;
 }
 
+/* ── xterm bottom-gap fix ──
+   xterm canvas height = rows × cellHeight which is always ≤ container height.
+   The remainder pixels below the last row show the viewport background.
+   Setting overflow:hidden on xterm-screen clips the canvas to its own height
+   so the viewport background (set by xterm's JS to theme.background) fills
+   the gap seamlessly — no visible dark bar at the bottom. */
+.xterm .xterm-screen {
+  overflow: hidden;
+}
+
 /* ── Font metric isolation for xterm.js canvas ──
    xterm.js calculates cell dimensions from font metrics. Any external
    line-height, letter-spacing, or box-sizing on xterm elements causes

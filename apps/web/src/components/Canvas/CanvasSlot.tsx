@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { XTermTerminal } from '../Terminal';
+import type { XTermTerminalHandle } from '../Terminal';
 import { apiFetch } from '../../lib/api';
 import type { ITheme } from '@xterm/xterm';
 
@@ -30,11 +31,15 @@ function SlotHeader({
   sessionStatus,
   onRemove,
   onRename,
+  onReconnect,
+  onFit,
 }: {
   sessionName: string;
   sessionStatus: string | null;
   onRemove: () => void;
   onRename?: (newName: string) => Promise<void>;
+  onReconnect?: () => void;
+  onFit?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -89,17 +94,45 @@ function SlotHeader({
           />
         )}
       </div>
-      <button
-        onClick={onRemove}
-        className="shrink-0 flex items-center justify-center size-[18px] rounded-[3px] text-[#556] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)] transition-colors"
-        title="Remover do canvas"
-        aria-label="Remover sessão do slot"
-        data-testid="remove-slot-btn"
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-        </svg>
-      </button>
+      <div className="flex items-center gap-[2px] shrink-0">
+        {onReconnect && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReconnect(); }}
+            className="flex items-center justify-center size-[18px] rounded-[3px] text-[#2d8] hover:bg-[rgba(34,221,136,0.1)] transition-colors"
+            title="Reconectar terminal"
+            aria-label="Reconectar terminal"
+          >
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <path d="M7.5 1.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+        {onFit && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onFit(); }}
+            className="flex items-center justify-center size-[18px] rounded-[3px] text-[#6af] hover:bg-[rgba(100,160,255,0.1)] transition-colors"
+            title="Ajustar layout do terminal"
+            aria-label="Ajustar layout do terminal"
+          >
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
+        <button
+          onClick={onRemove}
+          className="flex items-center justify-center size-[18px] rounded-[3px] text-[#556] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)] transition-colors"
+          title="Remover do canvas"
+          aria-label="Remover sessão do slot"
+          data-testid="remove-slot-btn"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
@@ -177,6 +210,7 @@ export function CanvasSlot({
   onRename,
   theme,
 }: CanvasSlotProps) {
+  const terminalRef = useRef<XTermTerminalHandle | null>(null);
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDimsRef = useRef<{ cols: number; rows: number } | null>(null);
 
@@ -240,9 +274,12 @@ export function CanvasSlot({
             sessionStatus={sessionStatus}
             onRemove={handleRemove}
             onRename={onRename}
+            onReconnect={() => terminalRef.current?.reconnect()}
+            onFit={() => terminalRef.current?.resize()}
           />
           <div className="relative flex-1 min-h-0 overflow-hidden">
             <XTermTerminal
+              ref={terminalRef}
               sessionId={sessionId}
               onResize={handleResize}
               fontSize={fontSize}

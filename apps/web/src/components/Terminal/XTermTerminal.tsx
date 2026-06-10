@@ -868,6 +868,14 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             for (const chunk of pendingData) {
               terminal.write(chunk);
             }
+            // Force a repaint after draining buffered data. xterm's internal
+            // rAF-based render can miss the first paint when the WebGL renderer
+            // is initialising its shaders (cold page load). An explicit refresh()
+            // here guarantees the content appears without waiting for the next
+            // external trigger (e.g. a keypress or resize).
+            if (pendingData.length > 0) {
+              try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
+            }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
             // Defer the overlay removal to the next animation frame.
@@ -1285,7 +1293,25 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       if (socket.status !== 'connected') return;
       const fit = fitAddonRef.current;
       const term = terminalRef.current;
-      if (!fit || !term) return;
+      if (!fit || !term) {
+        // Socket connected before the terminal finished initialising (font load
+        // still in flight). Schedule retries so the fit+refresh+mouse-tracking
+        // still runs once the terminal is ready. The retry delays (500 ms,
+        // 1500 ms, 3000 ms) bracket the 3-second font-load timeout.
+        const doSync = () => {
+          const f = fitAddonRef.current;
+          const t = terminalRef.current;
+          if (!f || !t) return;
+          try { f.fit(); } catch { return; }
+          try { t.refresh(0, t.rows - 1); } catch { /* disposed */ }
+          try { t.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
+          lastSentDims.current = { cols: t.cols, rows: t.rows };
+          console.log(`[XTermTerminal] WS connect retry sync: ${t.cols}x${t.rows}`);
+          onResizeRef.current?.(t.cols, t.rows);
+        };
+        const timers = [500, 1500, 3000].map((d) => setTimeout(doSync, d));
+        return () => timers.forEach(clearTimeout);
+      }
       const t = setTimeout(() => {
         try {
           fit.fit();
@@ -1333,6 +1359,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           ref={containerRef}
           data-testid="xterm-container"
           className="absolute inset-0 [contain:strict]"
+          style={{ backgroundColor: theme?.background ?? TERMINAL_THEME.background }}
         />
 
         {/* "Copiado!" toast — shown after any copy action */}
