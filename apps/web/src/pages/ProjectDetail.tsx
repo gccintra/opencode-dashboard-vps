@@ -907,6 +907,7 @@ export default function ProjectDetailPage() {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false); // synchronous guard against double-create
   const [killing, setKilling] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
 
@@ -1064,14 +1065,19 @@ export default function ProjectDetailPage() {
 
   /* ── Create session ── */
   const handleCreateSession = useCallback(async () => {
-    if (!projectId || creating) return;
+    // Use a ref (not state) as the guard — refs update synchronously, preventing
+    // double-create from rapid double-clicks or React StrictMode remounts.
+    if (!projectId || creatingRef.current) return;
+    creatingRef.current = true;
     setCreating(true);
+    if (import.meta.env.DEV) console.log('[Session] creating...');
     try {
       const { cols, rows } = estimateTerminalDims(fontSizeRef.current, isMobile);
       const created = await apiFetch<Session>(`/api/projects/${projectId}/sessions`, {
         method: 'POST',
         body: JSON.stringify({ cols, rows }),
       });
+      if (import.meta.env.DEV) console.log('[Session] created:', created.sessionId);
       setSessions((prev) => [...prev, created].sort((a, b) => a.createdAt - b.createdAt));
       setActiveSessionId(created.sessionId);
       setShowCanvas(false);
@@ -1084,9 +1090,10 @@ export default function ProjectDetailPage() {
       console.error('[ProjectDetail] create session failed', msg);
       setSessionsError(msg);
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
-  }, [projectId, creating, fetchSessions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId, fetchSessions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Kill session ── */
   const handleKillSession = useCallback(async () => {

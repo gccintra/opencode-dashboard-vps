@@ -7,7 +7,7 @@
  *      character dimensions with a fallback font, which causes misaligned
  *      columns/rows and broken opencode TUI layout.
  *
- *   2. Create Terminal with options: block cursor, lineHeight 1.0,
+ *   2. Create Terminal with options: block cursor, lineHeight 1.2,
  *      scrollback disabled (managed by @opentui), no EOL conversion.
  *
  *   3. Load addons: FitAddon, Unicode11Addon (activeVersion='11'),
@@ -406,56 +406,45 @@ export function MobileKeyboard({
 
 /* ── Clipboard helper ── */
 
-/**
- * Copy text to clipboard.
- *
- * Strategy: try execCommand synchronously first — it works inside any
- * user-gesture event handler (keydown, mouseup, touchend, click) without
- * needing HTTPS or a clipboard-write permission grant. Only fall back to
- * the async Clipboard API when execCommand is unavailable (modern
- * browsers in non-user-gesture contexts, e.g. a setTimeout callback).
- *
- * Why execCommand first: navigator.clipboard.writeText is async and its
- * .catch() fires outside the original event handler, breaking the
- * user-gesture chain and causing the fallback to fail on Safari/Firefox.
- */
-function writeClipboard(text: string, onDone?: () => void): void {
-  if (!text) return;
-
-  // Synchronous path — works in every user-gesture context.
+function _execCommandCopy(text: string, onDone?: () => void): void {
   const el = document.createElement('textarea');
-  el.value = text;
+  // normalize('NFC') ensures canonical Unicode form (avoids corruption on some platforms)
+  el.value = String(text).normalize('NFC');
   Object.assign(el.style, {
     position: 'fixed', left: '-9999px', top: '-9999px',
     width: '1px', height: '1px', opacity: '0', fontSize: '12pt',
   });
   document.body.appendChild(el);
-  // Capture focus BEFORE stealing it so we can restore it after the copy.
-  // Without this, removing the textarea leaves focus on document.body and
-  // the terminal loses keyboard control (xterm stops receiving keystrokes).
+  // Restore focus after copy so xterm keeps receiving keystrokes.
   const prevActive = document.activeElement as HTMLElement | null;
   el.focus({ preventScroll: true });
   el.select();
   let ok = false;
   try { ok = document.execCommand('copy'); } catch { /* ignore */ }
   document.body.removeChild(el);
-  // Restore focus to whichever element was active before (usually xterm's
-  // internal textarea) so the terminal keeps capturing keyboard input.
   if (prevActive && prevActive !== document.body) {
     prevActive.focus({ preventScroll: true });
   }
+  if (ok) onDone?.();
+}
 
-  if (ok) {
-    onDone?.();
+/**
+ * Copy text to clipboard.
+ *
+ * Primary: navigator.clipboard.writeText — native Unicode support, avoids
+ * known execCommand issues with non-ASCII on iOS Safari (accented chars,
+ * Unicode block elements). Falls back to execCommand if the Clipboard API
+ * is unavailable or fails (document not focused, permission denied).
+ */
+function writeClipboard(text: string, onDone?: () => void): void {
+  if (!text) return;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(onDone).catch(() => {
+      _execCommandCopy(text, onDone);
+    });
     return;
   }
-
-  // Async path — fallback for contexts where execCommand is unavailable
-  // (e.g. Firefox with clipboard.execCommand removed, or timer callbacks
-  // where navigator.clipboard is available and the page is trusted).
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(onDone).catch(() => {});
-  }
+  _execCommandCopy(text, onDone);
 }
 
 /* ── Context menu ── */
@@ -506,14 +495,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       setTimeout(() => setShowCopied(false), 1500);
     }, []);
 
-    // Loading overlay: shown while the socket hasn't connected yet.
-    // Reset to true on every session change so switching sessions always
-    // shows the spinner instead of a flash of broken/stale terminal content.
-    const [showLoader, setShowLoader] = useState(true);
-    useEffect(() => { setShowLoader(true); }, [sessionId]);
-    useEffect(() => {
-      if (socket.status === 'connected') setShowLoader(false);
-    }, [socket.status]);
+    // Loading overlay: shown until xterm.js is fully initialised (font loaded +
+    // terminal.open() + flushBuffer() complete). Reset on every session change.
+    const [terminalReady, setTerminalReady] = useState(false);
+    useEffect(() => { setTerminalReady(false); }, [sessionId]);
 
     // Expose reconnect + resize + focus to the parent.
     useImperativeHandle(ref, () => ({
@@ -643,7 +628,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             cursorBlink: true,
             cursorStyle: 'block',
             fontSize,
-            lineHeight: 1.0,
+            lineHeight: 1.2,
             letterSpacing: 0,
             fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
             fontWeight: '400',
@@ -702,7 +687,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             const b64 = data.slice(semi + 1);
             if (!b64 || b64 === '?') return false; // ignore read-requests
             try {
-              const text = atob(b64);
+              // atob() returns a binary (latin1) string. Decode as UTF-8 so
+              // accented chars and Unicode block elements are preserved.
+              const binary = atob(b64);
+              const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+              const text = new TextDecoder('utf-8').decode(bytes);
               if (text) writeClipboard(text, flashCopied);
             } catch { /* ignore malformed base64 */ }
             return true; // consumed — don't let xterm process it further
@@ -881,6 +870,14 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
+            // Defer the overlay removal to the next animation frame.
+            // setTerminalReady(true) called directly inside a Promise .then()
+            // runs as a microtask — before the browser paints — so the spinner
+            // would never be visible when fonts are cached. rAF guarantees at
+            // least one painted frame with the overlay before it's removed.
+            requestAnimationFrame(() => {
+              if (!cancelled) setTerminalReady(true);
+            });
           };
 
           // Immediate fit attempt. If the container is already visible, drain
@@ -1130,7 +1127,18 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
           // ── Step 5: Wire socket status + terminal input ──
           // Data subscription was already wired before font loading.
-          const unsubscribeStatus = socket.onStatus((st) => onStatusChangeRef.current?.(st));
+          const MOUSE_RESET = '\x1b[?1000l\x1b[?1002l\x1b[?1003l';
+          const unsubscribeStatus = socket.onStatus((st) => {
+            onStatusChangeRef.current?.(st);
+            // Disable mouse tracking when the PTY session ends so clicks
+            // revert to normal text-selection instead of forwarding to a dead process.
+            if (st === 'finished' || st === 'exited' || st === 'killed') {
+              try { terminal.write(MOUSE_RESET); } catch { /* disposed */ }
+            }
+          });
+          const unsubscribeExit = socket.onExit(() => {
+            try { terminal.write(MOUSE_RESET); } catch { /* disposed */ }
+          });
           const onDataDisposable = terminal.onData((data) => socket.send(data));
 
           // ── Step 6: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
@@ -1230,6 +1238,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
             unsubscribeStatus();
+            unsubscribeExit();
             onDataDisposable.dispose();
             terminal.dispose();
             terminalRef.current = null;
@@ -1299,10 +1308,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       <div className={`relative h-full min-h-0 w-full overflow-hidden ${className ?? ''}`}>
         {/* Loading overlay: covers the terminal until the socket is connected,
             preventing a flash of broken/unsized terminal content on session switch. */}
-        {showLoader && socket.status !== 'error' && <LoadingOverlay />}
+        {!terminalReady && socket.status !== 'error' && <LoadingOverlay />}
 
-        {/* Status badge only shown after the initial connection (not during boot). */}
-        {!showLoader && (
+        {/* Status badge only shown after the terminal is fully initialised. */}
+        {terminalReady && (
           <StatusBadge
             status={socket.status}
             attempt={socket.attempt}
