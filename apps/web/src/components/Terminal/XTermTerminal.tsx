@@ -1136,8 +1136,27 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // ── Step 5: Wire socket status + terminal input ──
           // Data subscription was already wired before font loading.
           const MOUSE_RESET = '\x1b[?1000l\x1b[?1002l\x1b[?1003l';
+          let prevStatus = '';
+          let repaintTimer: ReturnType<typeof setTimeout> | null = null;
           const unsubscribeStatus = socket.onStatus((st) => {
             onStatusChangeRef.current?.(st);
+            // When a new process becomes active after the shell was idle (e.g. opencode
+            // restarted after Ctrl+C), send SIGWINCH so the TUI knows the real terminal
+            // dimensions and repaints. Without this, the user must navigate away and
+            // back to trigger the remount-time fit(), causing lost canvas state.
+            if (st === 'active' && prevStatus === 'waiting') {
+              if (repaintTimer !== null) clearTimeout(repaintTimer);
+              repaintTimer = setTimeout(() => {
+                repaintTimer = null;
+                const fit = fitAddonRef.current;
+                const term = terminalRef.current;
+                if (!fit || !term || term.element?.clientWidth === 0) return;
+                try { fit.fit(); } catch { return; }
+                try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
+                onResizeRef.current?.(term.cols, term.rows);
+              }, 150);
+            }
+            prevStatus = st;
             // Disable mouse tracking when the PTY session ends so clicks
             // revert to normal text-selection instead of forwarding to a dead process.
             if (st === 'finished' || st === 'exited' || st === 'killed') {
@@ -1245,6 +1264,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
+            if (repaintTimer !== null) { clearTimeout(repaintTimer); repaintTimer = null; }
             unsubscribeStatus();
             unsubscribeExit();
             onDataDisposable.dispose();

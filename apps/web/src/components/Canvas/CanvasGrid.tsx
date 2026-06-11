@@ -6,6 +6,7 @@ interface Session {
   sessionId: string;
   name: string;
   status: string;
+  projectName?: string;
 }
 
 interface CanvasGridProps {
@@ -16,6 +17,7 @@ interface CanvasGridProps {
   fontSize?: number;
   onAssign: (slotIndex: number, sessionId: string) => void;
   onRemove: (slotIndex: number) => void;
+  onKill?: (sessionId: string) => Promise<void>;
   onCreateSession?: () => Promise<string | null>;
   onRename?: (sessionId: string, newName: string) => Promise<void>;
   theme?: ITheme;
@@ -29,6 +31,7 @@ export function CanvasGrid({
   fontSize,
   onAssign,
   onRemove,
+  onKill,
   onCreateSession,
   onRename,
   theme,
@@ -48,7 +51,7 @@ export function CanvasGrid({
   );
   const availableSessions: AvailableSession[] = sessions
     .filter((s) => !assignedIds.has(s.sessionId))
-    .map((s) => ({ sessionId: s.sessionId, name: s.name, status: s.status }));
+    .map((s) => ({ sessionId: s.sessionId, name: s.name, status: s.status, projectName: s.projectName }));
 
   return (
     <div
@@ -75,12 +78,14 @@ export function CanvasGrid({
               sessionId={sessionId}
               sessionName={session?.name ?? null}
               sessionStatus={session?.status ?? null}
+              sessionProjectName={session?.projectName ?? null}
               isFocused={focusedSlot === i}
               availableSessions={availableSessions}
               fontSize={fontSize}
               onFocus={handleFocus}
               onAssignSession={onAssign}
               onRemoveSession={onRemove}
+              onKillSession={onKill && sessionId ? () => onKill(sessionId) : undefined}
               onCreateSession={onCreateSession}
               onRename={onRename && sessionId ? (newName) => onRename(sessionId, newName) : undefined}
               theme={theme}

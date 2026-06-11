@@ -16,6 +16,7 @@ import { resourcesRoutes } from './routes/resources';
 import { filesRoutes, filesBaseRoutes } from './routes/files';
 import { wsRoutes } from './ws/handler';
 import { getPtyManager } from './pty/manager';
+import { systemRoutes } from './routes/system';
 
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
@@ -129,6 +130,7 @@ if (webDistExists) {
 
 app
   .use(healthRoutes)
+  .use(systemRoutes)
   .use(authRoutes)
   .use(projectsRoutes)
   .use(harnessesRoutes)
