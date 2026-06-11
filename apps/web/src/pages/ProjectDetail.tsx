@@ -1372,6 +1372,12 @@ export default function ProjectDetailPage() {
                 sidebarOpen={sidebarOpen}
                 onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
                 hideKeyboardFAB
+                externalSlots={Array.from(
+                  { length: canvasLayout.cols * canvasLayout.rows },
+                  (_, i) => canvasLayout.slots[i] ?? null,
+                )}
+                onAssignSlot={assignSlot}
+                onClearSlot={clearSlot}
               />
             ) : (
               <>

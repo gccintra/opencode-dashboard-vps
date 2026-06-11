@@ -26,18 +26,24 @@ interface CanvasMobileProps {
   onCreateSession?: () => Promise<string | null>;
   onKill?: (sessionId: string) => Promise<void>;
   onRename?: (sessionId: string, newName: string) => Promise<void>;
-  /** Props for the combined single header (replaces page-level TerminalHeader on mobile) */
   projectName?: string;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
-  /** Suppress the built-in floating keyboard FAB (parent provides its own in a footer bar). */
   hideKeyboardFAB?: boolean;
+  /** External slot management (Canvas Hub). When provided, internal localStorage is bypassed. */
+  externalSlots?: (string | null)[];
+  onAssignSlot?: (index: number, sessionId: string) => void;
+  onClearSlot?: (index: number) => void;
 }
 
-/* ── Persistence ── */
+/* ── Constants ── */
 
-const MOBILE_KEY_PREFIX = 'canvas-mobile-';
 const SLOT_COUNT = 3;
+const MAX_SLOTS = 6;
+const SLOTS_PER_GROUP = 3;
+const MOBILE_KEY_PREFIX = 'canvas-mobile-';
+
+/* ── Persistence ── */
 
 function loadMobileSlots(projectId: string): (string | null)[] {
   try {
@@ -61,7 +67,7 @@ function saveMobileSlots(projectId: string, slots: (string | null)[]): void {
   localStorage.setItem(`${MOBILE_KEY_PREFIX}${projectId}`, JSON.stringify(slots));
 }
 
-/* ── Hook ── */
+/* ── Internal slot hook (used when externalSlots not provided) ── */
 
 function useMobileSlots(projectId: string, sessions: Session[]) {
   const [slots, setSlots] = useState<(string | null)[]>(() => loadMobileSlots(projectId));
@@ -181,9 +187,9 @@ function MobileSlot({
     } else {
       if (killTimerRef.current) clearTimeout(killTimerRef.current);
       setKillPending(false);
-      onKill?.().catch(() => {});
+      onKill?.().then(() => onRemove(slotIndex)).catch(() => {});
     }
-  }, [killPending, onKill]);
+  }, [killPending, onKill, onRemove, slotIndex]);
 
   const startEdit = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -293,7 +299,7 @@ function MobileSlot({
             <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
         </button>
-        {/* Kill session — mobile: tamanho fixo, confirmação só via cor (sem expandir) */}
+        {/* Kill session */}
         {onKill && (
           <button
             onClick={handleKillClick}
@@ -318,7 +324,7 @@ function MobileSlot({
             )}
           </button>
         )}
-        {/* Remove from canvas (keeps session alive) */}
+        {/* Remove from canvas */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(slotIndex); }}
           className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#334] active:text-[#778] active:bg-[rgba(255,255,255,0.08)] transition-colors"
@@ -331,7 +337,7 @@ function MobileSlot({
         </button>
       </div>
 
-      {/* Terminal — hidden when collapsed to only show header */}
+      {/* Terminal — hidden when collapsed */}
       <div className={`relative flex-1 min-h-0 overflow-hidden ${collapsed ? 'hidden' : ''}`}>
         <XTermTerminal
           ref={terminalRef}
@@ -346,7 +352,7 @@ function MobileSlot({
   );
 }
 
-/* ── Add session dropdown (anchors downward from top bar) ── */
+/* ── Add session dropdown ── */
 
 interface AddDropdownProps {
   availableSessions: Session[];
@@ -358,13 +364,7 @@ interface AddDropdownProps {
 function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDropdownProps) {
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 z-10"
-        onClick={onDismiss}
-        aria-hidden="true"
-      />
-      {/* Dropdown panel — anchors below the top bar */}
+      <div className="absolute inset-0 z-10" onClick={onDismiss} aria-hidden="true" />
       <div
         className="absolute top-[44px] right-0 z-20 w-[240px] flex flex-col rounded-b-[10px] rounded-tl-[10px] border border-[rgba(255,255,255,0.08)] bg-[#111118] shadow-xl overflow-hidden"
         data-testid="add-dropdown"
@@ -390,9 +390,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
                   }}
                 />
                 <span className="flex-1 min-w-0 truncate font-['Inter'] text-[13px] text-[#ccd]">
-                  {s.projectName && (
-                    <span className="text-[#556]">{s.projectName} — </span>
-                  )}
+                  {s.projectName && <span className="text-[#556]">{s.projectName} — </span>}
                   {s.name}
                 </span>
               </button>
@@ -418,7 +416,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
   );
 }
 
-/* ── Top bar (single combined header for mobile canvas) ── */
+/* ── Top bar ── */
 
 function TopBar({
   canAdd,
@@ -437,7 +435,6 @@ function TopBar({
 }) {
   return (
     <div className="relative flex shrink-0 items-center gap-[4px] px-[10px] h-[44px] border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] z-10">
-      {/* Left button: back arrow (no sidebar context) or hamburger/close (sidebar context) */}
       {onToggleSidebar && (
         <button
           onClick={onToggleSidebar}
@@ -446,7 +443,6 @@ function TopBar({
           data-testid="sidebar-toggle"
         >
           {sidebarOpen === undefined ? (
-            /* Back arrow — used when there is no sidebar (e.g. Canvas global page) */
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
               <path d="M12 4L6 10l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -462,7 +458,6 @@ function TopBar({
         </button>
       )}
 
-      {/* Project name */}
       {projectName ? (
         <span className="font-['Inter'] text-[12px] text-[#556] truncate flex-1 min-w-0 ml-[2px]">
           {projectName}
@@ -471,7 +466,6 @@ function TopBar({
         <div className="flex-1" />
       )}
 
-      {/* Add button */}
       {canAdd && (
         <button
           onClick={onToggleDropdown}
@@ -494,6 +488,44 @@ function TopBar({
   );
 }
 
+/* ── Group dots indicator ── */
+
+function GroupDots({
+  numGroups,
+  activeGroup,
+  onSelect,
+}: {
+  numGroups: number;
+  activeGroup: number;
+  onSelect: (g: number) => void;
+}) {
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center gap-[6px] h-[28px] border-b border-[rgba(255,255,255,0.06)] bg-[#0a0a0f]"
+      data-testid="group-dots"
+    >
+      {Array.from({ length: numGroups }, (_, i) => (
+        <button
+          key={i}
+          onClick={() => onSelect(i)}
+          aria-label={`Grupo ${i + 1}`}
+          data-testid={`group-dot-${i}`}
+          className="flex items-center justify-center p-[4px]"
+        >
+          <span
+            className="rounded-full transition-all duration-200"
+            style={{
+              width: i === activeGroup ? '18px' : '6px',
+              height: '6px',
+              backgroundColor: i === activeGroup ? '#af0' : 'rgba(255,255,255,0.2)',
+            }}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ── Main ── */
 
 export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(function CanvasMobile({
@@ -508,17 +540,35 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
   sidebarOpen,
   onToggleSidebar,
   hideKeyboardFAB = false,
+  externalSlots,
+  onAssignSlot,
+  onClearSlot,
 }, ref) {
-  const { slots, assignSlot, clearSlot } = useMobileSlots(projectId, sessions);
+  const internal = useMobileSlots(projectId, sessions);
+
+  // Use external slots when provided, otherwise internal
+  const slots = externalSlots ?? internal.slots;
+  const effectiveAssignSlot = onAssignSlot ?? internal.assignSlot;
+  const effectiveClearSlot = onClearSlot ?? internal.clearSlot;
+
+  const totalSlots = slots.length;
+  const numGroups = Math.max(1, Math.ceil(totalSlots / SLOTS_PER_GROUP));
+
   const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [activeGroup, setActiveGroup] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
-  // One stable ref per slot index (0-2)
+  // Reset group when total slots changes
+  useEffect(() => {
+    setActiveGroup(0);
+  }, [totalSlots]);
+
+  // One stable ref per slot index (0..MAX_SLOTS-1)
   const terminalRefs = useRef<RefObject<XTermTerminalHandle | null>[]>(
-    Array.from({ length: SLOT_COUNT }, () => ({ current: null })),
+    Array.from({ length: MAX_SLOTS }, () => ({ current: null })),
   );
 
-  // Always-fresh getTarget — updated inline every render so useImperativeHandle stays stable.
   const getTargetRef = useRef<() => number>(() => 0);
 
   const sessionMap = new Map(sessions.map((s) => [s.sessionId, s]));
@@ -526,9 +576,13 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
     .map((id, i) => ({ id, i }))
     .filter((x): x is { id: string; i: number } => x.id !== null);
 
-  // Update getTarget every render so the imperative handle always resolves the latest focused slot.
+  // Visible slot range for current group
+  const groupStart = activeGroup * SLOTS_PER_GROUP;
+  const groupEnd = groupStart + SLOTS_PER_GROUP;
+  const visibleFilledSlots = filledSlots.filter(({ i }) => i >= groupStart && i < groupEnd);
+
   getTargetRef.current = () =>
-    focusedSlot !== null ? focusedSlot : (filledSlots[0]?.i ?? 0);
+    focusedSlot !== null ? focusedSlot : (visibleFilledSlots[0]?.i ?? filledSlots[0]?.i ?? 0);
 
   useImperativeHandle(ref, () => ({
     sendKey: (seq) => terminalRefs.current[getTargetRef.current()]?.current?.sendKey(seq),
@@ -536,25 +590,28 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
     getSelection: () => terminalRefs.current[getTargetRef.current()]?.current?.getSelection() ?? '',
   }), []);
 
-  // Clear focused slot if it was removed; don't auto-select another
+  // Clear focused slot if it was removed
   useEffect(() => {
     if (focusedSlot !== null && !slots[focusedSlot]) {
       setFocusedSlot(null);
     }
   }, [slots, focusedSlot]);
 
-  // When focus changes, the flex layout shifts (slots collapse/expand via a
-  // 200ms CSS transition). Poll every 100 ms starting at 300 ms (after the
-  // transition settles) until all terminal refs have responded, for up to 2 s.
-  // Each terminal's own internal polling also runs concurrently — this is a
-  // supplementary signal from the parent that a layout change happened.
+  // When focused slot is in a different group, switch to that group
+  useEffect(() => {
+    if (focusedSlot === null) return;
+    const group = Math.floor(focusedSlot / SLOTS_PER_GROUP);
+    setActiveGroup(group);
+  }, [focusedSlot]);
+
+  // Resize terminals after group/focus change
   useEffect(() => {
     let attempt = 0;
     let timerId: ReturnType<typeof setTimeout> | null = null;
     const tryResize = () => {
       timerId = null;
-      for (const ref of terminalRefs.current) {
-        ref.current?.resize();
+      for (const r of terminalRefs.current) {
+        r.current?.resize();
       }
       if (attempt++ < 20) {
         timerId = setTimeout(tryResize, 100);
@@ -562,10 +619,10 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
     };
     timerId = setTimeout(tryResize, 300);
     return () => { if (timerId !== null) clearTimeout(timerId); };
-  }, [focusedSlot]);
+  }, [focusedSlot, activeGroup]);
 
   const handleFocus = useCallback((i: number) => setFocusedSlot((prev) => prev === i ? null : i), []);
-  const handleRemove = useCallback((i: number) => clearSlot(i), [clearSlot]);
+  const handleRemove = useCallback((i: number) => effectiveClearSlot(i), [effectiveClearSlot]);
 
   const assignedIds = new Set(slots.filter(Boolean) as string[]);
   const availableSessions = sessions.filter((s) => !assignedIds.has(s.sessionId));
@@ -575,11 +632,13 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
   const handleAssign = useCallback(
     (sessionId: string) => {
       if (nextEmptySlot === -1) return;
-      assignSlot(nextEmptySlot, sessionId);
+      effectiveAssignSlot(nextEmptySlot, sessionId);
+      const group = Math.floor(nextEmptySlot / SLOTS_PER_GROUP);
+      setActiveGroup(group);
       setFocusedSlot(nextEmptySlot);
       setShowDropdown(false);
     },
-    [nextEmptySlot, assignSlot],
+    [nextEmptySlot, effectiveAssignSlot],
   );
 
   const handleCreate = useCallback(async () => {
@@ -587,14 +646,35 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
     setShowDropdown(false);
     const newId = await onCreateSession();
     if (newId && nextEmptySlot !== -1) {
-      assignSlot(nextEmptySlot, newId);
+      effectiveAssignSlot(nextEmptySlot, newId);
+      const group = Math.floor(nextEmptySlot / SLOTS_PER_GROUP);
+      setActiveGroup(group);
       setFocusedSlot(nextEmptySlot);
     }
-  }, [nextEmptySlot, onCreateSession, assignSlot]);
+  }, [nextEmptySlot, onCreateSession, effectiveAssignSlot]);
+
+  // Swipe detection
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || numGroups <= 1) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 50) return;
+    if (delta < 0) {
+      // swipe left → next group
+      setActiveGroup((prev) => Math.min(prev + 1, numGroups - 1));
+    } else {
+      // swipe right → prev group
+      setActiveGroup((prev) => Math.max(prev - 1, 0));
+    }
+    setFocusedSlot(null);
+  }, [numGroups]);
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 w-full overflow-x-hidden bg-[#0a0a0f]" data-testid="canvas-mobile">
-      {/* Single combined header — always visible, keyboard can't cover it */}
       <TopBar
         canAdd={canAddMore}
         showDropdown={showDropdown}
@@ -604,7 +684,6 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
         onToggleSidebar={onToggleSidebar}
       />
 
-      {/* Add dropdown — always anchors below the top bar (top-[44px]) */}
       {showDropdown && (
         <AddDropdown
           availableSessions={availableSessions}
@@ -614,8 +693,16 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
         />
       )}
 
+      {/* Group dots — only when more than one group */}
+      {numGroups > 1 && (
+        <GroupDots
+          numGroups={numGroups}
+          activeGroup={activeGroup}
+          onSelect={(g) => { setActiveGroup(g); setFocusedSlot(null); }}
+        />
+      )}
+
       {filledSlots.length === 0 ? (
-        /* Empty state */
         <div className="flex flex-1 flex-col items-center justify-center gap-[16px] p-[32px]">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none" className="text-[#334]">
             <rect x="4" y="7" width="32" height="26" rx="2" stroke="currentColor" strokeWidth="1.3" />
@@ -639,35 +726,44 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
           )}
         </div>
       ) : (
-        /* Split view — all terminals visible simultaneously */
-        <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-          {filledSlots.map(({ id, i }) => {
-            const session = sessionMap.get(id);
-            return (
-              <MobileSlot
-                key={i}
-                slotIndex={i}
-                sessionId={id}
-                sessionName={session?.name ?? id}
-                sessionStatus={session?.status ?? ''}
-                sessionProjectName={session?.projectName}
-                isFocused={focusedSlot === i}
-                collapsed={focusedSlot !== null && focusedSlot !== i}
-                fontSize={fontSize}
-                theme={theme}
-                terminalRef={terminalRefs.current[i]}
-                onToggleFocus={handleFocus}
-                onRemove={handleRemove}
-                onKill={onKill ? () => onKill(id) : undefined}
-                onRename={onRename ? (newName) => onRename(id, newName) : undefined}
-              />
-            );
-          })}
-
+        <div
+          className="flex flex-col flex-1 min-h-0 w-full overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {visibleFilledSlots.length === 0 ? (
+            /* Current group is empty but other groups have slots */
+            <div className="flex flex-1 flex-col items-center justify-center gap-[10px]">
+              <p className="font-['Inter'] text-[13px] text-[#556]">Grupo vazio</p>
+              <p className="font-['Inter'] text-[11px] text-[#334]">Adicione uma sessão ou mude de grupo</p>
+            </div>
+          ) : (
+            visibleFilledSlots.map(({ id, i }) => {
+              const session = sessionMap.get(id);
+              return (
+                <MobileSlot
+                  key={i}
+                  slotIndex={i}
+                  sessionId={id}
+                  sessionName={session?.name ?? id}
+                  sessionStatus={session?.status ?? ''}
+                  sessionProjectName={session?.projectName}
+                  isFocused={focusedSlot === i}
+                  collapsed={focusedSlot !== null && focusedSlot !== i}
+                  fontSize={fontSize}
+                  theme={theme}
+                  terminalRef={terminalRefs.current[i]}
+                  onToggleFocus={handleFocus}
+                  onRemove={handleRemove}
+                  onKill={onKill ? () => onKill(id) : undefined}
+                  onRename={onRename ? (newName) => onRename(id, newName) : undefined}
+                />
+              );
+            })
+          )}
         </div>
       )}
 
-      {/* Floating keyboard FAB — suppressed when the parent renders it inline in a footer bar */}
       {!hideKeyboardFAB && filledSlots.length > 0 && (
         <MobileKeyboard
           onKey={(seq) => terminalRefs.current[getTargetRef.current()]?.current?.sendKey(seq)}

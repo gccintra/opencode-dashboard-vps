@@ -85,7 +85,7 @@ export function CanvasGrid({
               onFocus={handleFocus}
               onAssignSession={onAssign}
               onRemoveSession={onRemove}
-              onKillSession={onKill && sessionId ? () => onKill(sessionId) : undefined}
+              onKillSession={onKill && sessionId ? async () => { await onKill(sessionId); onRemove(i); } : undefined}
               onCreateSession={onCreateSession}
               onRename={onRename && sessionId ? (newName) => onRename(sessionId, newName) : undefined}
               theme={theme}
