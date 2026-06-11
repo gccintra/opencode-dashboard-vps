@@ -1,15 +1,47 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
+function HamburgerIcon() {
+  return (
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
+      <path
+        d="M1 1h16M1 7h16M1 13h16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function AppLayout() {
   return (
-    <div className="flex h-screen h-dvh bg-[#0a0a0f]">
+    <div className="flex h-dvh bg-[#0a0a0f]">
       <Sidebar />
-      <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="flex-1 min-h-0 flex flex-col">
-          <Outlet />
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* ── Mobile top bar — hidden on lg+ (sidebar is static there) ── */}
+        <div className="flex h-[48px] shrink-0 items-center gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] px-4 lg:hidden">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('sidebar:open'))}
+            className="flex size-[32px] shrink-0 items-center justify-center rounded-[6px] text-[#889] hover:text-[#f0f0f0] active:text-[#f0f0f0]"
+            aria-label="Open menu"
+            data-testid="hamburger-button"
+          >
+            <HamburgerIcon />
+          </button>
+          <span className="font-['JetBrains_Mono'] text-[15px] font-medium tracking-[-0.5px] text-[#af0]">
+            {'> _'}
+          </span>
+          <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">OpenCode</span>
         </div>
-      </main>
+
+        {/* ── Page content ── */}
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

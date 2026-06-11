@@ -32,8 +32,8 @@ import {
   type ConnectionStatus,
 } from '../components/Terminal';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
-import FileTree from '../components/FileTree/FileTree';
-import CodeEditor from '../components/CodeEditor/CodeEditor';
+import FileTree from '../components/FileManager/FileTree';
+import CodeEditor from '../components/FileManager/CodeEditor';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { MobileKeyboard } from '../components/Terminal';

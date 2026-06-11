@@ -341,8 +341,8 @@ function EmptyState() {
         Nothing running yet
       </h3>
       <p className="mt-[6px] max-w-[260px] font-['Inter'] text-[13px] leading-relaxed text-[#889]">
-        Open a project and start a session. Run multiple sessions across projects to parallelize your
-        work.
+        Open a project and start a session. Run multiple sessions across projects to parallelize
+        your work.
       </p>
       <button
         onClick={() => navigate('/projects')}
@@ -451,28 +451,23 @@ export default function SessionsPage() {
   );
 
   /* ── Rename session ── */
-  const handleRename = useCallback(
-    async (sessionId: string, name: string) => {
-      // Optimistic update
-      setGroups((prev) =>
-        prev.map((g) => ({
-          ...g,
-          sessions: g.sessions.map((s) =>
-            s.sessionId === sessionId ? { ...s, name } : s,
-          ),
-        })),
-      );
-      try {
-        await apiFetch(`/api/sessions/${sessionId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ name }),
-        });
-      } catch {
-        // next poll will revert if needed
-      }
-    },
-    [],
-  );
+  const handleRename = useCallback(async (sessionId: string, name: string) => {
+    // Optimistic update
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sessions: g.sessions.map((s) => (s.sessionId === sessionId ? { ...s, name } : s)),
+      })),
+    );
+    try {
+      await apiFetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      });
+    } catch {
+      // next poll will revert if needed
+    }
+  }, []);
 
   /* ── Derived data ── */
 
@@ -639,7 +634,7 @@ export default function SessionsPage() {
       {/* ══════ Main content ══════ */}
       <div className="flex flex-1 min-w-0 flex-col">
         {/* Sticky header */}
-        <header className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]/95 backdrop-blur-sm pl-[52px] pr-[20px] py-[13px] sm:px-[24px] lg:px-[24px]">
+        <header className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]/95 backdrop-blur-sm px-[16px] py-[13px] sm:px-[24px]">
           <div className="flex items-center justify-between gap-[12px]">
             {/* Title + live counts */}
             <div className="flex items-center gap-[10px] min-w-0">
@@ -684,10 +679,42 @@ export default function SessionsPage() {
                 title="Abrir canvas"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="0.6" y="0.6" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
-                  <rect x="7.2" y="0.6" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
-                  <rect x="0.6" y="7.2" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
-                  <rect x="7.2" y="7.2" width="4.2" height="4.2" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                  <rect
+                    x="0.6"
+                    y="0.6"
+                    width="4.2"
+                    height="4.2"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                  />
+                  <rect
+                    x="7.2"
+                    y="0.6"
+                    width="4.2"
+                    height="4.2"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                  />
+                  <rect
+                    x="0.6"
+                    y="7.2"
+                    width="4.2"
+                    height="4.2"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                  />
+                  <rect
+                    x="7.2"
+                    y="7.2"
+                    width="4.2"
+                    height="4.2"
+                    rx="0.8"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                  />
                 </svg>
                 Canvas
               </button>
@@ -743,7 +770,10 @@ export default function SessionsPage() {
           {error && (
             <div className="mb-[16px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400">
               {error}
-              <button onClick={() => fetchAll(true)} className="ml-[8px] underline hover:text-red-300">
+              <button
+                onClick={() => fetchAll(true)}
+                className="ml-[8px] underline hover:text-red-300"
+              >
                 Retry
               </button>
             </div>
@@ -819,7 +849,12 @@ export default function SessionsPage() {
                 <div className="size-[14px] animate-spin rounded-full border-2 border-[#0a0a0f] border-t-transparent" />
               ) : (
                 <svg width="14" height="14" viewBox="0 0 10 10" fill="none">
-                  <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path
+                    d="M5 1.5v7M1.5 5h7"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
                 </svg>
               )}
               {creating ? 'Starting…' : 'New Session'}

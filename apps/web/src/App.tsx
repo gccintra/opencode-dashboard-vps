@@ -12,6 +12,7 @@ import KanbanPage from './pages/Kanban';
 import SessionsPage from './pages/Sessions';
 import CanvasHubPage from './pages/CanvasHub';
 import CanvasHubViewPage from './pages/CanvasHubView';
+import FilesPage from './pages/FilesPage';
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/tasks" element={<KanbanPage />} />
         <Route path="/canvas" element={<CanvasHubPage />} />
+        <Route path="/files" element={<FilesPage />} />
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
 
