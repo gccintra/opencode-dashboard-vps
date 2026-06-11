@@ -11,8 +11,9 @@ import {
   unlinkSync,
   rmSync,
   writeFileSync,
+  cpSync,
 } from 'node:fs';
-import { resolve, join, dirname, normalize } from 'node:path';
+import { resolve, join, dirname, normalize, basename } from 'node:path';
 
 /* ── Types ── */
 
@@ -490,6 +491,210 @@ export const filesRoutes = new Elysia({ prefix: '/api/projects' }).guard(authGua
         body: t.Object({
           oldPath: t.String(),
           newPath: t.String(),
+        }),
+      },
+    )
+
+    // ── POST /api/projects/:id/files/copy ───────────────────────────
+    .post(
+      '/:id/files/copy',
+      ({ params: { id }, body, set }) => {
+        const project = getProjectById(id);
+        if (!project) {
+          set.status = 404;
+          return { error: 'project not found' };
+        }
+
+        const srcResult = resolveSafePath(project.directory as string, body.sourcePath);
+        if ('error' in srcResult) {
+          set.status = srcResult.status;
+          return { error: srcResult.error };
+        }
+
+        const dstResult = resolveSafePath(project.directory as string, body.destPath);
+        if ('error' in dstResult) {
+          set.status = dstResult.status;
+          return { error: dstResult.error };
+        }
+
+        if (!existsSync(srcResult.resolved)) {
+          set.status = 404;
+          return { error: 'source not found' };
+        }
+
+        if (existsSync(dstResult.resolved)) {
+          set.status = 409;
+          return { error: 'destination already exists' };
+        }
+
+        const dstParent = dirname(dstResult.resolved);
+        if (!existsSync(dstParent)) {
+          set.status = 400;
+          return { error: 'parent directory does not exist' };
+        }
+
+        try {
+          cpSync(srcResult.resolved, dstResult.resolved, {
+            recursive: true,
+            filter: (src) => {
+              const name = basename(src);
+              if (name === '.git') return false;
+              if (name === '.env') return false;
+              return true;
+            },
+          });
+        } catch (err) {
+          set.status = 500;
+          return { error: `failed to copy: ${(err as Error).message}` };
+        }
+
+        set.status = 201;
+        return { sourcePath: body.sourcePath, destPath: body.destPath };
+      },
+      {
+        body: t.Object({
+          sourcePath: t.String(),
+          destPath: t.String(),
+        }),
+      },
+    )
+
+    // ── GET /api/projects/:id/files/download?path= ──────────────────
+    .get(
+      '/:id/files/download',
+      ({ params: { id }, query, set }) => {
+        const project = getProjectById(id);
+        if (!project) {
+          set.status = 404;
+          return { error: 'project not found' };
+        }
+
+        const pathResult = resolveSafePath(project.directory as string, query.path || '');
+        if ('error' in pathResult) {
+          set.status = pathResult.status;
+          return { error: pathResult.error };
+        }
+
+        if (!existsSync(pathResult.resolved)) {
+          set.status = 404;
+          return { error: 'file not found' };
+        }
+
+        const stat = statSync(pathResult.resolved);
+        if (stat.isDirectory()) {
+          set.status = 400;
+          return { error: 'cannot download a directory' };
+        }
+
+        const MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024; // 50 MB
+        if (stat.size > MAX_DOWNLOAD_SIZE) {
+          set.status = 413;
+          return { error: 'file too large (max 50MB)' };
+        }
+
+        const filename = basename(pathResult.resolved);
+        const content = readFileSync(pathResult.resolved);
+
+        return new Response(content, {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Length': String(stat.size),
+          },
+        });
+      },
+      {
+        query: t.Object({
+          path: t.String(),
+        }),
+      },
+    )
+
+    // ── POST /api/projects/:id/files/upload?path= ───────────────────
+    .post(
+      '/:id/files/upload',
+      async ({ params: { id }, query, request, set }) => {
+        const project = getProjectById(id);
+        if (!project) {
+          set.status = 404;
+          return { error: 'project not found' };
+        }
+
+        const targetDir = query.path || '';
+        const dirResult = resolveSafePath(project.directory as string, targetDir);
+        if ('error' in dirResult) {
+          set.status = dirResult.status;
+          return { error: dirResult.error };
+        }
+
+        if (!existsSync(dirResult.resolved)) {
+          set.status = 400;
+          return { error: 'target directory does not exist' };
+        }
+
+        if (!statSync(dirResult.resolved).isDirectory()) {
+          set.status = 400;
+          return { error: 'target path is not a directory' };
+        }
+
+        let rawForm: Awaited<ReturnType<typeof request.formData>> | null = null;
+        try {
+          rawForm = await request.formData();
+        } catch {
+          set.status = 400;
+          return { error: 'invalid multipart form data' };
+        }
+
+        const file = rawForm.get('file');
+        if (!file || !(file instanceof File)) {
+          set.status = 400;
+          return { error: 'missing file field' };
+        }
+
+        const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
+        if (file.size > MAX_UPLOAD_SIZE) {
+          set.status = 413;
+          return { error: 'file too large (max 10MB)' };
+        }
+
+        const filePath = targetDir ? `${targetDir}/${file.name}` : file.name;
+        const fileResult = resolveSafePath(project.directory as string, filePath);
+        if ('error' in fileResult) {
+          set.status = fileResult.status;
+          return { error: fileResult.error };
+        }
+
+        if (existsSync(fileResult.resolved)) {
+          set.status = 409;
+          return { error: 'file already exists' };
+        }
+
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const tmpPath = fileResult.resolved + '.tmp.' + crypto.randomUUID().substring(0, 8);
+        try {
+          writeFileSync(tmpPath, buffer);
+          renameSync(tmpPath, fileResult.resolved);
+        } catch (err) {
+          try {
+            if (existsSync(tmpPath)) unlinkSync(tmpPath);
+          } catch {
+            // ignore
+          }
+          set.status = 500;
+          return { error: `failed to write file: ${(err as Error).message}` };
+        }
+
+        const finalStat = statSync(fileResult.resolved);
+        set.status = 201;
+        return {
+          path: filePath,
+          size: finalStat.size,
+          modifiedAt: finalStat.mtime.toISOString(),
+        };
+      },
+      {
+        query: t.Object({
+          path: t.Optional(t.String()),
         }),
       },
     ),

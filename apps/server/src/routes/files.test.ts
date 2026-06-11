@@ -615,6 +615,325 @@ describe('files routes', () => {
   });
 
   /* ══════════════════════════════════════════════════════════════════════
+     COPY FILE / DIRECTORY
+     ══════════════════════════════════════════════════════════════════════ */
+
+  describe('POST /:id/files/copy — copy', () => {
+    it('copies a file', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'README.md', destPath: 'README-copy.md' },
+        }),
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.sourcePath).toBe('README.md');
+      expect(data.destPath).toBe('README-copy.md');
+      // Verify the copy exists and has same content
+      const readRes = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/read?path=README-copy.md`),
+      );
+      expect(readRes.status).toBe(200);
+      const readData = await readRes.json();
+      expect(readData.content).toBe('# Test Project\n');
+    });
+
+    it('copies a directory recursively', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'src', destPath: 'src-copy' },
+        }),
+      );
+      expect(res.status).toBe(201);
+      // Verify nested file was copied
+      const readRes = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/read?path=src-copy/index.ts`),
+      );
+      expect(readRes.status).toBe(200);
+    });
+
+    it('returns 404 for missing project', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, '/api/projects/nonexistent/files/copy', {
+          method: 'POST',
+          body: { sourcePath: 'README.md', destPath: 'out.md' },
+        }),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 for missing source', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'nonexistent.md', destPath: 'out.md' },
+        }),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 409 when destination already exists', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'README.md', destPath: 'empty-file.txt' },
+        }),
+      );
+      expect(res.status).toBe(409);
+    });
+
+    it('returns 400 when parent directory does not exist', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'README.md', destPath: 'nonexistent-dir/out.md' },
+        }),
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 403 on path traversal in sourcePath', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: '../../etc/passwd', destPath: 'out.txt' },
+        }),
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 403 on path traversal in destPath', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          body: { sourcePath: 'README.md', destPath: '../../out.md' },
+        }),
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 401 without token', async () => {
+      const res = await app.handle(
+        new Request(`http://localhost/api/projects/${projectId}/files/copy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourcePath: 'README.md', destPath: 'out.md' }),
+        }),
+      );
+      expect(res.status).toBe(401);
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════
+     DOWNLOAD FILE
+     ══════════════════════════════════════════════════════════════════════ */
+
+  describe('GET /:id/files/download — download', () => {
+    it('downloads a text file as binary', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=README.md`),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-disposition')).toContain('attachment');
+      expect(res.headers.get('content-disposition')).toContain('README.md');
+      expect(res.headers.get('content-type')).toBe('application/octet-stream');
+      const body = await res.text();
+      expect(body).toBe('# Test Project\n');
+    });
+
+    it('downloads a binary file (png)', async () => {
+      const token = await getToken();
+      const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      writeFileSync(join(testDir, 'icon.png'), pngBytes);
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=icon.png`),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-disposition')).toContain('icon.png');
+      const buf = Buffer.from(await res.arrayBuffer());
+      expect(buf).toEqual(pngBytes);
+    });
+
+    it('returns 404 for missing file', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=missing.txt`),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 400 for directory', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=src`),
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 413 for files over 50MB', async () => {
+      const token = await getToken();
+      const bigFile = join(testDir, 'big.bin');
+      const size = 50 * 1024 * 1024 + 1;
+      // Write sparse file using a buffer trick
+      const buf = Buffer.alloc(1, 0);
+      const { openSync, writeSync, closeSync } = await import('node:fs');
+      const fd = openSync(bigFile, 'w');
+      writeSync(fd, buf, 0, 1, size - 1);
+      closeSync(fd);
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=big.bin`),
+      );
+      expect(res.status).toBe(413);
+    });
+
+    it('returns 403 on path traversal', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(
+          token,
+          `/api/projects/${projectId}/files/download?path=${encodeURIComponent('../../etc/passwd')}`,
+        ),
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 401 without token', async () => {
+      const res = await app.handle(
+        new Request(
+          `http://localhost/api/projects/${projectId}/files/download?path=README.md`,
+        ),
+      );
+      expect(res.status).toBe(401);
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════
+     UPLOAD FILE
+     ══════════════════════════════════════════════════════════════════════ */
+
+  describe('POST /:id/files/upload — upload', () => {
+    function makeUploadReq(
+      token: string,
+      projectId: string,
+      targetPath: string,
+      fileName: string,
+      fileContent: Uint8Array | string,
+      contentType = 'text/plain',
+    ) {
+      const form = new FormData();
+      const blob = new Blob([fileContent], { type: contentType });
+      form.append('file', new File([blob], fileName, { type: contentType }));
+      return new Request(
+        `http://localhost/api/projects/${projectId}/files/upload?path=${encodeURIComponent(targetPath)}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        },
+      );
+    }
+
+    it('uploads a text file', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, projectId, '', 'uploaded.txt', 'hello world'),
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.path).toBe('uploaded.txt');
+      expect(data.size).toBeGreaterThan(0);
+      // Verify content
+      const readRes = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/read?path=uploaded.txt`),
+      );
+      expect(readRes.status).toBe(200);
+      const readData = await readRes.json();
+      expect(readData.content).toBe('hello world');
+    });
+
+    it('uploads a binary file without corruption', async () => {
+      const token = await getToken();
+      const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xde, 0xad, 0xbe, 0xef]);
+      const res = await app.handle(
+        makeUploadReq(token, projectId, '', 'image.png', pngBytes, 'image/png'),
+      );
+      expect(res.status).toBe(201);
+      // Download and verify bytes preserved
+      const dlRes = await app.handle(
+        authReq(token, `/api/projects/${projectId}/files/download?path=image.png`),
+      );
+      expect(dlRes.status).toBe(200);
+      const buf = Buffer.from(await dlRes.arrayBuffer());
+      expect(Array.from(buf)).toEqual(Array.from(pngBytes));
+    });
+
+    it('uploads to a subdirectory', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, projectId, 'src', 'new-component.ts', 'export {}'),
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.path).toBe('src/new-component.ts');
+    });
+
+    it('returns 409 when file already exists', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, projectId, '', 'README.md', '# collision'),
+      );
+      expect(res.status).toBe(409);
+    });
+
+    it('returns 400 when target directory does not exist', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, projectId, 'nonexistent-dir', 'file.txt', 'content'),
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 403 on path traversal in path query', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, projectId, '../../etc', 'pwned.txt', 'evil'),
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 for missing project', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        makeUploadReq(token, 'nonexistent-project', '', 'file.txt', 'content'),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 401 without token', async () => {
+      const form = new FormData();
+      form.append('file', new File(['hello'], 'test.txt', { type: 'text/plain' }));
+      const res = await app.handle(
+        new Request(`http://localhost/api/projects/${projectId}/files/upload?path=`, {
+          method: 'POST',
+          body: form,
+        }),
+      );
+      expect(res.status).toBe(401);
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════
      GET /api/files/directories — list directories
      ══════════════════════════════════════════════════════════════════════ */
 
