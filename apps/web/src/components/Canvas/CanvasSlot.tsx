@@ -156,7 +156,7 @@ function SlotHeader({
             title={killPending ? 'Clique novamente para confirmar' : 'Encerrar sessão'}
             aria-label="Encerrar sessão"
           >
-            {killPending ? 'Matar?' : (
+            {killPending ? 'Kill?' : (
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M4 6h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>

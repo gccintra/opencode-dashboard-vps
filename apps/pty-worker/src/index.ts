@@ -37,9 +37,41 @@ import type { ClientMessage, ServerMessage } from './protocol.js';
 /** Active PTY sessions, keyed by session id. Production uses this map. */
 const sessions = new Map<string, IPty>();
 
+/** Log PATH once at startup so we can verify pty-sighup-exec is reachable. */
+process.stderr.write(`[pty-worker] START PATH=${process.env.PATH}\n`);
+
+/**
+ * Timestamp of the last kill. New spawns are delayed for COOLDOWN_MS after
+ * a kill to prevent a Linux kernel race: close(master_fd) frees the PTY
+ * synchronously but queues SIGHUP asynchronously. If the PTY device number
+ * is reused before SIGHUP delivery, the new session receives the stale
+ * SIGHUP and dies immediately.
+ */
+// Initialised to -SPAWN_COOLDOWN_MS so that the first spawn is never delayed
+// (with fake timers in tests, Date.now() starts at 0, making the cooldown
+// incorrectly fire if we initialise to 0).
+let gLastKillTime = -500;
+const SPAWN_COOLDOWN_MS = 500;
+
+// Hedge settings (defaults; overridable per-call via HandleDeps for tests).
+const HEDGE_COUNT_DEFAULT = 3;
+const HEDGE_SETTLE_MS_DEFAULT = 1000;
+
+// Circuit breaker: if N consecutive hedge-all-dead events occur (evidence of
+// a sustained SIGHUP cascade), pause ALL spawns for CIRCUIT_BREAKER_PAUSE_MS
+// so the kernel can drain its SIGHUP queue before we try again.
+let gConsecutiveSpawnFailures = 0;
+let gCircuitBreakerUntil = 0;
+const CIRCUIT_BREAKER_THRESHOLD = 5;
+const CIRCUIT_BREAKER_PAUSE_MS = 8_000;
+
 /** Default response writer: one JSON line + `\n` to stdout. */
 export function writeResponse(msg: ServerMessage): void {
-  process.stdout.write(JSON.stringify(msg) + '\n');
+  const line = JSON.stringify(msg) + '\n';
+  const ok = process.stdout.write(line);
+  if (msg.type === 'exit') {
+    process.stderr.write(`[pty-worker] WRITE_EXIT id=${msg.id} code=${msg.code} flushed=${ok}\n`);
+  }
 }
 
 /** Test helper: snapshot the current session ids (production map). */
@@ -59,6 +91,13 @@ export function clearSessions(): void {
   sessions.clear();
 }
 
+/** Test helper: reset all module-level mutable state to a clean baseline. */
+export function resetGlobalState(): void {
+  gLastKillTime = -SPAWN_COOLDOWN_MS;
+  gConsecutiveSpawnFailures = 0;
+  gCircuitBreakerUntil = 0;
+}
+
 // ── Handler surface (testable) ─────────────────────────────────────
 
 export type PtySpawnFn = typeof pty.spawn;
@@ -70,6 +109,10 @@ export interface HandleDeps {
   sessionsMap?: Map<string, IPty>;
   /** Override the response writer. Defaults to `writeResponse` (stdout). */
   write?: (msg: ServerMessage) => void;
+  /** Number of parallel hedge PTYs per spawn. Defaults to HEDGE_COUNT_DEFAULT (3). */
+  hedgeCount?: number;
+  /** How long (ms) to wait before selecting the hedge winner. Defaults to HEDGE_SETTLE_MS_DEFAULT (1000). */
+  hedgeSettleMs?: number;
 }
 
 /**
@@ -85,7 +128,11 @@ export function handleMessage(msg: ClientMessage, deps: HandleDeps = {}): void {
   try {
     switch (msg.type) {
       case 'spawn':
-        handleSpawn(msg, ptySpawn, map, write);
+        process.stderr.write(`[pty-worker] MSG_RECV spawn id=${msg.id}\n`);
+        handleSpawn(msg, ptySpawn, map, write, 0, {
+          count: deps.hedgeCount ?? HEDGE_COUNT_DEFAULT,
+          settleMs: deps.hedgeSettleMs ?? HEDGE_SETTLE_MS_DEFAULT,
+        });
         break;
       case 'write':
         handleWrite(msg, map, write);
@@ -116,67 +163,180 @@ function handleSpawn(
   ptySpawn: PtySpawnFn,
   map: Map<string, IPty>,
   write: (m: ServerMessage) => void,
+  retryAttempt = 0,
+  hedgeOpts: { count: number; settleMs: number } = { count: HEDGE_COUNT_DEFAULT, settleMs: HEDGE_SETTLE_MS_DEFAULT },
 ): void {
-  if (map.has(msg.id)) {
+  const HEDGE_COUNT = hedgeOpts.count;
+  const HEDGE_SETTLE_MS = hedgeOpts.settleMs;
+  const MAX_RETRIES = 3;
+  const hedgeIds = Array.from({ length: HEDGE_COUNT }, (_, i) => `${msg.id}__h${i}`);
+
+  // Duplicate guard: reject if the session is already live OR in the hedge window.
+  if (map.has(msg.id) || hedgeIds.some((hid) => map.has(hid))) {
     write({ type: 'error', id: msg.id, message: `session already exists: ${msg.id}` });
     return;
+  }
+
+  // Circuit breaker: checked on ALL attempts (including retries) so that a
+  // session in the retry loop does not keep spawning/dying and generating
+  // more kernel SIGHUPs during the pause period.
+  const cbRemaining = gCircuitBreakerUntil - Date.now();
+  if (cbRemaining > 0) {
+    process.stderr.write(`[pty-worker] CIRCUIT_BREAKER id=${msg.id} waiting=${cbRemaining}ms retry=${retryAttempt}\n`);
+    setTimeout(() => handleSpawn(msg, ptySpawn, map, write, retryAttempt, hedgeOpts), cbRemaining);
+    return;
+  }
+
+  // Cooldown: only on the initial attempt — delay if a session was recently killed.
+  if (retryAttempt === 0) {
+    const remainingCooldown = SPAWN_COOLDOWN_MS - (Date.now() - gLastKillTime);
+    if (remainingCooldown > 0) {
+      process.stderr.write(`[pty-worker] COOLDOWN id=${msg.id} remaining=${remainingCooldown}ms\n`);
+      setTimeout(() => handleSpawn(msg, ptySpawn, map, write, 0, hedgeOpts), remainingCooldown);
+      return;
+    }
   }
 
   const env = { ...(process.env as Record<string, string>) };
   if (msg.env) {
     Object.assign(env, msg.env);
   }
-  const proc = ptySpawn(msg.command, msg.args ?? [], {
-    name: 'xterm-color',
+
+  const spawnOpts = {
+    name: 'xterm-color' as const,
     cols: msg.cols ?? 80,
     rows: msg.rows ?? 24,
     cwd: msg.cwd,
     env,
-  });
+  };
 
-  map.set(msg.id, proc);
+  process.stderr.write(`[pty-worker] HEDGE_SPAWN id=${msg.id} count=${HEDGE_COUNT} retry=${retryAttempt} map_size=${map.size}\n`);
 
-  proc.onData((chunk) => {
-    write({
-      type: 'data',
-      id: msg.id,
-      // Encode as UTF-8 bytes before base64, NOT latin1 ('binary').
-      // Latin1 truncates multi-byte Unicode characters (▀ ▄ █ — 3-byte
-      // UTF-8 sequences like E2 96 88) to their low byte (0x88 alone),
-      // which xterm.js renders as isolated replacement glyphs (■).
-      // UTF-8 encoding preserves the full 3-byte sequence so block
-      // characters survive the IPC pipeline intact.
-      chunk: Buffer.from(chunk, 'utf8').toString('base64'),
-      encoding: 'base64',
-    });
-  });
-  proc.onExit(({ exitCode, signal }) => {
-    // Normalise signal-induced exits: PTY exits with exitCode=0 even on SIGHUP
-    // etc., so we treat any non-zero code as an abnormal exit and let the
-    // buffer reconnection logic on the manager side figure it out.
-    if (map.get(msg.id) === proc) {
-      map.delete(msg.id);
+  // Spawn all hedges in parallel.
+  let spawnCount = 0;
+  for (const hid of hedgeIds) {
+    try {
+      const proc = ptySpawn(msg.command, msg.args ?? [], spawnOpts);
+      map.set(hid, proc);
+      spawnCount++;
+      // Cleanup-only onExit per hedge: just remove from map.
+      // NEVER call destroy() here — closing the master fd queues a kernel
+      // tty_hangup(SIGHUP) that can cascade to the next spawned session.
+      // The socket closes naturally via EIO when the slave fd is released.
+      proc.onExit(() => {
+        if (map.get(hid) === proc) map.delete(hid);
+      });
+    } catch (err) {
+      process.stderr.write(`[pty-worker] HEDGE_FAIL id=${hid}: ${(err as Error).message}\n`);
     }
-    const code = exitCode ?? (signal ? 128 + (typeof signal === 'number' ? signal : 0) : 0);
-    write({ type: 'exit', id: msg.id, code });
-  });
+  }
 
-  // Defer 'spawned' by one event-loop turn. When multiple spawns arrive in the
-  // same readline batch (single pipe chunk), Node.js fires all 'line' events
-  // synchronously — meaning pty.spawn() is called N times without the event
-  // loop running between them. If any child process exits immediately (e.g.
-  // `claude` crash before exec-bash fallback), node-pty's onExit callback has
-  // no chance to fire during the synchronous batch. setImmediate runs AFTER the
-  // current I/O phase, so any pending onExit callbacks fire first. If the
-  // session was already removed from the map by onExit, we skip 'spawned' so
-  // the manager never sees a zombie session.
-  setImmediate(() => {
-    if (!map.has(msg.id)) {
-      // Process died before we declared success — onExit already sent 'exit'.
+  if (spawnCount === 0) {
+    write({ type: 'error', id: msg.id, message: 'All hedge spawns failed' });
+    return;
+  }
+
+  // After a short settle period, pick the first hedge that survived.
+  setTimeout(() => {
+    let winnerProc: IPty | null = null;
+    let winnerHid: string | null = null;
+
+    for (const hid of hedgeIds) {
+      const p = map.get(hid);
+      if (!p) continue;
+      // Verify the PTY fd is still valid. A process can die between the
+      // hedge-spawn and the settle timeout while its onExit cleanup is still
+      // queued in the event loop (JS event queue ordering). If the fd is already
+      // closed (EBADF/EIO), this hedge is dead — skip it and try the next one.
+      try {
+        p.resize(msg.cols ?? 80, msg.rows ?? 24);
+        winnerProc = p;
+        winnerHid = hid;
+        break;
+      } catch {
+        process.stderr.write(`[pty-worker] HEDGE_DEAD_FD id=${hid} skipping\n`);
+        map.delete(hid);
+      }
+    }
+
+    if (!winnerProc || !winnerHid) {
+      // All hedges died — count this event toward the circuit breaker.
+      gConsecutiveSpawnFailures++;
+      if (gConsecutiveSpawnFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+        gCircuitBreakerUntil = Date.now() + CIRCUIT_BREAKER_PAUSE_MS;
+        process.stderr.write(`[pty-worker] CIRCUIT_BREAKER tripped consec=${gConsecutiveSpawnFailures} pause=${CIRCUIT_BREAKER_PAUSE_MS}ms\n`);
+        gConsecutiveSpawnFailures = 0;
+      }
+      // Retry with exponential backoff.
+      if (retryAttempt < MAX_RETRIES) {
+        const delay = 500 * Math.pow(2, retryAttempt);
+        process.stderr.write(`[pty-worker] HEDGE_ALL_DEAD id=${msg.id} retrying in ${delay}ms attempt=${retryAttempt + 1}/${MAX_RETRIES}\n`);
+        setTimeout(() => handleSpawn(msg, ptySpawn, map, write, retryAttempt + 1, hedgeOpts), delay);
+        return;
+      }
+      process.stderr.write(`[pty-worker] HEDGE_GAVE_UP id=${msg.id}\n`);
+      write({ type: 'error', id: msg.id, message: 'All spawn attempts failed after retries' });
       return;
     }
-    write({ type: 'spawned', id: msg.id, pid: proc.pid });
-  });
+
+    // Winner survived — cascade is not active, reset failure counter.
+    gConsecutiveSpawnFailures = 0;
+
+    // Promote winner: move from hedge ID to the real session ID.
+    map.delete(winnerHid);
+    map.set(msg.id, winnerProc);
+
+    // Kill the losing hedges.
+    // CRITICAL: kill the ENTIRE process group (-pid), not just the bash leader.
+    // bash -c 'claude; ...' forks claude as a subprocess. lp.kill() only sends
+    // SIGKILL to bash's PID; claude is orphaned and keeps the slave PTY fd
+    // open indefinitely, which delays the tty_hangup and leaks PTY devices.
+    // process.kill(-pid) sends to the pgrp (bash + claude + any subprocs).
+    // NEVER call destroy() — closing the master fd queues tty_hangup(SIGHUP).
+    for (const hid of hedgeIds) {
+      if (hid !== winnerHid && map.has(hid)) {
+        const lp = map.get(hid)!;
+        try { process.kill(-lp.pid, 'SIGKILL'); } catch { /* pgrp may already be dead */ }
+        try { lp.kill('SIGKILL'); } catch { /* fallback: at least kill the pid */ }
+        map.delete(hid);
+      }
+    }
+
+    // Wire the winner's output and exit to the real session ID.
+    winnerProc.onData((chunk) => {
+      write({
+        type: 'data',
+        id: msg.id,
+        chunk: Buffer.from(chunk, 'utf8').toString('base64'),
+        encoding: 'base64',
+      });
+    });
+
+    const winnerPromotedAt = Date.now();
+    winnerProc.onExit(({ exitCode, signal: exitSignal }) => {
+      if (map.get(msg.id) === winnerProc) {
+        map.delete(msg.id);
+      }
+      // Delay destroy() by 5s for clean exits (exitSignal == null). Immediate
+      // destroy() closes the master fd → tty_hangup(SIGHUP) queued → if the
+      // PTY device number is reallocated within 5s, the new session gets SIGHUP.
+      // 5s gives the kernel time to drain the SIGHUP queue before the next spawn.
+      // Signal deaths: DO NOT call destroy() — the kernel already delivered the
+      // lethal signal; closing master_fd would queue a SECOND SIGHUP.
+      if (exitSignal == null) {
+        setTimeout(() => {
+          try { (winnerProc as unknown as { destroy(): void }).destroy(); } catch { /* best-effort */ }
+        }, 5_000);
+      }
+      const aliveMs = Date.now() - winnerPromotedAt;
+      const code = exitCode ?? (exitSignal ? 128 + (typeof exitSignal === 'number' ? exitSignal : 0) : 0);
+      process.stderr.write(`[pty-worker] EXIT id=${msg.id} code=${exitCode} signal=${exitSignal} mapSize=${map.size} aliveAfterWinner=${aliveMs}ms\n`);
+      write({ type: 'exit', id: msg.id, code });
+    });
+
+    process.stderr.write(`[pty-worker] HEDGE_WINNER id=${msg.id} winner=${winnerHid} pid=${winnerProc.pid} sessions=${map.size}\n`);
+    write({ type: 'spawned', id: msg.id, pid: winnerProc.pid });
+  }, HEDGE_SETTLE_MS);
 }
 
 function handleWrite(
@@ -213,10 +373,9 @@ function handleResize(
     // so the manager can mark the session dead and stop forwarding resizes.
     if (message.includes('EBADF') || message.includes('EIO')) {
       if (map.get(msg.id) === proc) map.delete(msg.id);
-      // kill() releases node-pty's internal master PTY fd — without this the fd
-      // leaks, and accumulated leaked fds exhaust the process fd table, causing
-      // all subsequent spawns to fail until the worker restarts.
-      try { proc.kill(); } catch { /* best-effort */ }
+      // PTY fd is dead — process may have exited without triggering onExit.
+      // Use proc.kill() (NOT process.kill(-pid)) to target the specific PID.
+      try { proc.kill('SIGKILL'); } catch { /* best-effort */ }
       write({ type: 'exit', id: msg.id, code: -1 });
     }
   }
@@ -230,12 +389,18 @@ function handleKill(
   const proc = map.get(msg.id);
   // Kill is idempotent — if the session is already gone, still acknowledge.
   if (proc) {
-    try {
-      proc.kill();
-    } catch {
-      // best-effort
+    process.stderr.write(`[pty-worker] KILL_START id=${msg.id} pid=${proc.pid} map_size_before=${map.size}\n`);
+    gLastKillTime = Date.now();
+    // Kill the entire process group so claude subprocesses (which share the
+    // slave PTY fd) are also killed immediately. Without -pid, claude is
+    // orphaned and holds the slave fd open, preventing PTY device release.
+    try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* pgrp may already be gone */ }
+    try { proc.kill('SIGKILL'); } catch (err) {
+      process.stderr.write(`[pty-worker] KILL_FAILED id=${msg.id} pid=${proc.pid}: ${(err as Error).message}\n`);
     }
+    process.stderr.write(`[pty-worker] KILL_SENT id=${msg.id} pid=${proc.pid}\n`);
     map.delete(msg.id);
+    process.stderr.write(`[pty-worker] KILL_MAP_DELETED id=${msg.id} map_size_after=${map.size}\n`);
   }
   write({ type: 'killed', id: msg.id });
 }
@@ -246,11 +411,13 @@ function handleList(map: Map<string, IPty>, write: (m: ServerMessage) => void): 
 
 function handleShutdown(map: Map<string, IPty>): void {
   for (const proc of map.values()) {
-    try {
-      proc.kill();
-    } catch {
-      // best-effort
-    }
+    // Kill the entire process group (bash + claude subprocesses).
+    try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* best-effort */ }
+    try { proc.kill('SIGKILL'); } catch { /* best-effort */ }
+    // Do NOT call destroy() — closing master fds queues tty_hangup(SIGHUP) for
+    // every session. When this Node process exits, the kernel closes all fds
+    // anyway, generating tty_hangup at that point. pty-sighup-exec protects new
+    // sessions started after restart, so the timing doesn't matter for safety.
   }
   map.clear();
   // Synchronous exit so the parent process observes a clean shutdown.
@@ -300,6 +467,34 @@ export function startIpcLoop(opts: {
 
 const ENTRY = process.argv[1];
 if (ENTRY && import.meta.url === `file://${ENTRY}`) {
-  const rl = createInterface({ input: process.stdin });
+  // Prevent stdout EPIPE from crashing the worker when Bun closes its end of
+  // the pipe (e.g. during server restart). Without this listener, Node throws
+  // an uncaught EPIPE that terminates the process, killing all active sessions.
+  process.stdout.on('error', (err) => {
+    process.stderr.write(`[pty-worker] stdout error (suppressed): ${(err as Error).message}\n`);
+  });
+
+  // Safety net: catch any node-pty socket errors that escape the try/catch in
+  // proc.kill(). These are non-fatal write-after-close errors that should not
+  // crash the worker and kill all running sessions.
+  process.on('uncaughtException', (err: Error) => {
+    const msg = err.message ?? '';
+    const code = (err as NodeJS.ErrnoException).code ?? '';
+    process.stderr.write(`[pty-worker] uncaughtException code=${code} msg=${msg}\n`);
+    if (
+      msg.includes('This socket has been ended by the other party') ||
+      msg.includes('write after end') ||
+      code === 'EPIPE'
+    ) {
+      process.stderr.write(`[pty-worker] suppressed non-fatal write error\n`);
+      return;
+    }
+    process.stderr.write(`[pty-worker] FATAL: ${err.stack ?? msg}\n`);
+    process.exit(1);
+  });
+
+  // terminal: false prevents readline from piping stdin→stdout for echo,
+  // which would cause writeAfterFIN if stdout closes before stdin.
+  const rl = createInterface({ input: process.stdin, terminal: false });
   startIpcLoop({ readline: rl });
 }

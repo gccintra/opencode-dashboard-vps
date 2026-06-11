@@ -39,6 +39,17 @@ function SessionsIcon() {
   );
 }
 
+function CanvasIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="1.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="8.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
 /* ── Small action icons ── */
 
 function PlusIcon() {
@@ -286,6 +297,31 @@ export default function Sidebar() {
                   {totalActive}
                 </span>
               )}
+            </>
+          )}
+        </NavLink>
+
+        {/* Canvas */}
+        <NavLink
+          to="/canvas"
+          className={({ isActive }) =>
+            `${navLinkBase} ${
+              isActive
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
+                : 'text-[#889]'
+            }`
+          }
+          onClick={() => setMobileOpen(false)}
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+              )}
+              <span className="flex size-[16px] shrink-0 items-center justify-center">
+                <CanvasIcon />
+              </span>
+              <span>Canvas</span>
             </>
           )}
         </NavLink>

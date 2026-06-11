@@ -17,6 +17,7 @@ import { filesRoutes, filesBaseRoutes } from './routes/files';
 import { wsRoutes } from './ws/handler';
 import { getPtyManager } from './pty/manager';
 import { systemRoutes } from './routes/system';
+import { canvasesRoutes } from './routes/canvases';
 
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
@@ -141,6 +142,7 @@ app
   .use(filesRoutes)
   .use(filesBaseRoutes)
   .use(githubRoutes)
+  .use(canvasesRoutes)
   .use(wsRoutes);
 
 // Observability — server metrics + db stats

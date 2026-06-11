@@ -10,7 +10,8 @@ import SessionTerminalPage from './pages/SessionTerminal';
 import EmergencyPage from './pages/Emergency';
 import KanbanPage from './pages/Kanban';
 import SessionsPage from './pages/Sessions';
-import CanvasPage from './pages/Canvas';
+import CanvasHubPage from './pages/CanvasHub';
+import CanvasHubViewPage from './pages/CanvasHubView';
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/emergency" element={<EmergencyPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/tasks" element={<KanbanPage />} />
+        <Route path="/canvas" element={<CanvasHubPage />} />
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
 
@@ -76,12 +78,12 @@ function AppRoutes() {
         }
       />
 
-      {/* Global canvas: full-screen multi-project canvas, opened in new tab from Sessions */}
+      {/* Canvas Hub view: full-screen canvas for a specific saved canvas */}
       <Route
-        path="/canvas"
+        path="/canvas/:id"
         element={
           <ProtectedRoute>
-            <CanvasPage />
+            <CanvasHubViewPage />
           </ProtectedRoute>
         }
       />

@@ -168,7 +168,14 @@ export class PtyManager {
   ): Promise<number> {
     this.ensureStarted();
     if (this.sessions.has(id)) {
-      throw new Error(`session already exists: ${id}`);
+      const existing = this.sessions.get(id)!;
+      // Allow re-spawning a session that has already terminated. The old entry is
+      // cleared so the new spawn starts fresh (buffer kept for reconnecting clients).
+      if (existing.status === 'exited' || existing.status === 'killed') {
+        this.sessions.delete(id);
+      } else {
+        throw new Error(`session already exists: ${id}`);
+      }
     }
 
     const session: SessionState = {
@@ -368,6 +375,7 @@ export class PtyManager {
         this.onData(msg);
         break;
       case 'exit':
+        console.error(`[pty-manager] MSG_RECV exit id=${msg.id} code=${msg.code}`);
         this.onExit(msg);
         break;
       case 'error':
