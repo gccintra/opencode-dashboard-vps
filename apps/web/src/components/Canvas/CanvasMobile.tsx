@@ -9,6 +9,7 @@ interface Session {
   sessionId: string;
   name: string;
   status: string;
+  projectName?: string;
 }
 
 export interface CanvasMobileHandle {
@@ -23,6 +24,7 @@ interface CanvasMobileProps {
   fontSize?: number;
   theme?: ITheme;
   onCreateSession?: () => Promise<string | null>;
+  onKill?: (sessionId: string) => Promise<void>;
   onRename?: (sessionId: string, newName: string) => Promise<void>;
   /** Props for the combined single header (replaces page-level TerminalHeader on mobile) */
   projectName?: string;
@@ -137,7 +139,9 @@ interface MobileSlotProps {
   sessionId: string;
   sessionName: string;
   sessionStatus: string;
+  sessionProjectName?: string;
   isFocused: boolean;
+  onKill?: () => Promise<void>;
   collapsed: boolean;
   fontSize?: number;
   theme?: ITheme;
@@ -152,7 +156,9 @@ function MobileSlot({
   sessionId,
   sessionName,
   sessionStatus,
+  sessionProjectName,
   isFocused,
+  onKill,
   collapsed,
   fontSize,
   theme,
@@ -164,6 +170,20 @@ function MobileSlot({
   const handleResize = useSlotResize(sessionId);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const [killPending, setKillPending] = useState(false);
+  const killTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleKillClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!killPending) {
+      setKillPending(true);
+      killTimerRef.current = setTimeout(() => setKillPending(false), 3000);
+    } else {
+      if (killTimerRef.current) clearTimeout(killTimerRef.current);
+      setKillPending(false);
+      onKill?.().catch(() => {});
+    }
+  }, [killPending, onKill]);
 
   const startEdit = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -184,7 +204,7 @@ function MobileSlot({
 
   return (
     <div
-      className="flex flex-col overflow-hidden border-b border-[rgba(255,255,255,0.06)] transition-all duration-200 ease-out"
+      className="flex flex-col w-full min-w-0 overflow-hidden border-b border-[rgba(255,255,255,0.06)] transition-all duration-200 ease-out"
       style={
         collapsed
           ? { flexGrow: 0, flexShrink: 0, height: '52px' }
@@ -194,7 +214,7 @@ function MobileSlot({
     >
       {/* Header — tap to toggle focus */}
       <div
-        className={`flex shrink-0 w-full items-center gap-[10px] px-[14px] h-[52px] transition-colors cursor-pointer select-none ${
+        className={`flex shrink-0 w-full overflow-hidden items-center gap-[10px] px-[14px] h-[52px] transition-colors cursor-pointer select-none ${
           isFocused ? 'bg-[rgba(170,255,0,0.07)]' : 'bg-[#0d0d14] active:bg-[rgba(255,255,255,0.04)]'
         }`}
         onClick={() => onToggleFocus(slotIndex)}
@@ -230,6 +250,9 @@ function MobileSlot({
               isFocused ? 'text-[#f0f0f0] font-semibold' : 'text-[#667]'
             }`}
           >
+            {sessionProjectName && (
+              <span className={isFocused ? 'text-[#889] font-normal' : 'text-[#445]'}>{sessionProjectName} — </span>
+            )}
             {sessionName}
           </span>
         )}
@@ -261,7 +284,7 @@ function MobileSlot({
         </button>
         {/* Ajustar layout */}
         <button
-          onClick={(e) => { e.stopPropagation(); terminalRef.current?.resize(); }}
+          onClick={(e) => { e.stopPropagation(); terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
           className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#6af] active:bg-[rgba(100,160,255,0.1)] transition-colors"
           aria-label="Ajustar layout do terminal"
         >
@@ -270,11 +293,36 @@ function MobileSlot({
             <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
         </button>
-        {/* Remove */}
+        {/* Kill session — mobile: tamanho fixo, confirmação só via cor (sem expandir) */}
+        {onKill && (
+          <button
+            onClick={handleKillClick}
+            className={`shrink-0 flex items-center justify-center size-[26px] rounded-[4px] transition-colors ${
+              killPending
+                ? 'text-[#f54] bg-[rgba(255,85,68,0.18)]'
+                : 'text-[#556] active:text-[#f54] active:bg-[rgba(255,85,68,0.1)]'
+            }`}
+            aria-label="Encerrar sessão"
+            title={killPending ? 'Toque novamente para confirmar' : 'Encerrar sessão'}
+          >
+            {killPending ? (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M4 6h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+        )}
+        {/* Remove from canvas (keeps session alive) */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(slotIndex); }}
-          className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#445] active:text-[#f54] active:bg-[rgba(255,85,68,0.1)] transition-colors"
-          aria-label="Remover sessão"
+          className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#334] active:text-[#778] active:bg-[rgba(255,255,255,0.08)] transition-colors"
+          aria-label="Remover do canvas"
           data-testid={`mobile-slot-remove-${slotIndex}`}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -342,6 +390,9 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
                   }}
                 />
                 <span className="flex-1 min-w-0 truncate font-['Inter'] text-[13px] text-[#ccd]">
+                  {s.projectName && (
+                    <span className="text-[#556]">{s.projectName} — </span>
+                  )}
                   {s.name}
                 </span>
               </button>
@@ -451,6 +502,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
   fontSize,
   theme,
   onCreateSession,
+  onKill,
   onRename,
   projectName,
   sidebarOpen,
@@ -541,7 +593,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
   }, [nextEmptySlot, onCreateSession, assignSlot]);
 
   return (
-    <div className="relative flex flex-col flex-1 min-h-0 bg-[#0a0a0f]" data-testid="canvas-mobile">
+    <div className="relative flex flex-col flex-1 min-h-0 w-full overflow-x-hidden bg-[#0a0a0f]" data-testid="canvas-mobile">
       {/* Single combined header — always visible, keyboard can't cover it */}
       <TopBar
         canAdd={canAddMore}
@@ -557,6 +609,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
         <AddDropdown
           availableSessions={availableSessions}
           onAssign={handleAssign}
+          onCreate={onCreateSession ? handleCreate : undefined}
           onDismiss={() => setShowDropdown(false)}
         />
       )}
@@ -587,7 +640,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
         </div>
       ) : (
         /* Split view — all terminals visible simultaneously */
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
           {filledSlots.map(({ id, i }) => {
             const session = sessionMap.get(id);
             return (
@@ -597,6 +650,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
                 sessionId={id}
                 sessionName={session?.name ?? id}
                 sessionStatus={session?.status ?? ''}
+                sessionProjectName={session?.projectName}
                 isFocused={focusedSlot === i}
                 collapsed={focusedSlot !== null && focusedSlot !== i}
                 fontSize={fontSize}
@@ -604,6 +658,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
                 terminalRef={terminalRefs.current[i]}
                 onToggleFocus={handleFocus}
                 onRemove={handleRemove}
+                onKill={onKill ? () => onKill(id) : undefined}
                 onRename={onRename ? (newName) => onRename(id, newName) : undefined}
               />
             );

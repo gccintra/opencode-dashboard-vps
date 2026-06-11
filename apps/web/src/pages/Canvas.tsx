@@ -21,6 +21,7 @@ import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { useCanvasState } from '../hooks/useCanvasState';
+import { VpsStatsWidget } from '../components/VpsStatsWidget';
 
 /* ── Types ── */
 
@@ -29,6 +30,7 @@ interface SessionItem {
   name: string;
   status: string;
   projectId: string;
+  projectName?: string;
 }
 
 interface ProjectBrief {
@@ -84,6 +86,69 @@ function isValidProjectId(id: unknown): id is string {
 
 /* ── Page ── */
 
+function ProjectPickerModal({
+  projects,
+  onSelect,
+  onDismiss,
+}: {
+  projects: ProjectBrief[];
+  onSelect: (projectId: string) => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center bg-[rgba(0,0,0,0.7)]"
+      onClick={onDismiss}
+    >
+      {/* Mobile: bottom sheet. Desktop: centered dialog. */}
+      <div
+        className="flex flex-col w-full sm:w-[340px] max-h-[70vh] sm:max-h-[460px]
+          rounded-t-[16px] sm:rounded-[12px]
+          border border-[rgba(255,255,255,0.1)] bg-[#111118] shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Drag handle (mobile only) */}
+        <div className="flex sm:hidden justify-center pt-[10px] pb-[4px] shrink-0">
+          <span className="w-[36px] h-[4px] rounded-full bg-[rgba(255,255,255,0.15)]" />
+        </div>
+
+        <div className="flex items-center justify-between px-[16px] pt-[12px] pb-[12px] border-b border-[rgba(255,255,255,0.06)] shrink-0">
+          <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">Criar sessão em qual projeto?</span>
+          <button
+            onClick={onDismiss}
+            className="flex items-center justify-center size-[26px] rounded-[5px] text-[#556] hover:text-[#889] hover:bg-[rgba(255,255,255,0.06)] active:bg-[rgba(255,255,255,0.1)] transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex flex-col overflow-y-auto py-[6px]">
+          {projects.length === 0 && (
+            <p className="px-[16px] py-[14px] font-['Inter'] text-[13px] text-[#556]">Nenhum projeto encontrado.</p>
+          )}
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onSelect(p.id)}
+              className="flex items-center gap-[12px] px-[16px] py-[14px] text-left active:bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+            >
+              <span className="shrink-0 size-[8px] rounded-full bg-[rgba(170,255,0,0.5)]" />
+              <span className="flex-1 min-w-0 truncate font-['Inter'] text-[14px] text-[#ccd]">{p.name}</span>
+              <svg className="shrink-0 text-[#445]" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ))}
+          {/* Safe area padding for iOS home indicator */}
+          <div className="h-[env(safe-area-inset-bottom,0px)] sm:hidden" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CanvasPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -92,12 +157,14 @@ export default function CanvasPage() {
 
   /* ── Sessions data ── */
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [projects, setProjects] = useState<ProjectBrief[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     try {
-      const projects = await apiFetch<ProjectBrief[]>('/api/projects');
-      const safeProjects: ProjectBrief[] = Array.isArray(projects) ? projects : [];
+      const fetched = await apiFetch<ProjectBrief[]>('/api/projects');
+      const safeProjects: ProjectBrief[] = Array.isArray(fetched) ? fetched : [];
+      setProjects(safeProjects);
 
       const results = await Promise.allSettled(
         safeProjects.flatMap((project) => {
@@ -105,7 +172,7 @@ export default function CanvasPage() {
           return [
             (async () => {
               const list = await apiFetch<SessionItem[]>(`/api/projects/${project.id}/sessions`);
-              return (Array.isArray(list) ? list : []).map((s) => ({ ...s, projectId: project.id }));
+              return (Array.isArray(list) ? list : []).map((s) => ({ ...s, projectId: project.id, projectName: project.name }));
             })(),
           ];
         }),
@@ -135,6 +202,17 @@ export default function CanvasPage() {
     };
   }, [fetchAll]);
 
+  /* ── Kill session ── */
+  const handleKillSession = useCallback(async (sessionId: string) => {
+    try {
+      await apiFetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
+      window.dispatchEvent(new CustomEvent('sessions-changed'));
+    } catch {
+      // silent
+    }
+  }, []);
+
   /* ── Rename ── */
   const handleRenameSession = useCallback(async (sessionId: string, newName: string) => {
     try {
@@ -147,6 +225,32 @@ export default function CanvasPage() {
       // silent
     }
   }, []);
+
+  /* ── Create session — project picker ── */
+  type PickerResolver = (projectId: string | null) => void;
+  const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
+
+  const handleCreateSession = useCallback((): Promise<string | null> => {
+    return new Promise<string | null>((resolve) => {
+      // Store resolver so the picker modal can settle it
+      setPickerResolver(() => resolve);
+    }).then(async (projectId) => {
+      if (!projectId) return null;
+      try {
+        const created = await apiFetch<SessionItem>(`/api/projects/${projectId}/sessions`, {
+          method: 'POST',
+          body: JSON.stringify({}),
+        });
+        const project = projects.find((p) => p.id === projectId);
+        const newSession: SessionItem = { ...created, projectId, projectName: project?.name };
+        setSessions((prev) => [...prev, newSession]);
+        window.dispatchEvent(new CustomEvent('sessions-changed'));
+        return created.sessionId;
+      } catch {
+        return null;
+      }
+    });
+  }, [projects]);
 
   /* ── Canvas state ── */
   const canvasSessions = useMemo(
@@ -257,6 +361,8 @@ export default function CanvasPage() {
             sessions={sessions}
             fontSize={fontSize}
             theme={getThemeById(themeId).xterm}
+            onCreateSession={handleCreateSession}
+            onKill={handleKillSession}
             onRename={handleRenameSession}
             projectName="Canvas"
             onToggleSidebar={() => navigate('/sessions')}
@@ -272,13 +378,34 @@ export default function CanvasPage() {
             theme={getThemeById(themeId).xterm}
             onAssign={assignSlot}
             onRemove={clearSlot}
+            onKill={handleKillSession}
+            onCreateSession={handleCreateSession}
             onRename={handleRenameSession}
           />
         )}
       </div>
 
+      {/* Project picker modal — shown when a slot's "Nova Sessão" button is clicked */}
+      {pickerResolver && (
+        <ProjectPickerModal
+          projects={projects}
+          onSelect={(projectId) => {
+            const resolver = pickerResolver;
+            setPickerResolver(null);
+            resolver(projectId);
+          }}
+          onDismiss={() => {
+            const resolver = pickerResolver;
+            setPickerResolver(null);
+            resolver(null);
+          }}
+        />
+      )}
+
       {/* Footer: font size + theme + keyboard (mobile, rightmost) */}
       <div className="flex shrink-0 items-center justify-end gap-[8px] border-t border-[rgba(170,255,0,0.1)] bg-[rgba(170,255,0,0.06)] px-[20px] py-[5px]">
+        <VpsStatsWidget />
+        <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
         <ThemePicker themeId={themeId} onChange={handleThemeChange} />
         <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
         <div className="flex items-center gap-[2px]">

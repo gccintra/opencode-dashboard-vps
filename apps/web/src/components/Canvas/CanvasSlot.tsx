@@ -8,6 +8,7 @@ export interface AvailableSession {
   sessionId: string;
   name: string;
   status: string;
+  projectName?: string;
 }
 
 export interface CanvasSlotProps {
@@ -15,12 +16,14 @@ export interface CanvasSlotProps {
   sessionId: string | null;
   sessionName: string | null;
   sessionStatus: string | null;
+  sessionProjectName?: string | null;
   isFocused: boolean;
   availableSessions: AvailableSession[];
   fontSize?: number;
   onFocus: (slotIndex: number) => void;
   onAssignSession: (slotIndex: number, sessionId: string) => void;
   onRemoveSession: (slotIndex: number) => void;
+  onKillSession?: () => Promise<void>;
   onCreateSession?: () => Promise<string | null>;
   onRename?: (newName: string) => Promise<void>;
   theme?: ITheme;
@@ -29,20 +32,38 @@ export interface CanvasSlotProps {
 function SlotHeader({
   sessionName,
   sessionStatus,
+  projectName,
   onRemove,
+  onKill,
   onRename,
   onReconnect,
   onFit,
 }: {
   sessionName: string;
   sessionStatus: string | null;
+  projectName?: string | null;
   onRemove: () => void;
+  onKill?: () => Promise<void>;
   onRename?: (newName: string) => Promise<void>;
   onReconnect?: () => void;
   onFit?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const [killPending, setKillPending] = useState(false);
+  const killTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleKillClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!killPending) {
+      setKillPending(true);
+      killTimerRef.current = setTimeout(() => setKillPending(false), 3000);
+    } else {
+      if (killTimerRef.current) clearTimeout(killTimerRef.current);
+      setKillPending(false);
+      onKill?.().catch(() => {});
+    }
+  }, [killPending, onKill]);
 
   const startEdit = useCallback(() => {
     setEditValue(sessionName);
@@ -75,11 +96,14 @@ function SlotHeader({
           />
         ) : (
           <span
-            className={`font-['Inter'] text-[11px] text-[#889] truncate ${onRename ? 'cursor-text hover:text-[#bbc]' : ''}`}
+            className={`font-['Inter'] text-[11px] truncate ${onRename ? 'cursor-text hover:text-[#bbc]' : ''}`}
             onClick={onRename ? startEdit : undefined}
             title={onRename ? 'Clique para renomear' : undefined}
           >
-            {sessionName}
+            {projectName && (
+              <span className="text-[#556]">{projectName} — </span>
+            )}
+            <span className="text-[#889]">{sessionName}</span>
           </span>
         )}
         {!editing && sessionStatus && (
@@ -121,10 +145,29 @@ function SlotHeader({
             </svg>
           </button>
         )}
+        {onKill && (
+          <button
+            onClick={handleKillClick}
+            className={`flex items-center justify-center h-[18px] rounded-[3px] transition-colors ${
+              killPending
+                ? 'px-[5px] bg-[rgba(255,85,68,0.18)] text-[#f54] text-[9px] font-semibold font-[\'Inter\']'
+                : 'size-[18px] text-[#556] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)]'
+            }`}
+            title={killPending ? 'Clique novamente para confirmar' : 'Encerrar sessão'}
+            aria-label="Encerrar sessão"
+          >
+            {killPending ? 'Matar?' : (
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M4 6h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+        )}
         <button
           onClick={onRemove}
-          className="flex items-center justify-center size-[18px] rounded-[3px] text-[#556] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)] transition-colors"
-          title="Remover do canvas"
+          className="flex items-center justify-center size-[18px] rounded-[3px] text-[#445] hover:text-[#889] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+          title="Remover do canvas (mantém sessão ativa)"
           aria-label="Remover sessão do slot"
           data-testid="remove-slot-btn"
         >
@@ -175,7 +218,7 @@ function EmptySlotPlaceholder({
           <option value="" disabled>Selecionar sessão…</option>
           {availableSessions.map((s) => (
             <option key={s.sessionId} value={s.sessionId}>
-              {s.name}
+              {s.projectName ? `${s.projectName} — ${s.name}` : s.name}
             </option>
           ))}
         </select>
@@ -200,12 +243,14 @@ export function CanvasSlot({
   sessionId,
   sessionName,
   sessionStatus,
+  sessionProjectName,
   isFocused,
   availableSessions,
   fontSize,
   onFocus,
   onAssignSession,
   onRemoveSession,
+  onKillSession,
   onCreateSession,
   onRename,
   theme,
@@ -272,10 +317,12 @@ export function CanvasSlot({
           <SlotHeader
             sessionName={sessionName ?? 'Sessão'}
             sessionStatus={sessionStatus}
+            projectName={sessionProjectName}
             onRemove={handleRemove}
+            onKill={onKillSession}
             onRename={onRename}
             onReconnect={() => terminalRef.current?.reconnect()}
-            onFit={() => terminalRef.current?.resize()}
+            onFit={() => { terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
           />
           <div className="relative flex-1 min-h-0 overflow-hidden">
             <XTermTerminal

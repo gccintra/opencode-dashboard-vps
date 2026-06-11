@@ -39,6 +39,7 @@ import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/Canv
 import { MobileKeyboard } from '../components/Terminal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import type { CanvasLayout } from '../hooks/useCanvasState';
+import { VpsStatsWidget } from '../components/VpsStatsWidget';
 
 const ResourceConfig = lazy(() => import('../components/ResourceConfig/ResourceConfig'));
 
@@ -789,6 +790,10 @@ function TerminalStatusBar({
             </span>
           </span>
         )}
+        <div className="hidden sm:flex items-center gap-[8px]">
+          <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
+          <VpsStatsWidget />
+        </div>
       </div>
 
       <div className="flex items-center gap-[8px]">
