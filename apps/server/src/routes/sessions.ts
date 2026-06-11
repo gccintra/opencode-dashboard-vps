@@ -147,6 +147,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
       async ({ params, body, set }) => {
         try {
           const projectId = params.id;
+          console.error(`[sessions] POST /api/projects/${projectId}/sessions received`);
           const db = getDb();
 
           // 1. Verify the project exists in the DB.
@@ -248,16 +249,47 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           const rows = typeof body?.rows === 'number' && body.rows > 0 ? body.rows : 35;
 
           const manager = getPtyManager();
+
+          // Spawn args extracted so the auto-respawn closure can reuse them.
+          //
+          // IMPORTANT: spawn only `bash` (not `bash -c 'claude; ...'`).
+          // The hedge system creates 3 parallel PTYs to survive the Linux PTY
+          // SIGHUP race. If the spawn command includes `claude`, all 3 hedges
+          // start claude in the same project directory simultaneously — they
+          // compete for claude's per-project lock/local-server, causing the
+          // winner's claude to detect the conflict and exit cleanly (code=0).
+          // Instead, spawn a bare bash shell, then write the initial command
+          // to the PTY *after* the winner hedge is confirmed alive. This
+          // guarantees only ONE claude instance ever starts per session.
+          const spawnCommand = 'pty-sighup-exec';
+          const spawnArgs = ['bash'];
+          // The command written to the winner's PTY after successful spawn.
+          const initialCmd = 'claude; exec zsh 2>&1 || exec bash\n';
+
           try {
             await manager.spawnSession(
               sessionId,
               directory,
-              'bash',
-              ['-c', '(claude); exec zsh 2>/dev/null || exec bash'],
+              // pty-sighup-exec sets SIGHUP=SIG_IGN via sigaction() BEFORE exec-ing
+              // bash. SIG_IGN is inherited across all fork/exec descendants (POSIX
+              // guarantee), so claude, zsh, and the fallback bash are all immune
+              // from the very first instruction — zero race window vs the ~2ms
+              // window that `trap "" HUP` inside bash has (bash must start up and
+              // parse the script before trap takes effect). This eliminates the
+              // Linux PTY SIGHUP race where a stale SIGHUP queued by close(master_fd)
+              // hits the new session's pgrp when the kernel reuses the same /dev/pts/N.
+              // Binary compiled from apps/pty-worker/src/pty-sighup-exec.c and
+              // installed at /usr/local/bin/pty-sighup-exec.
+              spawnCommand,
+              spawnArgs,
               extraEnv,
               cols,
               rows,
             );
+            // Start claude in the winner's shell. Writing to the PTY stdin
+            // buffers the command for bash to execute as soon as it's ready.
+            // This runs AFTER the 1000ms hedge settle, so bash is confirmed alive.
+            manager.writeToSession(sessionId, initialCmd);
           } catch (spawnErr) {
             sessionMeta.delete(sessionId);
             db.run('DELETE FROM sessions WHERE id = ?', [sessionId]);
@@ -267,19 +299,70 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             };
           }
 
-          // 7. Wire the exit callback. The PTY manager fires this
-          //    when the underlying process exits; we mirror that
-          //    into our metadata so the UI can reflect the status.
-          manager.onSessionExit(sessionId, (code) => {
-            const m = sessionMeta.get(sessionId);
-            if (m) m.status = 'exited';
-            try {
-              getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
-            } catch {
-              // non-fatal
-            }
-            void code;
-          });
+          // 7. Wire the exit callback with transparent auto-respawn.
+          //
+          //    When the PTY process dies within RESPAWN_THRESHOLD_MS of being
+          //    spawned, we assume it was a victim of the SIGHUP kernel race and
+          //    automatically re-spawn under the same sessionId. The browser's
+          //    WebSocket reconnect logic (exponential back-off, up to 10 attempts)
+          //    handles the brief gap between exit and respawn transparently.
+          //
+          //    Auto-respawn is limited to MAX_AUTORESPAWNS attempts so a truly
+          //    broken command doesn't loop forever.
+          const RESPAWN_THRESHOLD_MS = 6_000;
+          const MAX_AUTORESPAWNS = 4;
+          let autoRespawnCount = 0;
+          let lastSpawnedAt = Date.now();
+
+          const registerExitCallback = () => {
+            manager.onSessionExit(sessionId, async (code) => {
+              const aliveMs = Date.now() - lastSpawnedAt;
+              const m = sessionMeta.get(sessionId);
+
+              if (aliveMs < RESPAWN_THRESHOLD_MS && autoRespawnCount < MAX_AUTORESPAWNS && m) {
+                autoRespawnCount++;
+                console.error(
+                  `[sessions] auto-respawn ${autoRespawnCount}/${MAX_AUTORESPAWNS} for ${sessionId} (lived ${aliveMs}ms code=${code})`,
+                );
+                m.status = 'active'; // keep session visible while respawning
+
+                // Brief pause so pending kernel SIGHUPs drain before the next spawn.
+                await new Promise<void>((r) => setTimeout(r, 2_000));
+
+                try {
+                  lastSpawnedAt = Date.now();
+                  await manager.spawnSession(
+                    sessionId,
+                    directory,
+                    spawnCommand,
+                    spawnArgs,
+                    extraEnv,
+                    cols,
+                    rows,
+                  );
+                  // Same as initial spawn: write command after winner is confirmed.
+                  manager.writeToSession(sessionId, initialCmd);
+                  registerExitCallback(); // wire for the new process
+                  console.error(`[sessions] auto-respawn ${autoRespawnCount} succeeded for ${sessionId}`);
+                } catch (respawnErr) {
+                  console.error(
+                    `[sessions] auto-respawn ${autoRespawnCount} failed for ${sessionId}: ${(respawnErr as Error).message}`,
+                  );
+                  if (m) m.status = 'exited';
+                  try { getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]); } catch { /* non-fatal */ }
+                }
+              } else {
+                // Normal exit (lived long enough) or retries exhausted.
+                if (m) m.status = 'exited';
+                try {
+                  getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
+                } catch { /* non-fatal */ }
+                void code;
+              }
+            });
+          };
+
+          registerExitCallback();
 
           set.status = 201;
           return sessionMeta.get(sessionId)!;

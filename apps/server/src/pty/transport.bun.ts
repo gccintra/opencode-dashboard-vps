@@ -28,9 +28,25 @@
  */
 
 import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import type { WorkerTransport } from './transport';
 import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+
+const WORKER_PID_FILE = '/tmp/pty-worker.pid';
+
+function killPreviousWorker(): void {
+  try {
+    const pid = parseInt(readFileSync(WORKER_PID_FILE, 'utf8').trim(), 10);
+    if (pid && pid > 0) {
+      try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
+    }
+  } catch { /* no pid file */ }
+  try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
+}
+
+function writeWorkerPid(pid: number): void {
+  try { writeFileSync(WORKER_PID_FILE, String(pid)); } catch { /* non-fatal */ }
+}
 
 /** Resolve Node 18 binary. Prefers PTY_NODE_BIN env var, then tries common paths. */
 function resolveNodeBin(): string {
@@ -58,6 +74,9 @@ export class BunWorkerTransport implements WorkerTransport {
   start(): void {
     if (this.started) return;
 
+    // Kill any leftover worker from a previous hot-reload or crash.
+    killPreviousWorker();
+
     // Resolve the pty-worker relative to the project root. PM2 sets cwd to
     // the project root, but dev runs from apps/server/ — fall back two levels.
     let workerDir = resolve(process.cwd(), 'apps/pty-worker');
@@ -78,7 +97,9 @@ export class BunWorkerTransport implements WorkerTransport {
       env: { ...process.env, NODE_NO_WARNINGS: '1' },
     });
 
+    writeWorkerPid(this.proc.pid);
     this.started = true;
+    console.error(`[pty-transport] worker started pid=${this.proc.pid}`);
 
     // Stream worker stderr → server stderr (prefixed for clarity).
     this.pipeStderrToServer(this.proc);
@@ -90,6 +111,8 @@ export class BunWorkerTransport implements WorkerTransport {
     // respawn the worker when ensureStarted() is called on next request.
     void this.proc.exited
       .then((code) => {
+        console.error(`[pty-transport] worker exited code=${code} pid=${this.proc?.pid ?? '?'}`);
+        try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
         this.proc = null;
         this.started = false;
         this.buf = '';
@@ -97,6 +120,7 @@ export class BunWorkerTransport implements WorkerTransport {
       })
       .catch((err) => {
         console.error('[pty-manager] worker exit promise rejected:', err);
+        try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
         this.proc = null;
         this.started = false;
         this.buf = '';
@@ -167,15 +191,21 @@ export class BunWorkerTransport implements WorkerTransport {
     const decoder = new TextDecoder();
     const stdout = this.proc.stdout as ReadableByteStream;
     const reader = stdout.getReader();
+    let lineCount = 0;
+    console.error('[pty-transport] readStdoutLoop STARTED');
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) return;
+        if (done) {
+          console.error('[pty-transport] readStdoutLoop DONE (stream ended)');
+          return;
+        }
         this.buf += decoder.decode(value, { stream: true });
         let nl: number;
         while ((nl = this.buf.indexOf('\n')) !== -1) {
           const line = this.buf.slice(0, nl);
           this.buf = this.buf.slice(nl + 1);
+          lineCount++;
           if (!line.trim() || !this.messageCb) continue;
           try {
             this.messageCb(JSON.parse(line));
@@ -185,8 +215,9 @@ export class BunWorkerTransport implements WorkerTransport {
         }
       }
     } catch (err) {
-      console.error('[pty-manager] worker stdout read error:', err);
+      console.error('[pty-manager] worker stdout read error (LOOP DEAD):', err);
     } finally {
+      console.error(`[pty-transport] readStdoutLoop EXITED linesProcessed=${lineCount}`);
       try {
         reader.releaseLock();
       } catch {
