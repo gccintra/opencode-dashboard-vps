@@ -101,6 +101,13 @@ export class BunWorkerTransport implements WorkerTransport {
     this.started = true;
     console.error(`[pty-transport] worker started pid=${this.proc.pid}`);
 
+    // Protect worker from OOM killer — it holds all live PTY state.
+    try {
+      writeFileSync(`/proc/${this.proc.pid}/oom_score_adj`, '-1000');
+    } catch {
+      // Non-fatal: might lack permissions in some environments.
+    }
+
     // Stream worker stderr → server stderr (prefixed for clarity).
     this.pipeStderrToServer(this.proc);
 
