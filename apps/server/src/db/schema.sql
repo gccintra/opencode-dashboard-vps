@@ -61,3 +61,22 @@ CREATE TABLE IF NOT EXISTS tasks (
   updated_at TEXT NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) STRICT;
+
+-- Canvas Hub: named multi-terminal layouts persisted cross-device
+CREATE TABLE IF NOT EXISTS canvases (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cols INTEGER NOT NULL DEFAULT 2,
+  rows INTEGER NOT NULL DEFAULT 2,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+) STRICT;
+
+-- Canvas Slots: session assignments for each slot in a canvas
+CREATE TABLE IF NOT EXISTS canvas_slots (
+  canvas_id TEXT NOT NULL,
+  slot_index INTEGER NOT NULL,
+  session_id TEXT,
+  PRIMARY KEY (canvas_id, slot_index),
+  FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
+) STRICT;

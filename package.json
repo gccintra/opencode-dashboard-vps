@@ -10,6 +10,10 @@
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
+    "dev:flat": "bun run dev:server:raw & bun run dev:web:raw & bun run dev:pty:raw & wait",
+    "dev:server:raw": "cd apps/server && NODE_ENV=development DATABASE_PATH=./data/opencode.db SERVER_PORT=3002 bun run --watch --env-file ../../.env src/index.ts",
+    "dev:web:raw": "cd apps/web && SERVER_PORT=3002 WEB_PORT=5174 vite",
+    "dev:pty:raw": "cd apps/pty-worker && tsx watch src/index.ts",
     "dev:server": "bun run --filter @opencode/server dev",
     "dev:web": "bun run --filter @opencode/web dev",
     "dev:pty-worker": "bun run --filter @opencode/pty-worker dev",
