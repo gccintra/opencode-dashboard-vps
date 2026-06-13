@@ -461,6 +461,13 @@ export function startIpcLoop(opts: {
     const msg = parsed as ClientMessage;
     handleMessage(msg, { ...opts.handleDeps, write });
   });
+
+  // Exit when stdin closes (Bun server restarted or pipe broken) so the worker
+  // doesn't spin in a tight read-EAGAIN loop consuming 100% CPU.
+  opts.readline.on('close', () => {
+    process.stderr.write('[pty-worker] stdin closed, exiting\n');
+    process.exit(0);
+  });
 }
 
 // ── Entry point ────────────────────────────────────────────────────
