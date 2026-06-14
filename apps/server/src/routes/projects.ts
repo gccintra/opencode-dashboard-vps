@@ -1,9 +1,15 @@
 import { Elysia, t } from 'elysia';
 import { authGuard } from '../auth/middleware';
 import { getDb } from '../db/client';
-import { existsSync, readdirSync, cpSync } from 'node:fs';
-import { resolve, join } from 'node:path';
-import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import {
+  copyHarnessToDir,
+  resolveHarnessDir,
+  getFileTree,
+  detectOverwriteConflicts,
+  syncHarnessesToDb,
+} from './harnesses';
 
 /**
  * Sanitize and validate a directory path:
@@ -19,30 +25,6 @@ function validateDirectory(raw: string): { resolved: string } | { error: string 
     return { error: `directory does not exist: ${resolved}` };
   }
   return { resolved };
-}
-
-/**
- * Check if a directory is non-empty (has files or subdirectories).
- */
-function isDirNonEmpty(dirPath: string): boolean {
-  try {
-    const entries = readdirSync(dirPath);
-    return entries.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Resolve the harness directory path given a harness ID.
- * Returns the full path if it exists, or null.
- */
-function resolveHarnessDir(harnessId: string): string | null {
-  const envPath = process.env.HARNESSES_PATH?.trim();
-  const rootPath = envPath ? resolve(envPath) : join(homedir(), '.config', 'opencode', 'harnesses');
-  const harnessDir = join(rootPath, harnessId);
-  if (!existsSync(harnessDir)) return null;
-  return harnessDir;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,26 +91,17 @@ export const projectsRoutes = new Elysia({ prefix: '/api/projects' }).guard(auth
 
         // Handle harness copy if harnessId is provided
         if (harnessId) {
-          const harnessDir = resolveHarnessDir(harnessId);
-          if (!harnessDir) {
-            set.status = 400;
-            return { error: `harness not found: ${harnessId}` };
-          }
-
-          // Check if project directory is non-empty
-          if (isDirNonEmpty(dirResult.resolved)) {
-            if (!body.overwrite) {
-              set.status = 409;
-              return { error: 'Directory not empty. Set overwrite=true to proceed.' };
-            }
-          }
-
-          // Copy harness files into project directory
           try {
-            cpSync(harnessDir, dirResult.resolved, { recursive: true });
+            // Sync filesystem -> DB to ensure harness exists for FK constraint
+            syncHarnessesToDb();
+            copyHarnessToDir(harnessId, dirResult.resolved, !!body.overwrite);
           } catch (err) {
-            set.status = 500;
-            return { error: `failed to copy harness files: ${(err as Error).message}` };
+            const e = err as Error & { status?: number; conflicts?: string[] };
+            set.status = (e.status as number) || 500;
+            if (e.conflicts) {
+              return { error: e.message, conflicts: e.conflicts };
+            }
+            return { error: e.message || 'failed to copy harness files' };
           }
         }
 
@@ -295,5 +268,107 @@ export const projectsRoutes = new Elysia({ prefix: '/api/projects' }).guard(auth
       db.run('DELETE FROM projects WHERE id = ?', [id]);
       set.status = 200;
       return { deleted: true };
+    })
+
+    // ── POST /api/projects/:id/harness ─────────────────────────────
+    // Apply a harness template to an existing project directory.
+    .post(
+      '/:id/harness',
+      ({ params: { id }, body, set }) => {
+        const db = getDb();
+        const project = db
+          .query('SELECT id, directory FROM projects WHERE id = ?')
+          .get(id) as DbRow | null;
+
+        if (!project) {
+          set.status = 404;
+          return { error: 'project not found' };
+        }
+
+        const harnessId = body.harnessId?.trim();
+        if (!harnessId) {
+          set.status = 400;
+          return { error: 'harnessId is required' };
+        }
+
+        try {
+          // Sync filesystem -> DB to ensure harness exists for FK constraint
+          syncHarnessesToDb();
+          const result = copyHarnessToDir(harnessId, project.directory as string, !!body.overwrite);
+
+          // Update project's harness_id to reflect applied template
+          db.run('UPDATE projects SET harness_id = ?, updated_at = ? WHERE id = ?', [
+            harnessId,
+            new Date().toISOString(),
+            id,
+          ]);
+
+          return { copied: result.copied, skipped: result.conflicts, errors: [] };
+        } catch (err) {
+          const e = err as Error & { status?: number; conflicts?: string[] };
+          set.status = (e.status as number) || 500;
+          if (e.conflicts) {
+            return { error: e.message, conflicts: e.conflicts };
+          }
+          return { error: e.message || 'failed to copy harness' };
+        }
+      },
+      {
+        body: t.Object({
+          harnessId: t.String(),
+          overwrite: t.Optional(t.Boolean()),
+          files: t.Optional(t.Array(t.String())),
+        }),
+      },
+    )
+
+    // ── GET /api/projects/:id/harness/preview ──────────────────────
+    // Dry-run: list files that would be copied and any conflicts.
+    .get('/:id/harness/preview', ({ params: { id }, query, set }) => {
+      const db = getDb();
+      const project = db
+        .query('SELECT id, directory FROM projects WHERE id = ?')
+        .get(id) as DbRow | null;
+
+      if (!project) {
+        set.status = 404;
+        return { error: 'project not found' };
+      }
+
+      const harnessId = query.harnessId?.trim();
+      if (!harnessId) {
+        set.status = 400;
+        return { error: 'harnessId query parameter is required' };
+      }
+
+      const harnessDir = resolveHarnessDir(harnessId);
+      if (!harnessDir) {
+        set.status = 400;
+        return { error: `harness not found: ${harnessId}` };
+      }
+
+      // Get harness metadata from DB
+      const harnessRow = db
+        .query('SELECT id, name, description FROM harnesses WHERE id = ?')
+        .get(harnessId) as DbRow | null;
+
+      // Build file tree for the harness
+      const files = getFileTree(harnessDir);
+
+      // Detect conflicts with existing project files
+      let conflicts: string[] = [];
+      if (existsSync(project.directory as string)) {
+        conflicts = detectOverwriteConflicts(harnessDir, project.directory as string);
+      }
+
+      return {
+        harness: {
+          id: harnessId,
+          name: harnessRow?.name || harnessId,
+          description: harnessRow?.description || '',
+        },
+        files,
+        conflicts,
+      };
     }),
 );
