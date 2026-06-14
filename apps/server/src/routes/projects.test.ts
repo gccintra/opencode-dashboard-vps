@@ -76,14 +76,22 @@ describe('projects routes', () => {
       join(harnessesDir, 'some-harness-id', 'manifest.json'),
       JSON.stringify({ name: 'Test Harness' }),
     );
+    writeFileSync(join(harnessesDir, 'some-harness-id', '.env.example'), 'PORT=3000\n');
+    writeFileSync(join(harnessesDir, 'some-harness-id', 'README.md'), '# Test Harness\n');
+    mkdirSync(join(harnessesDir, 'some-harness-id', 'src'), { recursive: true });
+    writeFileSync(
+      join(harnessesDir, 'some-harness-id', 'src', 'index.ts'),
+      'console.log("hello");\n',
+    );
     mkdirSync(join(harnessesDir, 'h1'));
     writeFileSync(join(harnessesDir, 'h1', 'manifest.json'), JSON.stringify({ name: 'h1' }));
     process.env.HARNESSES_PATH = harnessesDir;
 
-    // Build the app with both auth and projects routes
+    // Build the app with auth, projects, and harnesses routes
     const { authRoutes } = await import('../auth/index');
     const { projectsRoutes } = await import('./projects');
-    app = new Elysia().use(authRoutes).use(projectsRoutes);
+    const { harnessesRoutes } = await import('./harnesses');
+    app = new Elysia().use(authRoutes).use(projectsRoutes).use(harnessesRoutes);
   });
 
   afterEach(() => {
@@ -695,6 +703,247 @@ describe('projects routes', () => {
         }),
       );
       expect(res.status).toBe(401);
+    });
+  });
+
+  // ── POST /api/projects/:id/harness ─────────────────────────────────
+  describe('POST /api/projects/:id/harness', () => {
+    it('copies harness files into existing project directory', async () => {
+      const token = await getToken();
+      // Create project first (without harnessId so testDir stays empty)
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Harness Apply', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      // Apply harness
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness`, {
+          method: 'POST',
+          body: { harnessId: 'some-harness-id' },
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        copied: string[];
+        skipped: string[];
+        errors: unknown[];
+      };
+      expect(body.copied).toBeDefined();
+      expect(body.copied.length).toBeGreaterThan(0);
+      expect(body.errors).toEqual([]);
+
+      // Verify specific files were copied to the project directory
+      const { existsSync } = await import('node:fs');
+      expect(existsSync(join(testDir, '.env.example'))).toBe(true);
+      expect(existsSync(join(testDir, 'README.md'))).toBe(true);
+      expect(existsSync(join(testDir, 'src', 'index.ts'))).toBe(true);
+    });
+
+    it('returns 409 when conflicts exist and overwrite not set', async () => {
+      const { existsSync } = await import('node:fs');
+      const token = await getToken();
+
+      // Place a file that conflicts with a harness file
+      writeFileSync(join(testDir, '.env.example'), 'EXISTING_CONTENT');
+
+      // Create project (no harnessId — project dir already has the file)
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Conflict Test', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      // Apply harness without overwrite — should detect conflict
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness`, {
+          method: 'POST',
+          body: { harnessId: 'some-harness-id' },
+        }),
+      );
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { error: string; conflicts: string[] };
+      expect(body.error).toBeDefined();
+      expect(body.conflicts).toBeDefined();
+      expect(Array.isArray(body.conflicts)).toBe(true);
+      expect(body.conflicts.length).toBeGreaterThan(0);
+    });
+
+    it('proceeds with overwrite when overwrite=true', async () => {
+      const token = await getToken();
+
+      // Place a conflicting file in the project directory
+      writeFileSync(join(testDir, '.env.example'), 'EXISTING_CONTENT');
+
+      // Create project
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Overwrite Test', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      // Apply harness with overwrite=true
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness`, {
+          method: 'POST',
+          body: { harnessId: 'some-harness-id', overwrite: true },
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        copied: string[];
+        skipped: string[];
+        errors: unknown[];
+      };
+      expect(body.copied).toBeDefined();
+      expect(body.copied.length).toBeGreaterThan(0);
+    });
+
+    it('returns 404 when project does not exist', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, '/api/projects/nonexistent-id/harness', {
+          method: 'POST',
+          body: { harnessId: 'some-harness-id' },
+        }),
+      );
+
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('project not found');
+    });
+
+    it('returns 400 when harnessId is missing', async () => {
+      const token = await getToken();
+      // Create a project first so the route passes the project-exists check
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Missing HarnessId', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      // Send an empty-string harnessId so Elysia string validation passes
+      // but the handler's own check returns 400
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness`, {
+          method: 'POST',
+          body: { harnessId: '' },
+        }),
+      );
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('harnessId is required');
+    });
+
+    it('returns 400 when harness does not exist', async () => {
+      const token = await getToken();
+      // Create a project first
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Bad Harness', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness`, {
+          method: 'POST',
+          body: { harnessId: 'nonexistent-harness' },
+        }),
+      );
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('harness not found');
+    });
+  });
+
+  // ── GET /api/projects/:id/harness/preview ──────────────────────────
+  describe('GET /api/projects/:id/harness/preview', () => {
+    it('returns harness info, file tree, and conflicts', async () => {
+      const token = await getToken();
+
+      // Sync harnesses to DB so the preview can look up metadata
+      const { syncHarnessesToDb } = await import('./harnesses');
+      syncHarnessesToDb();
+
+      // Create a project
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Preview Test', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      // Place a conflicting file in the project directory
+      writeFileSync(join(testDir, '.env.example'), 'EXISTING');
+
+      // Preview the harness
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness/preview?harnessId=some-harness-id`),
+      );
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        harness: { id: string; name: string; description: string };
+        files: unknown[];
+        conflicts: string[];
+      };
+      expect(body.harness).toBeDefined();
+      expect(body.harness.id).toBe('some-harness-id');
+      expect(body.harness.name).toBe('Test Harness');
+      expect(body.files).toBeDefined();
+      expect(Array.isArray(body.files)).toBe(true);
+      expect(body.files.length).toBeGreaterThan(0);
+      expect(body.conflicts).toBeDefined();
+      expect(Array.isArray(body.conflicts)).toBe(true);
+      expect(body.conflicts).toContain('.env.example');
+    });
+
+    it('returns 404 when project does not exist', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, '/api/projects/nonexistent-id/harness/preview?harnessId=some-harness-id'),
+      );
+
+      expect(res.status).toBe(404);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('project not found');
+    });
+
+    it('returns 400 when harnessId query param is missing', async () => {
+      const token = await getToken();
+      // Create a project first so the route passes the project-exists check
+      const createRes = await app.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: 'Preview No Query', directory: testDir },
+        }),
+      );
+      const project = (await createRes.json()) as Record<string, unknown>;
+
+      const res = await app.handle(
+        authReq(token, `/api/projects/${project.id}/harness/preview`),
+      );
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('harnessId query parameter is required');
     });
   });
 });

@@ -32,7 +32,8 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import type { WorkerTransport } from './transport';
 import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
 
-const WORKER_PID_FILE = '/tmp/pty-worker.pid';
+const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
+const WORKER_PID_FILE = `/tmp/pty-worker-${PORT}.pid`;
 
 function killPreviousWorker(): void {
   try {

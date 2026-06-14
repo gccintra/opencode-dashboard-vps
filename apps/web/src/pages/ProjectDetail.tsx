@@ -24,7 +24,7 @@
 
 import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { apiFetch, type ApiError } from '../lib/api';
+import { apiFetch, fetchHarnesses, previewHarnessOnProject, applyHarnessToProject, type ApiError, type FileEntry } from '../lib/api';
 import {
   XTermTerminal,
   ThemePicker,
@@ -42,6 +42,7 @@ import type { CanvasLayout } from '../hooks/useCanvasState';
 import { VpsStatsWidget } from '../components/VpsStatsWidget';
 
 const ResourceConfig = lazy(() => import('../components/ResourceConfig/ResourceConfig'));
+const HarnessPreviewModal = lazy(() => import('../components/Harnesses/HarnessPreviewModal'));
 
 /* ── Types ── */
 
@@ -504,6 +505,7 @@ function TerminalHeader({
   killing,
   sidebarOpen,
   onToggleSidebar,
+  onApplyTemplate,
 }: {
   projectName: string;
   sessionName: string | null;
@@ -520,6 +522,7 @@ function TerminalHeader({
   killing: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  onApplyTemplate?: () => void;
 }) {
   const isConnected = connectionStatus === 'connected';
 
@@ -633,56 +636,71 @@ function TerminalHeader({
           </div>
         </div>
       ) : (
-        /* Session action buttons */
-        hasActiveSession && (
-          <div className="flex items-center gap-[8px] shrink-0 ml-[16px]">
+        <div className="flex items-center gap-[8px] shrink-0 ml-[16px]">
+          {hasActiveSession && (
+            <>
+              <button
+                onClick={onReconnect}
+                title="Reconnect"
+                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#2d8] hover:bg-[rgba(34,221,136,0.14)] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path
+                    d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M7.5 1.5l1.5 1.5-1.5 1.5"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Reconnect</span>
+              </button>
+              <button
+                onClick={onRefresh}
+                title="Fit/Refresh terminal layout"
+                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                <span className="hidden sm:inline">Fit</span>
+              </button>
+              <button
+                onClick={onKill}
+                disabled={killing}
+                title={killing ? 'Killing…' : 'Kill'}
+                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(255,85,102,0.2)] bg-[rgba(255,85,102,0.15)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#f56] hover:bg-[rgba(255,85,102,0.22)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="close-session-button"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                <span className="hidden sm:inline">{killing ? 'Killing…' : 'Kill'}</span>
+              </button>
+              <div className="h-[14px] w-px bg-[rgba(255,255,255,0.08)]" />
+            </>
+          )}
+          {onApplyTemplate && (
             <button
-              onClick={onReconnect}
-              title="Reconnect"
-              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#2d8] hover:bg-[rgba(34,221,136,0.14)] transition-colors"
+              onClick={onApplyTemplate}
+              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(170,255,0,0.2)] bg-[rgba(170,255,0,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#af0] hover:bg-[rgba(170,255,0,0.14)] transition-colors"
+              title="Apply template to project"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M7.5 1.5l1.5 1.5-1.5 1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
-              <span className="hidden sm:inline">Reconnect</span>
+              <span className="hidden sm:inline">Template</span>
             </button>
-            <button
-              onClick={onRefresh}
-              title="Fit/Refresh terminal layout"
-              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              <span className="hidden sm:inline">Fit</span>
-            </button>
-            <button
-              onClick={onKill}
-              disabled={killing}
-              title={killing ? 'Killing…' : 'Kill'}
-              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(255,85,102,0.2)] bg-[rgba(255,85,102,0.15)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#f56] hover:bg-[rgba(255,85,102,0.22)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="close-session-button"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <span className="hidden sm:inline">{killing ? 'Killing…' : 'Kill'}</span>
-            </button>
-          </div>
-        )
+          )}
+        </div>
       )}
     </header>
   );
@@ -931,6 +949,73 @@ export default function ProjectDetailPage() {
 
   const urlSessionId = searchParams.get('session');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // ── Template / Harness preview modal ──
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [harnesses, setHarnesses] = useState<Array<{ id: string; name: string; description: string }>>([]);
+  const [harnessesLoading, setHarnessesLoading] = useState(false);
+  const [selectedHarnessId, setSelectedHarnessId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ files: FileEntry[]; conflicts: string[] } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  const handleOpenTemplateModal = useCallback(async () => {
+    setTemplateModalOpen(true);
+    setHarnessesLoading(true);
+    setSelectedHarnessId(null);
+    setPreview(null);
+    setApplyError(null);
+    try {
+      const data = await fetchHarnesses();
+      setHarnesses(data);
+    } catch {
+      setHarnesses([]);
+    } finally {
+      setHarnessesLoading(false);
+    }
+  }, []);
+
+  const handleHarnessChange = useCallback(
+    async (harnessId: string | null) => {
+      setSelectedHarnessId(harnessId);
+      setApplyError(null);
+      if (!harnessId || !projectId) {
+        setPreview(null);
+        return;
+      }
+      setPreviewLoading(true);
+      try {
+        const data = await previewHarnessOnProject(projectId, harnessId);
+        setPreview(data);
+      } catch (err) {
+        const apiErr = err as ApiError;
+        setApplyError(apiErr.message || 'Failed to load preview');
+        setPreview(null);
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [projectId],
+  );
+
+  const handleApplyTemplate = useCallback(
+    async (overwrite: boolean) => {
+      if (!selectedHarnessId || !projectId) return;
+      setApplying(true);
+      setApplyError(null);
+      try {
+        await applyHarnessToProject(projectId, selectedHarnessId, overwrite);
+        setTemplateModalOpen(false);
+      } catch (err) {
+        const apiErr = err as ApiError;
+        setApplyError(apiErr.message || 'Failed to apply template');
+      } finally {
+        setApplying(false);
+      }
+    },
+    [selectedHarnessId, projectId],
+  );
 
   const searchParamsRef = useRef(searchParams);
   useEffect(() => {
@@ -1353,6 +1438,7 @@ export default function ProjectDetailPage() {
             killing={killing}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onApplyTemplate={handleOpenTemplateModal}
           />
         )}
 
@@ -1589,6 +1675,25 @@ export default function ProjectDetailPage() {
             />
           ) : undefined}
         />
+
+        {/* ── Template preview modal ── */}
+        {templateModalOpen && (
+          <Suspense fallback={null}>
+            <HarnessPreviewModal
+              open={templateModalOpen}
+              harnesses={harnesses}
+              harnessesLoading={harnessesLoading}
+              preview={preview}
+              previewLoading={previewLoading}
+              selectedHarnessId={selectedHarnessId}
+              onHarnessChange={handleHarnessChange}
+              onApply={handleApplyTemplate}
+              applying={applying}
+              applyError={applyError}
+              onClose={() => setTemplateModalOpen(false)}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   );

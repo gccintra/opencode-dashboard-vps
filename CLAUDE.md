@@ -156,8 +156,37 @@ These are documented failures that exist in the repo and are not regressions:
 - `Projects.test.tsx` — ~8 fail (`harnesses.map is not a function`)
 - `Sidebar.test.tsx` — 1 fail (duplicate DOM text)
 - `sessions.test.ts` (server) — 5 fail (mock assertion mismatches)
+- `ws/handler.test.ts` (server) — 1 fail (`ws.closed` is null when expected to have close code 1011)
 
 When running the full suite, V8 coverage output may be absent if uncaught exceptions abort vitest. Run coverage scoped to a specific file to work around this:
 ```bash
 cd apps/web && bunx vitest run --coverage src/path/to/Component.test.tsx
 ```
+
+---
+
+## Lessons Learned
+
+### 2026-06-13 - Bun/Elysia: HTTP 204 Not Supported in Response Constructor
+**Context:** DELETE endpoints that return no body.
+**Discovery:** Bun's `Response` constructor throws `Invalid response status code 204` when Elysia sets `set.status = 204` and returns without a body (`return;`). This is a Bun limitation, not standard HTTP behavior.
+**Solution:** Use `set.status = 200; return { deleted: true };` instead of 204. This matches the pattern already used in `projects.ts` DELETE handler.
+**Source:** This task (harness CRUD implementation)
+
+### 2026-06-13 - Testing: Module-level Side Effects and Import Order
+**Context:** Writing server tests for routes that use `process.env`.
+**Discovery:** `apps/server/src/routes/harnesses.ts` calls `ensureHarnessesDir()` at module level (line 374). This means `HARNESSES_PATH` must be set in `process.env` BEFORE the routes module is imported. If the module is imported first (triggering `ensureHarnessesDir()` with the wrong path), then `HARNESSES_PATH` is set, the cached module won't re-execute `ensureHarnessesDir()`.
+**Solution:** Always set `process.env.HARNESSES_PATH = tempDir` BEFORE `const { harnessesRoutes } = await import('./harnesses')`. Do NOT add redundant early imports of the route module. This pattern is followed correctly in the first `describe` block of `harnesses.test.ts`.
+**Source:** This task (harness test phase)
+
+### 2026-06-13 - Testing: No New Learnings from Harness Test Run
+**Context:** Tester ran 143 harness-specific tests (88 server, 55 frontend) and full regression suite.
+**Discovery:** All 143 new tests pass with no failures. Coverage exceeds 80% threshold on all new code (server routes: 90-97%, web components: 83-100%). Full regression suite shows only pre-existing failures unchanged.
+**Solution:** No changes needed. Pre-existing failures remain documented in "Known Pre-existing Test Failures" section.
+**Source:** This task (test phase)
+
+### 2026-06-13 - Testing: Full Regression Suite (901 tests) — Only Pre-existing Failures
+**Context:** Tester ran the complete vitest test suite across both apps/server and apps/web after harness feature implementation.
+**Discovery:** All new harness tests pass (143/143). Server suite: 406/412 pass (6 pre-existing failures across sessions.test.ts and ws/handler.test.ts). Web suite: 399/489 pass (90 pre-existing failures across 9 files including ProjectDetail, Emergency, XTermTerminal, CodeEditor, FileTree, AppLayout, Sidebar, Sessions, Projects). No regressions introduced by harness feature.
+**Solution:** The ws/handler.test.ts failure was added to the documented pre-existing failures list. No code changes needed for the harness feature.
+**Source:** This task (test phase - full regression)

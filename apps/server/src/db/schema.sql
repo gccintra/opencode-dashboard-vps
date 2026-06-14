@@ -9,8 +9,18 @@ CREATE TABLE IF NOT EXISTS _migrations (
   applied_at TEXT DEFAULT (datetime('now'))
 ) STRICT;
 
+-- Harnesses: template directories for bootstrapping projects
+CREATE TABLE IF NOT EXISTS harnesses (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  directory TEXT NOT NULL,
+  file_count INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+) STRICT;
+
 -- Projects: registered project directories with metadata
--- harness_id is a soft reference to harnesses (task 07 will add the FK)
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -19,8 +29,34 @@ CREATE TABLE IF NOT EXISTS projects (
   harness_id TEXT,
   github_repo TEXT,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (harness_id) REFERENCES harnesses(id) ON DELETE SET NULL
 ) STRICT;
+
+-- FK enforcement for projects.harness_id (works for existing DBs where
+-- the projects table was created without a declarative FK).
+-- Used alongside the declarative FK in CREATE TABLE for new DBs.
+CREATE TRIGGER IF NOT EXISTS fk_projects_harness_id_insert
+  BEFORE INSERT ON projects
+  WHEN NEW.harness_id IS NOT NULL
+BEGIN
+  SELECT RAISE(ABORT, 'FOREIGN KEY constraint failed: harness_id not found in harnesses')
+  WHERE (SELECT id FROM harnesses WHERE id = NEW.harness_id) IS NULL;
+END;
+
+CREATE TRIGGER IF NOT EXISTS fk_projects_harness_id_update
+  BEFORE UPDATE OF harness_id ON projects
+  WHEN NEW.harness_id IS NOT NULL
+BEGIN
+  SELECT RAISE(ABORT, 'FOREIGN KEY constraint failed: harness_id not found in harnesses')
+  WHERE (SELECT id FROM harnesses WHERE id = NEW.harness_id) IS NULL;
+END;
+
+CREATE TRIGGER IF NOT EXISTS fk_harnesses_delete_set_null
+  BEFORE DELETE ON harnesses
+BEGIN
+  UPDATE projects SET harness_id = NULL WHERE harness_id = OLD.id;
+END;
 
 -- Project Resources: link scanned resources (skills, agents, mcps) to
 -- projects with activation state. Only active + available resources are

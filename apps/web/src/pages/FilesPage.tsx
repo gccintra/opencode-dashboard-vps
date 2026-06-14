@@ -5,7 +5,6 @@ import FileTree from '../components/FileManager/FileTree';
 import CodeEditor from '../components/FileManager/CodeEditor';
 import type { FileTreeHandle } from '../components/FileManager/FileTree';
 import type { CodeEditorHandle } from '../components/FileManager/CodeEditor';
-import { useFileClipboard } from '../hooks/useFileClipboard';
 
 /* ── Types ── */
 
@@ -110,19 +109,6 @@ function ProjectCard({
   );
 }
 
-/* ── Paste Error Banner ── */
-
-function PasteErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-  return (
-    <div className="shrink-0 border-b border-red-500/20 bg-red-500/10 px-3 py-2 font-['Inter'] text-[12px] text-red-400">
-      {message}
-      <button onClick={onDismiss} className="ml-2 text-[#556] hover:text-[#889]">
-        ×
-      </button>
-    </div>
-  );
-}
-
 /* ── FilesPage ── */
 
 export default function FilesPage() {
@@ -131,14 +117,12 @@ export default function FilesPage() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [pasteError, setPasteError] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>('projects');
   // Mobile opens one file at a time via initialFilePath + key remount.
   // Desktop opens via imperative ref (multiple tabs supported).
   const [mobileFilePath, setMobileFilePath] = useState<string | null>(null);
   const fileTreeRef = useRef<FileTreeHandle>(null);
   const desktopEditorRef = useRef<CodeEditorHandle>(null);
-  const { clipboard, copy, clear } = useFileClipboard();
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -210,40 +194,7 @@ export default function FilesPage() {
     setMobileView('editor');
   }, []);
 
-  const handleCopy = useCallback(
-    (path: string) => {
-      if (!selectedProjectId) return;
-      copy(selectedProjectId, path);
-    },
-    [selectedProjectId, copy],
-  );
-
-  const handlePaste = useCallback(
-    async (targetDir: string) => {
-      if (!clipboard || !selectedProjectId) return;
-      if (clipboard.projectId !== selectedProjectId) {
-        setPasteError('Cannot paste across projects');
-        return;
-      }
-      const filename = clipboard.sourcePath.split('/').pop() || 'file';
-      const destPath = targetDir ? `${targetDir}/${filename}` : filename;
-      setPasteError(null);
-      try {
-        await apiFetch(`/api/projects/${selectedProjectId}/files/copy`, {
-          method: 'POST',
-          body: JSON.stringify({ sourcePath: clipboard.sourcePath, destPath }),
-        });
-        clear();
-        fileTreeRef.current?.refresh();
-      } catch (err) {
-        setPasteError((err as ApiError).message || 'Paste failed');
-      }
-    },
-    [clipboard, selectedProjectId, clear],
-  );
-
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
-  const activeClipboard = clipboard?.projectId === selectedProjectId ? clipboard : null;
 
   /* ── Full-page states ── */
 
@@ -336,17 +287,11 @@ export default function FilesPage() {
                 {selectedProject?.name}
               </span>
             </div>
-            {pasteError && (
-              <PasteErrorBanner message={pasteError} onDismiss={() => setPasteError(null)} />
-            )}
             <div className="min-h-0 flex-1 overflow-hidden">
               <FileTree
                 ref={fileTreeRef}
                 projectId={selectedProjectId}
                 onFileOpen={handleFileOpen}
-                onCopy={handleCopy}
-                onPaste={handlePaste}
-                clipboard={activeClipboard}
                 isMobile
               />
             </div>
@@ -410,9 +355,6 @@ export default function FilesPage() {
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            {pasteError && (
-              <PasteErrorBanner message={pasteError} onDismiss={() => setPasteError(null)} />
-            )}
             <div className="flex min-h-0 flex-1">
               {/* FileTree sidebar — user-resizable via drag handle */}
               <div className="shrink-0 overflow-hidden" style={{ width: sidebarWidth }}>
@@ -420,9 +362,6 @@ export default function FilesPage() {
                   ref={fileTreeRef}
                   projectId={selectedProjectId}
                   onFileOpen={handleFileOpen}
-                  onCopy={handleCopy}
-                  onPaste={handlePaste}
-                  clipboard={activeClipboard}
                 />
               </div>
               {/* Drag handle */}

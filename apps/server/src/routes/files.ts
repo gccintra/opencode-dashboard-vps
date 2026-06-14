@@ -759,5 +759,53 @@ export const filesBaseRoutes = new Elysia({ prefix: '/api/files' }).guard(authGu
           path: t.String(),
         }),
       },
+    )
+    // ── POST /api/files/upload-temp — save clipboard image to /tmp ───────
+    .post(
+      '/upload-temp',
+      async ({ request, set }) => {
+        const tmpDir = '/tmp/opencode-paste-images';
+        if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let rawForm: any;
+        try {
+          rawForm = await request.formData();
+        } catch {
+          set.status = 400;
+          return { error: 'invalid multipart form data' };
+        }
+
+        const file = rawForm.get('file');
+        if (!file || !(file instanceof File)) {
+          set.status = 400;
+          return { error: 'missing file field' };
+        }
+
+        const MAX = 10 * 1024 * 1024;
+        if (file.size > MAX) {
+          set.status = 413;
+          return { error: 'file too large (max 10MB)' };
+        }
+
+        const extMap: Record<string, string> = {
+          'image/png': '.png',
+          'image/jpeg': '.jpg',
+          'image/jpg': '.jpg',
+          'image/gif': '.gif',
+          'image/webp': '.webp',
+          'image/bmp': '.bmp',
+          'image/svg+xml': '.svg',
+        };
+        const ext = extMap[file.type] ?? '.png';
+        const filename = `paste-${Date.now()}${ext}`;
+        const destPath = join(tmpDir, filename);
+
+        const buffer = Buffer.from(await file.arrayBuffer());
+        writeFileSync(destPath, buffer);
+
+        set.status = 201;
+        return { path: destPath };
+      },
     ),
 );

@@ -13,6 +13,8 @@ import SessionsPage from './pages/Sessions';
 import CanvasHubPage from './pages/CanvasHub';
 import CanvasHubViewPage from './pages/CanvasHubView';
 import FilesPage from './pages/FilesPage';
+import HarnessesPage from './pages/HarnessesPage';
+import HarnessManagerPage from './pages/HarnessManagerPage';
 
 function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -57,6 +59,8 @@ function AppRoutes() {
         <Route path="/tasks" element={<KanbanPage />} />
         <Route path="/canvas" element={<CanvasHubPage />} />
         <Route path="/files" element={<FilesPage />} />
+        <Route path="/templates" element={<HarnessesPage />} />
+        <Route path="/templates/:id" element={<HarnessManagerPage />} />
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
 

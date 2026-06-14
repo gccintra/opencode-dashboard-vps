@@ -211,15 +211,17 @@ function ThemePicker({
 
 export interface CodeEditorProps {
   projectId: string;
+  filesApiBase?: string;
   initialFilePath?: string;
   isMobile?: boolean;
   onBack?: () => void;
 }
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
-  { projectId, initialFilePath, isMobile = false, onBack },
+  { projectId, filesApiBase, initialFilePath, isMobile = false, onBack },
   ref,
 ) {
+  const base = filesApiBase ?? `/api/projects/${projectId}/files`;
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -273,7 +275,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
         try {
           const token = getToken();
           const res = await fetch(
-            `/api/projects/${projectId}/files/download?path=${encodeURIComponent(filePath)}`,
+            `${base}/download?path=${encodeURIComponent(filePath)}`,
             { headers: token ? { Authorization: `Bearer ${token}` } : {} },
           );
           if (!res.ok) {
@@ -305,7 +307,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
 
       try {
         const data = await apiFetch<FileContentResponse>(
-          `/api/projects/${projectId}/files/read?path=${encodeURIComponent(filePath)}`,
+          `${base}/read?path=${encodeURIComponent(filePath)}`,
         );
         const newTab: EditorTab = {
           filePath,
@@ -360,7 +362,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
       setError(null);
       try {
         const result = await apiFetch<{ modifiedAt: string }>(
-          `/api/projects/${projectId}/files/write?path=${encodeURIComponent(tab.filePath)}`,
+          `${base}/write?path=${encodeURIComponent(tab.filePath)}`,
           { method: 'PUT', body: JSON.stringify({ content: tab.content }) },
         );
         setTabs((prev) =>
@@ -587,48 +589,64 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
             {saving ? '…' : 'Save'}
           </button>
         )}
-        <div className="flex min-h-[40px] flex-1 overflow-x-auto">
-          {tabs.map((tab, i) => {
-            const tabExt = extOf(tab.fileName);
-            const isDragTarget = dragOverIdx === i && dragTabIdx !== null && dragTabIdx !== i;
-            return (
-              <button
-                key={tab.filePath}
-                draggable
-                onDragStart={() => handleTabDragStart(i)}
-                onDragOver={(e) => handleTabDragOver(e, i)}
-                onDrop={(e) => handleTabDrop(e, i)}
-                onDragEnd={() => {
-                  setDragTabIdx(null);
-                  setDragOverIdx(null);
-                }}
-                onClick={() => setActiveTabIndex(i)}
-                className={`flex min-h-[40px] items-center gap-1.5 border-r border-[rgba(255,255,255,0.06)] px-3 py-2 text-left font-['Inter'] text-[12px] transition-colors shrink-0 cursor-pointer ${
-                  i === activeTabIndex
-                    ? 'border-b-2 border-b-[#af0] bg-[#0a0a0f] text-[#f0f0f0]'
-                    : 'text-[#889] hover:text-[#ccd]'
-                } ${isDragTarget ? 'border-l-2 border-l-[#af0]' : ''}`}
-                data-testid={`tab-${i}`}
-              >
-                <FileTabIcon extension={tabExt} />
-                <span className="max-w-[120px] truncate">{tab.fileName}</span>
-                {tab.modified && <span className="text-[#af0] text-[10px]">●</span>}
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(i);
-                  }}
-                  className="ml-1 flex size-[20px] shrink-0 items-center justify-center rounded-sm hover:bg-[rgba(255,255,255,0.08)] cursor-pointer"
-                  data-testid={`close-tab-${i}`}
-                >
-                  <CloseIcon />
+        {/* Mobile: show only active tab name, no list, no close button */}
+        {isMobile ? (
+          <div className="flex min-h-[44px] flex-1 items-center px-3">
+            {activeTab && (
+              <>
+                <FileTabIcon extension={extOf(activeTab.fileName)} />
+                <span className="ml-1.5 font-['Inter'] text-[13px] text-[#f0f0f0] truncate">
+                  {activeTab.fileName}
                 </span>
-              </button>
-            );
-          })}
-        </div>
+                {activeTab.modified && <span className="ml-1.5 text-[#af0] text-[10px]">●</span>}
+              </>
+            )}
+          </div>
+        ) : (
+          /* Desktop: full scrollable tab list with close buttons */
+          <div className="flex min-h-[40px] flex-1 overflow-x-auto">
+            {tabs.map((tab, i) => {
+              const tabExt = extOf(tab.fileName);
+              const isDragTarget = dragOverIdx === i && dragTabIdx !== null && dragTabIdx !== i;
+              return (
+                <button
+                  key={tab.filePath}
+                  draggable
+                  onDragStart={() => handleTabDragStart(i)}
+                  onDragOver={(e) => handleTabDragOver(e, i)}
+                  onDrop={(e) => handleTabDrop(e, i)}
+                  onDragEnd={() => {
+                    setDragTabIdx(null);
+                    setDragOverIdx(null);
+                  }}
+                  onClick={() => setActiveTabIndex(i)}
+                  className={`flex min-h-[40px] items-center gap-1.5 border-r border-[rgba(255,255,255,0.06)] px-3 py-2 text-left font-['Inter'] text-[12px] transition-colors shrink-0 cursor-pointer ${
+                    i === activeTabIndex
+                      ? 'border-b-2 border-b-[#af0] bg-[#0a0a0f] text-[#f0f0f0]'
+                      : 'text-[#889] hover:text-[#ccd]'
+                  } ${isDragTarget ? 'border-l-2 border-l-[#af0]' : ''}`}
+                  data-testid={`tab-${i}`}
+                >
+                  <FileTabIcon extension={tabExt} />
+                  <span className="max-w-[120px] truncate">{tab.fileName}</span>
+                  {tab.modified && <span className="text-[#af0] text-[10px]">●</span>}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(i);
+                    }}
+                    className="ml-1 flex size-[20px] shrink-0 items-center justify-center rounded-sm hover:bg-[rgba(255,255,255,0.08)] cursor-pointer"
+                    data-testid={`close-tab-${i}`}
+                  >
+                    <CloseIcon />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {activeTab && (
           <div className="flex shrink-0 items-center gap-2 px-3">
             {saving && <span className="font-['Inter'] text-[10px] text-[#889]">Saving…</span>}
