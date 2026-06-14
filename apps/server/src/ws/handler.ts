@@ -133,6 +133,18 @@ export function handleOpen(ws: WSLike): void {
 
   const manager = getPtyManager();
 
+  // Send the current detected status immediately on connect so the frontend
+  // can initialize prevStatus correctly. Status changes are only sent on
+  // transitions, so without this the frontend never knows the initial state.
+  const detectedStatus = manager.getDetectedStatus(sessionId);
+  if (detectedStatus && detectedStatus !== 'finished') {
+    try {
+      ws.send(JSON.stringify({ type: 'status', status: detectedStatus }));
+    } catch {
+      // ignore
+    }
+  }
+
   // Subscribe to PTY output. The callback runs on every chunk
   // produced by the underlying process. Skip the send if the
   // socket is already closed (race on shutdown).
