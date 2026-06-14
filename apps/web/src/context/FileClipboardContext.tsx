@@ -72,29 +72,55 @@ export function FileClipboardProvider({ children }: { children: ReactNode }) {
       if (!clipboard) return { ok: false, error: 'Nothing in clipboard' };
 
       const token = getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const authHeaders: Record<string, string> = {};
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
+      const destPath = destDir ? `${destDir}/${clipboard.fileName}` : clipboard.fileName;
 
       try {
-        // 1. Download from source
+        // Same-project: use server-side copy or rename (handles directories correctly)
+        if (clipboard.sourceApiBase === destApiBase) {
+          if (clipboard.action === 'cut') {
+            const res = await fetch(`${destApiBase}/rename`, {
+              method: 'PUT',
+              headers: { ...authHeaders, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ oldPath: clipboard.sourcePath, newPath: destPath }),
+            });
+            if (!res.ok) {
+              const text = await res.text();
+              return { ok: false, error: `Move failed: ${text}` };
+            }
+          } else {
+            const res = await fetch(`${destApiBase}/copy`, {
+              method: 'POST',
+              headers: { ...authHeaders, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sourcePath: clipboard.sourcePath, destPath }),
+            });
+            if (!res.ok) {
+              const text = await res.text();
+              return { ok: false, error: `Copy failed: ${text}` };
+            }
+          }
+          clear();
+          return { ok: true };
+        }
+
+        // Cross-project: download + upload (files only — directories not supported cross-project)
         const downloadUrl = `${clipboard.sourceApiBase}/download?path=${encodeURIComponent(clipboard.sourcePath)}`;
-        const downloadRes = await fetch(downloadUrl, { headers });
+        const downloadRes = await fetch(downloadUrl, { headers: authHeaders });
         if (!downloadRes.ok) {
           const text = await downloadRes.text();
           return { ok: false, error: `Download failed: ${text}` };
         }
         const blob = await downloadRes.blob();
 
-        // 2. Upload to destination
-        const uploadPath = destDir
-          ? `${destDir}/${clipboard.fileName}`
-          : clipboard.fileName;
         const formData = new FormData();
         formData.append('file', new File([blob], clipboard.fileName));
-        const uploadUrl = `${destApiBase}/upload?path=${encodeURIComponent(uploadPath)}`;
+        // path param is the target DIRECTORY, not the full path — server appends file.name
+        const uploadUrl = `${destApiBase}/upload?path=${encodeURIComponent(destDir)}`;
         const uploadRes = await fetch(uploadUrl, {
           method: 'POST',
-          headers,
+          headers: authHeaders,
           body: formData,
         });
         if (!uploadRes.ok) {
@@ -102,13 +128,9 @@ export function FileClipboardProvider({ children }: { children: ReactNode }) {
           return { ok: false, error: `Upload failed: ${text}` };
         }
 
-        // 3. If cut, delete from source
         if (clipboard.action === 'cut') {
           const deleteUrl = `${clipboard.sourceApiBase}?path=${encodeURIComponent(clipboard.sourcePath)}`;
-          await fetch(deleteUrl, {
-            method: 'DELETE',
-            headers,
-          });
+          await fetch(deleteUrl, { method: 'DELETE', headers: authHeaders });
         }
 
         clear();
