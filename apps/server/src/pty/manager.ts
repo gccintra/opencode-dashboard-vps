@@ -317,6 +317,13 @@ export class PtyManager {
     return s ? s.status : null;
   }
 
+  /** Return the currently-detected semantic status ('active'|'waiting'|'finished') for a session, or null if not found. */
+  getDetectedStatus(id: string): string | null {
+    const session = this.sessions.get(id);
+    if (!session) return null;
+    return detectStatus(session);
+  }
+
   /**
    * Start a periodic status monitor that polls every session and fires
    * status-change callbacks when the {@link detectStatus} result changes.

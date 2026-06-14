@@ -1184,24 +1184,31 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // Data subscription was already wired before font loading.
           const MOUSE_RESET = '\x1b[?1000l\x1b[?1002l\x1b[?1003l';
           let prevStatus = '';
-          let repaintTimer: ReturnType<typeof setTimeout> | null = null;
+          const statusTimers: ReturnType<typeof setTimeout>[] = [];
+          const clearStatusTimers = () => {
+            for (const t of statusTimers) clearTimeout(t);
+            statusTimers.length = 0;
+          };
           const unsubscribeStatus = socket.onStatus((st) => {
             onStatusChangeRef.current?.(st);
-            // When a new process becomes active after the shell was idle (e.g. opencode
-            // restarted after Ctrl+C), send SIGWINCH so the TUI knows the real terminal
-            // dimensions and repaints. Without this, the user must navigate away and
-            // back to trigger the remount-time fit(), causing lost canvas state.
-            if (st === 'active' && prevStatus === 'waiting') {
-              if (repaintTimer !== null) clearTimeout(repaintTimer);
-              repaintTimer = setTimeout(() => {
-                repaintTimer = null;
+            // Fire fit+refresh+SIGWINCH when status becomes 'active' from any non-active
+            // state. This covers:
+            //   'waiting' → 'active': user ran a command from bash
+            //   ''        → 'active': new session; opencode started before first status poll
+            if (st === 'active' && prevStatus !== 'active') {
+              clearStatusTimers();
+              const doRepaint = (sendSigwinch: boolean) => {
                 const fit = fitAddonRef.current;
                 const term = terminalRef.current;
                 if (!fit || !term || term.element?.clientWidth === 0) return;
                 try { fit.fit(); } catch { return; }
                 try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
-                onResizeRef.current?.(term.cols, term.rows);
-              }, 150);
+                if (sendSigwinch) onResizeRef.current?.(term.cols, term.rows);
+              };
+              // 150ms: fast refresh to cover cases where opencode has already rendered
+              statusTimers.push(setTimeout(() => doRepaint(false), 150));
+              // 1000ms: refresh + SIGWINCH after opencode has had time to initialize
+              statusTimers.push(setTimeout(() => doRepaint(true), 1000));
             }
             prevStatus = st;
             // Disable mouse tracking when the PTY session ends so clicks
@@ -1233,6 +1240,14 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // visualViewport.resize fires before the CSS layout reflects the new
           // height, so the ResizeObserver alone may miss the first keyboard event.
           window.visualViewport?.addEventListener('resize', debouncedResize);
+
+          // Re-fit when the page becomes visible again — covers browser tab switching,
+          // window minimize/restore, and WebGL context loss/restore where the RAF loop
+          // may have been paused and doesn't auto-resume painting.
+          const onVisibilityChange = () => {
+            if (!document.hidden) scheduleVisibilityFit();
+          };
+          document.addEventListener('visibilitychange', onVisibilityChange);
 
           // ── Step 7: Visibility detection — re-fit + re-render on session switch ──
           //
@@ -1311,7 +1326,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
-            if (repaintTimer !== null) { clearTimeout(repaintTimer); repaintTimer = null; }
+            clearStatusTimers();
+            document.removeEventListener('visibilitychange', onVisibilityChange);
             unsubscribeStatus();
             unsubscribeExit();
             onDataDisposable.dispose();

@@ -614,6 +614,7 @@ function TreeNodeItem({
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           onContextMenu(e, fullPath, isDir);
         }}
         onTouchStart={isMobile ? handleTouchStart : undefined}
@@ -921,6 +922,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const uploadMenuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [uploadTargetDir, setUploadTargetDir] = useState('');
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   // Trash: text files store content in memory; binary files renamed to .trash/ on disk
@@ -1021,6 +1023,8 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   /* ── Ctrl+C / Ctrl+V on selected file ── */
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
+      // Skip if this FileTree is hidden via CSS (e.g., display:none from Tailwind 'hidden' class)
+      if (!containerRef.current || containerRef.current.offsetParent === null) return;
       // Only trigger when focus is inside the tree (not in an input/textarea)
       const tag = (document.activeElement?.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea') return;
@@ -1431,7 +1435,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   const hasClipboard = !!globalClipboard;
 
   return (
-    <div className="flex h-full flex-col" data-testid="filetree-container">
+    <div ref={containerRef} className="flex h-full flex-col" data-testid="filetree-container">
       {/* Clipboard indicator */}
       {globalClipboard && (
         <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(170,255,0,0.06)] px-3 py-1.5">
@@ -1625,6 +1629,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = draggingPath ? 'move' : 'copy'; }}
         onDragEnter={(e) => e.preventDefault()}
         onDrop={(e) => handleDrop(e, currentPath)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY, path: currentPath, isDir: true });
+        }}
         role="tree"
         data-testid="file-tree"
       >
