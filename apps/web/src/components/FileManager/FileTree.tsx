@@ -10,6 +10,7 @@ import {
   type DragEvent,
 } from 'react';
 import { apiFetch, getToken, type ApiError } from '../../lib/api';
+import { useGlobalClipboard } from '../../context/FileClipboardContext';
 
 /* ── Types ── */
 
@@ -159,6 +160,7 @@ function ContextMenu({
   onUpload,
   onDownload,
   onCopy,
+  onCut,
   onPaste,
   hasClipboard,
   isMobile: _isMobile,
@@ -172,6 +174,7 @@ function ContextMenu({
   onUpload: (path: string) => void;
   onDownload: (path: string) => void;
   onCopy?: (path: string) => void;
+  onCut?: (path: string) => void;
   onPaste?: (targetDir: string) => void;
   hasClipboard?: boolean;
   isMobile: boolean;
@@ -190,6 +193,7 @@ function ContextMenu({
     { label: 'New File', action: () => onNewFile(state.isDir ? state.path : parentPath || '') },
     { label: 'New Folder', action: () => onNewFolder(state.isDir ? state.path : parentPath || '') },
     onCopy ? { label: 'Copy', action: () => onCopy!(state.path) } : null,
+    onCut ? { label: 'Cut', action: () => onCut!(state.path) } : null,
     state.isDir && hasClipboard && onPaste
       ? { label: 'Paste', action: () => onPaste!(state.path) }
       : null,
@@ -404,6 +408,38 @@ function LargeFileWarning({
   );
 }
 
+/* ── Folder upload: recursively flatten FileSystemEntry tree into upload tasks ── */
+
+async function collectEntriesFlat(
+  entry: FileSystemEntry,
+  prefix: string,
+): Promise<Array<{ file: File; subPath: string }>> {
+  if (entry.isFile) {
+    const file = await new Promise<File>((res, rej) =>
+      (entry as FileSystemFileEntry).file(res, rej),
+    );
+    return [{ file, subPath: prefix }];
+  }
+  const dirEntry = entry as FileSystemDirectoryEntry;
+  const subPrefix = prefix ? `${prefix}/${entry.name}` : entry.name;
+  const reader = dirEntry.createReader();
+  const allEntries: FileSystemEntry[] = [];
+  await new Promise<void>((res) => {
+    const readBatch = () =>
+      reader.readEntries((batch) => {
+        if (batch.length === 0) { res(); return; }
+        allEntries.push(...batch);
+        readBatch();
+      });
+    readBatch();
+  });
+  const results: Array<{ file: File; subPath: string }> = [];
+  for (const child of allEntries) {
+    results.push(...(await collectEntriesFlat(child, subPrefix)));
+  }
+  return results;
+}
+
 /* ── Tree Node ── */
 
 function TreeNodeItem({
@@ -429,6 +465,7 @@ function TreeNodeItem({
   onDragDrop,
   onDragEnd,
   onUploadToDir,
+  onDropEntries,
 }: {
   node: TreeNode;
   path: string;
@@ -452,6 +489,7 @@ function TreeNodeItem({
   onDragDrop: (targetDir: string) => void;
   onDragEnd: () => void;
   onUploadToDir: (targetDir: string, files: FileList) => void;
+  onDropEntries: (targetDir: string, entries: FileSystemEntry[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isDir = node.entry.type === 'directory';
@@ -534,15 +572,19 @@ function TreeNodeItem({
       e.preventDefault();
       e.stopPropagation();
       if (draggingPath && draggingPath !== fullPath) {
-        // Internal move: source path dropped on a directory
         if (isDir) onDragDrop(fullPath);
-      } else if (e.dataTransfer.files.length > 0 && isDir) {
-        // External files from OS dropped on a directory
-        onUploadToDir(fullPath, e.dataTransfer.files);
+      } else if (isDir) {
+        // Collect FileSystemEntry refs synchronously (they expire after event)
+        const entries: FileSystemEntry[] = [];
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          const entry = e.dataTransfer.items[i].webkitGetAsEntry?.();
+          if (entry) entries.push(entry);
+        }
+        if (entries.length > 0) onDropEntries(fullPath, entries);
       }
       onDragEnd();
     },
-    [isDir, draggingPath, fullPath, onDragDrop, onDragEnd, onUploadToDir],
+    [isDir, draggingPath, fullPath, onDragDrop, onDragEnd, onDropEntries],
   );
 
   // Indentation: 8px base + 16px per depth level (consistent at all levels)
@@ -652,6 +694,7 @@ function TreeNodeItem({
               onDragDrop={onDragDrop}
               onDragEnd={onDragEnd}
               onUploadToDir={onUploadToDir}
+              onDropEntries={onDropEntries}
             />
           ))}
         </div>
@@ -763,14 +806,17 @@ function SearchBar({
 
 /* ── Upload Progress ── */
 
-function UploadProgress({ progress }: { progress: number }) {
+function UploadProgress({ progress, label }: { progress: number; label: string }) {
   if (progress >= 100 || progress <= 0) return null;
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-[200px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-3"
+      className="fixed bottom-4 right-4 z-50 w-[220px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-3"
       data-testid="upload-progress"
     >
-      <div className="mb-1 font-['Inter'] text-[11px] text-[#889]">Uploading...</div>
+      <div className="mb-1 flex items-center justify-between font-['Inter'] text-[11px] text-[#889]">
+        <span>Uploading{label ? '...' : '...'}</span>
+        {label && <span className="text-[#af0]">{label}</span>}
+      </div>
       <div className="h-1 rounded-full bg-[rgba(255,255,255,0.08)] overflow-hidden">
         <div
           className="h-full rounded-full bg-[#af0] transition-all"
@@ -830,6 +876,7 @@ function isBinaryExt(name: string): boolean {
 
 export interface FileTreeProps {
   projectId: string;
+  filesApiBase?: string;
   onFileOpen: (projectId: string, filePath: string) => void;
   isMobile?: boolean;
   onBack?: () => void;
@@ -839,9 +886,16 @@ export interface FileTreeProps {
 }
 
 const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { projectId, onFileOpen, isMobile = false, onBack, onCopy, onPaste, clipboard },
+  { projectId, filesApiBase, onFileOpen, isMobile = false, onBack, onCopy: _onCopy, onPaste: _onPaste, clipboard: _clipboard },
   ref,
 ) {
+  const base = filesApiBase ?? `/api/projects/${projectId}/files`;
+  const {
+    clipboard: globalClipboard,
+    setCopy,
+    setCut,
+    paste: globalPaste,
+  } = useGlobalClipboard();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -859,12 +913,16 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadLabel, setUploadLabel] = useState('');
   const [searchValue, setSearchValue] = useState('');
   const [largeFileWarning, setLargeFileWarning] = useState<{ path: string; size: number } | null>(
     null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const uploadMenuRef = useRef<HTMLDivElement>(null);
   const [uploadTargetDir, setUploadTargetDir] = useState('');
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   // Trash: text files store content in memory; binary files renamed to .trash/ on disk
   interface TrashItem {
     name: string;
@@ -885,7 +943,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   const fetchDir = useCallback(
     async (dirPath: string): Promise<TreeNode[]> => {
       const entries = await apiFetch<FileEntry[]>(
-        `/api/projects/${projectId}/files?path=${encodeURIComponent(dirPath)}`,
+        `${base}?path=${encodeURIComponent(dirPath)}`,
       );
       return entries.map((e) => ({
         entry: e,
@@ -893,7 +951,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         loading: false,
       }));
     },
-    [projectId],
+    [base, projectId],
   );
 
   const loadRoot = useCallback(async () => {
@@ -915,6 +973,32 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
 
   useImperativeHandle(ref, () => ({ refresh: loadRoot }), [loadRoot]);
 
+  /* ── Global clipboard handlers ── */
+  const handleContextCopy = useCallback(
+    (path: string) => {
+      const name = path.split('/').pop() || path;
+      setCopy(name, path, base);
+    },
+    [base, setCopy],
+  );
+
+  const handleContextCut = useCallback(
+    (path: string) => {
+      const name = path.split('/').pop() || path;
+      setCut(name, path, base);
+    },
+    [base, setCut],
+  );
+
+  const handleContextPaste = useCallback(
+    async (destDir: string) => {
+      const result = await globalPaste(base, destDir);
+      if (!result.ok && result.error) setError(result.error);
+      else await loadRoot();
+    },
+    [base, globalPaste, loadRoot],
+  );
+
   /* ── Move file via drag-drop ── */
   const handleMoveFile = useCallback(
     async (srcPath: string, destDir: string) => {
@@ -922,7 +1006,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       const newPath = destDir ? `${destDir}/${name}` : name;
       if (newPath === srcPath) return;
       try {
-        await apiFetch(`/api/projects/${projectId}/files/rename`, {
+        await apiFetch(`${base}/rename`, {
           method: 'PUT',
           body: JSON.stringify({ oldPath: srcPath, newPath }),
         });
@@ -941,10 +1025,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       const tag = (document.activeElement?.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea') return;
       if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.key === 'c' && selectedPath && onCopy) {
+      if (e.key === 'c' && selectedPath) {
         e.preventDefault();
-        onCopy(selectedPath);
-      } else if (e.key === 'v' && onPaste) {
+        handleContextCopy(selectedPath);
+      } else if (e.key === 'v' && globalClipboard) {
         e.preventDefault();
         // Paste into selected dir, or parent dir of selected file, or root
         const targetDir = selectedPath
@@ -952,12 +1036,12 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
             ? selectedPath.substring(0, selectedPath.lastIndexOf('/'))
             : ''
           : '';
-        onPaste(targetDir);
+        void handleContextPaste(targetDir);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedPath, onCopy, onPaste]);
+  }, [selectedPath, globalClipboard, handleContextCopy, handleContextPaste]);
 
   /* ── Lazy expand ── */
   useEffect(() => {
@@ -979,12 +1063,24 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     return () => window.removeEventListener('filetree:expand', handler);
   }, [tree, fetchDir]);
 
+  /* ── Close upload menu on outside click ── */
+  useEffect(() => {
+    if (!uploadMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (uploadMenuRef.current && !uploadMenuRef.current.contains(e.target as Node)) {
+        setUploadMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [uploadMenuOpen]);
+
   /* ── File open ── */
   const handleFileOpen = useCallback(
     async (filePath: string) => {
       try {
         const listing = await apiFetch<FileEntry[]>(
-          `/api/projects/${projectId}/files?path=${encodeURIComponent(filePath.substring(0, filePath.lastIndexOf('/')))}`,
+          `${base}?path=${encodeURIComponent(filePath.substring(0, filePath.lastIndexOf('/')))}`,
         );
         const file = listing.find((f: FileEntry) => f.name === filePath.split('/').pop());
         if (file && file.size > 500 * 1024) {
@@ -1004,7 +1100,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     async (type: 'file' | 'directory', parentPath: string, name: string) => {
       const p = parentPath ? `${parentPath}/${name}` : name;
       try {
-        await apiFetch(`/api/projects/${projectId}/files`, {
+        await apiFetch(`${base}`, {
           method: 'POST',
           body: JSON.stringify({ path: p, type }),
         });
@@ -1025,9 +1121,9 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         // Text file: read content first so it can be restored from trash
         try {
           const data = await apiFetch<{ content: string }>(
-            `/api/projects/${projectId}/files/read?path=${encodeURIComponent(path)}`,
+            `${base}/read?path=${encodeURIComponent(path)}`,
           );
-          await apiFetch(`/api/projects/${projectId}/files?path=${encodeURIComponent(path)}`, {
+          await apiFetch(`${base}?path=${encodeURIComponent(path)}`, {
             method: 'DELETE',
           });
           setTrashItems((prev) => [
@@ -1043,11 +1139,11 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         const trashPath = `.trash/${name}`;
         try {
           // Ensure .trash/ exists (ignore 409 = already exists)
-          await apiFetch(`/api/projects/${projectId}/files`, {
+          await apiFetch(`${base}`, {
             method: 'POST',
             body: JSON.stringify({ path: '.trash', type: 'directory' }),
           }).catch(() => {});
-          await apiFetch(`/api/projects/${projectId}/files/rename`, {
+          await apiFetch(`${base}/rename`, {
             method: 'PUT',
             body: JSON.stringify({ oldPath: path, newPath: trashPath }),
           });
@@ -1063,7 +1159,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         // Directory: hard-delete immediately
         try {
           await apiFetch(
-            `/api/projects/${projectId}/files?path=${encodeURIComponent(path)}&force=true`,
+            `${base}?path=${encodeURIComponent(path)}&force=true`,
             { method: 'DELETE' },
           );
         } catch (err) {
@@ -1088,14 +1184,14 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       try {
         if (item.movedToTrash) {
           // Binary: rename back from .trash/{name} to original path
-          await apiFetch(`/api/projects/${projectId}/files/rename`, {
+          await apiFetch(`${base}/rename`, {
             method: 'PUT',
             body: JSON.stringify({ oldPath: `.trash/${item.name}`, newPath: item.originalPath }),
           });
         } else {
           // Text: write stored content back to original path
           await apiFetch(
-            `/api/projects/${projectId}/files/write?path=${encodeURIComponent(item.originalPath)}`,
+            `${base}/write?path=${encodeURIComponent(item.originalPath)}`,
             { method: 'PUT', body: JSON.stringify({ content: item.content ?? '' }) },
           );
         }
@@ -1115,7 +1211,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       parts[parts.length - 1] = newName;
       const newPath = parts.join('/');
       try {
-        await apiFetch(`/api/projects/${projectId}/files/rename`, {
+        await apiFetch(`${base}/rename`, {
           method: 'PUT',
           body: JSON.stringify({ oldPath, newPath }),
         });
@@ -1128,36 +1224,49 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     [projectId, loadRoot],
   );
 
-  /* ── Upload (multipart — preserves binary files) ── */
-  const handleUpload = useCallback(
-    async (targetDir: string, file: File) => {
-      setUploadProgress(10);
-      const formData = new FormData();
-      formData.append('file', file);
+  /* ── Batch upload (files + folders with preserved paths) ── */
+  const handleBatchUpload = useCallback(
+    async (baseDir: string, tasks: Array<{ file: File; subPath: string }>) => {
+      const total = tasks.length;
+      if (total === 0) return;
       const token = getToken();
-      try {
-        const response = await fetch(
-          `/api/projects/${projectId}/files/upload?path=${encodeURIComponent(targetDir)}`,
-          {
+      let done = 0;
+      setUploadProgress(5);
+      setUploadLabel(`0 / ${total}`);
+      for (const { file, subPath } of tasks) {
+        const targetDir = subPath
+          ? baseDir ? `${baseDir}/${subPath}` : subPath
+          : baseDir;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const response = await fetch(`${base}/upload?path=${encodeURIComponent(targetDir)}`, {
             method: 'POST',
             headers: token ? { Authorization: `Bearer ${token}` } : {},
             body: formData,
-          },
-        );
-        setUploadProgress(75);
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({ error: 'Upload failed' }));
-          throw new Error((data as { error?: string }).error || 'Upload failed');
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({ error: 'Upload failed' }));
+            const msg = (data as { error?: string }).error || 'Upload failed';
+            if (!msg.includes('already exists')) setError(msg);
+          }
+        } catch (err) {
+          setError((err as Error).message || 'Upload failed');
         }
-        setUploadProgress(100);
-        setTimeout(() => setUploadProgress(0), 1000);
-        await loadRoot();
-      } catch (err) {
-        setError((err as Error).message || 'Upload failed');
-        setUploadProgress(0);
+        done++;
+        setUploadLabel(`${done} / ${total}`);
+        setUploadProgress(Math.round((done / total) * 90) + 5);
       }
+      setUploadProgress(100);
+      setTimeout(() => { setUploadProgress(0); setUploadLabel(''); }, 1000);
+      await loadRoot();
     },
-    [projectId, loadRoot],
+    [base, loadRoot],
+  );
+
+  const handleUpload = useCallback(
+    (targetDir: string, file: File) => handleBatchUpload(targetDir, [{ file, subPath: '' }]),
+    [handleBatchUpload],
   );
 
   /* ── Download ── */
@@ -1166,7 +1275,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       const token = getToken();
       try {
         const response = await fetch(
-          `/api/projects/${projectId}/files/download?path=${encodeURIComponent(filePath)}`,
+          `${base}/download?path=${encodeURIComponent(filePath)}`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           },
@@ -1191,14 +1300,38 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     [projectId],
   );
 
-  /* ── Upload files to a specific dir (called from TreeNodeItem external drop) ── */
+  /* ── Upload flat FileList to a specific dir (button-triggered) ── */
   const handleUploadToDir = useCallback(
-    async (targetDir: string, files: FileList) => {
+    (targetDir: string, files: FileList) => {
+      const tasks: Array<{ file: File; subPath: string }> = [];
       for (let i = 0; i < files.length; i++) {
-        await handleUpload(targetDir, files[i]);
+        const f = files[i];
+        // webkitRelativePath is set when using <input webkitdirectory>
+        const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath;
+        if (rel) {
+          const parts = rel.split('/');
+          parts.shift(); // strip the top-level folder name
+          const subPath = parts.slice(0, -1).join('/');
+          tasks.push({ file: f, subPath });
+        } else {
+          tasks.push({ file: f, subPath: '' });
+        }
       }
+      return handleBatchUpload(targetDir, tasks);
     },
-    [handleUpload],
+    [handleBatchUpload],
+  );
+
+  /* ── Upload from drop entries (files + folders via DataTransferItemList) ── */
+  const handleDropEntries = useCallback(
+    async (targetDir: string, entries: FileSystemEntry[]) => {
+      const tasks: Array<{ file: File; subPath: string }> = [];
+      for (const entry of entries) {
+        tasks.push(...(await collectEntriesFlat(entry, '')));
+      }
+      await handleBatchUpload(targetDir, tasks);
+    },
+    [handleBatchUpload],
   );
 
   /* ── Drag & Drop on outer container (upload from OS OR internal drag-to-root) ── */
@@ -1206,30 +1339,27 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     async (e: DragEvent, targetDir: string) => {
       e.preventDefault();
       if (draggingPath) {
-        // Internal file move → root or currentPath
         handleMoveFile(draggingPath, targetDir);
         setDraggingPath(null);
         setDragOverPath(null);
       } else {
-        // External files from OS
-        const files = e.dataTransfer?.files;
-        if (files) {
-          for (let i = 0; i < files.length; i++) {
-            await handleUpload(targetDir, files[i]);
+        // Collect entries synchronously before any await (DataTransfer clears after event)
+        const entries: FileSystemEntry[] = [];
+        const items = e.dataTransfer?.items;
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry?.();
+            if (entry) entries.push(entry);
           }
+        }
+        if (entries.length > 0) {
+          await handleDropEntries(targetDir, entries);
         }
       }
     },
-    [draggingPath, handleUpload, handleMoveFile],
+    [draggingPath, handleDropEntries, handleMoveFile],
   );
 
-  const handleDragOver = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer!.dropEffect = draggingPath ? 'move' : 'copy';
-    },
-    [draggingPath],
-  );
 
   /* ── Inline search: filter visible loaded nodes ── */
   const visibleTree = useMemo(() => {
@@ -1298,15 +1428,15 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     );
   }
 
-  const hasClipboard = !!clipboard && clipboard.projectId === projectId;
+  const hasClipboard = !!globalClipboard;
 
   return (
     <div className="flex h-full flex-col" data-testid="filetree-container">
       {/* Clipboard indicator */}
-      {hasClipboard && clipboard && (
+      {globalClipboard && (
         <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(170,255,0,0.06)] px-3 py-1.5">
           <span className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#af0]">
-            {clipboard.sourcePath.split('/').pop()} copied
+            {globalClipboard.fileName} {globalClipboard.action}
           </span>
           <span className="shrink-0 font-['Inter'] text-[10px] text-[#556]">
             {isMobile ? 'hold to paste' : 'right-click dir to paste'}
@@ -1394,7 +1524,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
             />
           </svg>
         </button>
-        {/* Upload */}
+        {/* Hidden file inputs */}
         <input
           ref={fileInputRef}
           type="file"
@@ -1407,32 +1537,81 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           }}
           data-testid="file-upload-input"
         />
-        <button
-          title="Upload file"
-          onClick={() => {
-            setUploadTargetDir(
-              selectedPath && !selectedPath.includes('.') ? selectedPath : currentPath,
-            );
-            fileInputRef.current?.click();
+        <input
+          ref={folderInputRef}
+          type="file"
+          // @ts-expect-error webkitdirectory is non-standard but widely supported
+          webkitdirectory=""
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = e.target.files;
+            if (files) handleUploadToDir(uploadTargetDir || currentPath, files);
+            e.target.value = '';
           }}
-          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#ccd]"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path
-              d="M6 1.5v7M3.5 4L6 1.5 8.5 4"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M1.5 9.5v.5a1 1 0 001 1h7a1 1 0 001-1v-.5"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+          data-testid="folder-upload-input"
+        />
+        {/* Upload button — dropdown (desktop) + bottom sheet (mobile) */}
+        <div ref={uploadMenuRef} className="relative shrink-0">
+          <button
+            title="Upload files or folder"
+            onClick={() => {
+              setUploadTargetDir(
+                selectedPath && !selectedPath.includes('.') ? selectedPath : currentPath,
+              );
+              setUploadMenuOpen((v) => !v);
+            }}
+            className={`flex min-h-[30px] items-center gap-[5px] rounded-[4px] border px-[8px] font-['Inter'] text-[12px] font-medium transition-colors ${
+              uploadMenuOpen
+                ? 'border-[rgba(170,255,0,0.4)] bg-[rgba(170,255,0,0.08)] text-[#af0]'
+                : 'border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#ccd]'
+            }`}
+          >
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M6 1.5v7M3.5 4L6 1.5 8.5 4"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M1.5 9.5v.5a1 1 0 001 1h7a1 1 0 001-1v-.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Upload</span>
+          </button>
+
+          {/* Desktop dropdown */}
+          {uploadMenuOpen && (
+            <div className="absolute right-0 top-[calc(100%+4px)] z-50 hidden w-[168px] rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#141420] py-1 shadow-xl sm:block">
+              <button
+                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                onClick={() => { fileInputRef.current?.click(); setUploadMenuOpen(false); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 2h5l3 3v7a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M8 2v3h3" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 6v4M5.5 8l1.5-2 1.5 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Files
+              </button>
+              <button
+                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                onClick={() => { folderInputRef.current?.click(); setUploadMenuOpen(false); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1.5 4A1.5 1.5 0 013 2.5h3.172a1 1 0 01.707.293L8 4H12a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5.5A1.5 1.5 0 011.5 4z" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 6.5v3M5.5 8L7 6.5 8.5 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Folder
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Breadcrumb */}
@@ -1440,10 +1619,11 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         <Breadcrumb currentPath={currentPath} onNavigate={setCurrentPath} />
       </div>
 
-      {/* Tree */}
+      {/* Tree — also an external drop zone for files/folders */}
       <div
         className={`flex-1 overflow-y-auto py-1 ${draggingPath ? 'outline-dashed outline-1 outline-[rgba(170,255,0,0.15)]' : ''}`}
-        onDragOver={handleDragOver}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = draggingPath ? 'move' : 'copy'; }}
+        onDragEnter={(e) => e.preventDefault()}
         onDrop={(e) => handleDrop(e, currentPath)}
         role="tree"
         data-testid="file-tree"
@@ -1488,6 +1668,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               setDragOverPath(null);
             }}
             onUploadToDir={handleUploadToDir}
+            onDropEntries={handleDropEntries}
           />
         ))}
       </div>
@@ -1503,8 +1684,9 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           onDelete={handleContextDelete}
           onUpload={handleContextUpload}
           onDownload={handleDownload}
-          onCopy={onCopy}
-          onPaste={onPaste}
+          onCopy={handleContextCopy}
+          onCut={handleContextCut}
+          onPaste={handleContextPaste}
           hasClipboard={hasClipboard}
           isMobile={isMobile}
         />
@@ -1536,7 +1718,65 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           onCancel={() => setLargeFileWarning(null)}
         />
       )}
-      <UploadProgress progress={uploadProgress} />
+      {/* Mobile upload bottom sheet */}
+      {uploadMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setUploadMenuOpen(false)}
+        >
+          <div
+            className="rounded-t-[18px] border-t border-[rgba(255,255,255,0.08)] bg-[#111118] px-4 pb-8 pt-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="mx-auto mb-4 h-[4px] w-[36px] rounded-full bg-[rgba(255,255,255,0.12)]" />
+            <p className="mb-3 text-center font-['Inter'] text-[12px] text-[#556]">Upload para</p>
+            <p className="mb-4 text-center font-['Inter'] text-[13px] font-medium text-[#889] truncate">
+              /{uploadTargetDir || 'root'}
+            </p>
+            <button
+              className="mb-2 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
+              onClick={() => { fileInputRef.current?.click(); setUploadMenuOpen(false); }}
+            >
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(170,255,0,0.1)]">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M4 3h7l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#af0" strokeWidth="1.4" />
+                  <path d="M11 3v4h4" stroke="#af0" strokeWidth="1.4" />
+                  <path d="M9 8.5v5M6.5 11l2.5-2.5 2.5 2.5" stroke="#af0" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <div className="font-semibold">Upload arquivos</div>
+                <div className="mt-0.5 text-[12px] font-normal text-[#556]">Selecione um ou mais arquivos</div>
+              </div>
+            </button>
+            <button
+              className="mb-3 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
+              onClick={() => { folderInputRef.current?.click(); setUploadMenuOpen(false); }}
+            >
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(170,255,0,0.1)]">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M2 5.5A2 2 0 014 3.5h4.172a1 1 0 01.707.293L10.5 5.5H15a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V5.5z" stroke="#af0" strokeWidth="1.4" />
+                  <path d="M9 8v5M6.5 10.5L9 8l2.5 2.5" stroke="#af0" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <div className="font-semibold">Upload pasta</div>
+                <div className="mt-0.5 text-[12px] font-normal text-[#556]">Mantém a estrutura de diretórios</div>
+              </div>
+            </button>
+            <button
+              className="w-full rounded-[12px] py-3 font-['Inter'] text-[14px] text-[#556] active:text-[#889] transition-colors"
+              onClick={() => setUploadMenuOpen(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <UploadProgress progress={uploadProgress} label={uploadLabel} />
 
       {/* Trash section */}
       {trashItems.length > 0 && (

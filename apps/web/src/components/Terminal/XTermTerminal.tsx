@@ -495,6 +495,13 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       setTimeout(() => setShowCopied(false), 1500);
     }, []);
 
+    // Clipboard image upload feedback
+    const [imageUploadStatus, setImageUploadStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
+    const flashImageUpload = useCallback((ok: boolean) => {
+      setImageUploadStatus(ok ? 'idle' : 'error');
+      if (!ok) setTimeout(() => setImageUploadStatus('idle'), 2000);
+    }, []);
+
     // Loading overlay: shown until xterm.js is fully initialised (font loaded +
     // terminal.open() + flushBuffer() complete). Reset on every session change.
     const [terminalReady, setTerminalReady] = useState(false);
@@ -720,7 +727,47 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               return false;
             }
 
-            // Ctrl+Shift+V — paste
+            // Ctrl+V — image-aware paste: upload image to /tmp, insert path; fall back to text
+            if (!e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+              (async () => {
+                try {
+                  if (navigator.clipboard?.read) {
+                    const clipItems = await navigator.clipboard.read();
+                    for (const clipItem of clipItems) {
+                      const imageType = clipItem.types.find((t) => t.startsWith('image/'));
+                      if (imageType) {
+                        setImageUploadStatus('uploading');
+                        const blob = await clipItem.getType(imageType);
+                        const token = localStorage.getItem('auth_token');
+                        const form = new FormData();
+                        const ext = imageType === 'image/png' ? '.png' : imageType === 'image/jpeg' ? '.jpg' : imageType === 'image/webp' ? '.webp' : imageType === 'image/gif' ? '.gif' : '.png';
+                        form.append('file', new File([blob], `paste${ext}`, { type: imageType }));
+                        const res = await fetch('/api/files/upload-temp', {
+                          method: 'POST',
+                          headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          body: form,
+                        });
+                        if (res.ok) {
+                          const data = await res.json() as { path: string };
+                          socket.send(data.path);
+                          setImageUploadStatus('idle');
+                        } else {
+                          flashImageUpload(false);
+                        }
+                        return;
+                      }
+                    }
+                  }
+                } catch { /* clipboard.read not available or permission denied */ }
+                // No image found — fall back to text paste
+                navigator.clipboard.readText().then((text) => {
+                  if (text) socket.send(text);
+                }).catch(() => {});
+              })();
+              return false;
+            }
+
+            // Ctrl+Shift+V — text paste (explicit, no image check)
             if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
               navigator.clipboard.readText().then((text) => {
                 if (text) socket.send(text);
@@ -1384,6 +1431,17 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
 
         {/* "Copiado!" toast — shown after any copy action */}
         {showCopied && <CopiedToast />}
+
+        {/* Image upload feedback */}
+        {imageUploadStatus !== 'idle' && (
+          <div className="pointer-events-none absolute bottom-10 left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#111118] px-3 py-1.5 font-['Inter'] text-[12px]">
+            {imageUploadStatus === 'uploading' ? (
+              <span className="text-[#af0]">⬆ Uploading image…</span>
+            ) : (
+              <span className="text-red-400">✕ Image upload failed</span>
+            )}
+          </div>
+        )}
 
         {/* Right-click context menu */}
         {/* Mobile-only floating keyboard button — suppressed when parent provides its own */}
