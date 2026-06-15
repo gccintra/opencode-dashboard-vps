@@ -98,6 +98,41 @@ CREATE TABLE IF NOT EXISTS tasks (
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) STRICT;
 
+-- Labels: per-project customizable colored labels (Linear-style)
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) STRICT;
+
+-- Unique label name per project (case-insensitive)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_project_name
+  ON labels(project_id, name COLLATE NOCASE);
+
+-- Task ↔ Label many-to-many join
+CREATE TABLE IF NOT EXISTS task_labels (
+  task_id TEXT NOT NULL,
+  label_id TEXT NOT NULL,
+  PRIMARY KEY (task_id, label_id),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE
+) STRICT;
+
+-- Task Attachments: metadata only; binaries live in <dataDir>/attachments/<taskId>/
+CREATE TABLE IF NOT EXISTS task_attachments (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  rel_path TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+) STRICT;
+
 -- Canvas Hub: named multi-terminal layouts persisted cross-device
 CREATE TABLE IF NOT EXISTS canvases (
   id TEXT PRIMARY KEY,

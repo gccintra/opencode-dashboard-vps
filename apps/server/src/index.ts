@@ -6,6 +6,7 @@ import { initDb, getDb, getDbPath, getDbIntegrityResult } from './db/client';
 import { scanResources } from './routes/resources';
 import { healthRoutes } from './routes/health';
 import { tasksRoutes } from './routes/tasks';
+import { labelsRoutes } from './routes/labels';
 import { githubRoutes, startGithubPolling } from './routes/github';
 import { authRoutes } from './auth';
 import { projectsRoutes } from './routes/projects';
@@ -137,6 +138,7 @@ app
   .use(harnessesRoutes)
   .use(sessionsRoutes)
   .use(tasksRoutes)
+  .use(labelsRoutes)
   .use(agentsRoutes)
   .use(resourcesRoutes)
   .use(filesRoutes)
