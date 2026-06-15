@@ -735,11 +735,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               return false;
             }
 
-            // Ctrl+Shift+V — text paste (explicit, no image check)
+            // Ctrl+Shift+V — text paste; all paste logic lives in onNativePaste.
+            // Returning false prevents xterm from processing the keydown; the
+            // browser still fires a paste event which onNativePaste handles.
             if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
-              navigator.clipboard.readText().then((text) => {
-                if (text) socket.send(text);
-              }).catch(() => {});
               return false;
             }
 
@@ -836,17 +835,32 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           };
           document.addEventListener('copy', onNativeCopy);
 
-          // Native paste event — fired by the browser when Ctrl+V is pressed.
-          // xterm.js registers its own paste listener on its internal textarea (bubble
-          // phase). We intercept here in the capture phase on the container so our
-          // handler runs first; stopPropagation() prevents xterm's bubble-phase
-          // listener from ever firing, eliminating the duplicate paste.
-          // Ctrl+V in attachCustomKeyEventHandler now just returns false (blocks
-          // xterm's keydown processing) and defers all paste logic to this handler.
+          // Paste event handler — intercepts ALL paste events (Ctrl+V, Ctrl+Shift+V,
+          // context-menu paste) when the xterm terminal has focus.
+          //
+          // WHY document-level capture + stopImmediatePropagation:
+          // xterm.js v6 registers paste listeners on both its internal textarea AND
+          // its wrapper element (both bubble phase). A container-level capture with
+          // stopPropagation() should theoretically block them, but in practice some
+          // browsers deliver the paste event to xterm before our handler can stop it
+          // (e.g. if activeElement check fails or there's a capture-phase race).
+          // Attaching at document capture phase is the earliest possible interception
+          // point; stopImmediatePropagation() kills ALL subsequent handlers globally,
+          // guaranteeing xterm never sees the event.
+          //
+          // Focus guard: track via focusin/focusout on the container (bubbles from
+          // any child including xterm's hidden textarea). More reliable than
+          // document.activeElement which can be transiently null during key events.
+          let xtermFocused = false;
+          const onContainerFocusIn = () => { xtermFocused = true; };
+          const onContainerFocusOut = () => { xtermFocused = false; };
+          container.addEventListener('focusin', onContainerFocusIn);
+          container.addEventListener('focusout', onContainerFocusOut);
+
           const onNativePaste = (e: ClipboardEvent) => {
-            if (!container.contains(document.activeElement)) return;
+            if (!xtermFocused) return;
             e.preventDefault();
-            e.stopPropagation(); // block xterm's textarea bubble-phase paste listener
+            e.stopImmediatePropagation();
             (async () => {
               // Image check via DataTransferItemList (no clipboard-read permission needed)
               const items = e.clipboardData?.items ? Array.from(e.clipboardData.items) : [];
@@ -883,7 +897,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               if (text) socket.send(text);
             })();
           };
-          container.addEventListener('paste', onNativePaste, true); // capture phase
+          document.addEventListener('paste', onNativePaste, true); // document-level capture
 
           // On touch devices, suppress the native virtual keyboard on tap.
           // Users open it explicitly via the MobileKeyboard FAB "Digitar" button.
@@ -1340,7 +1354,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('mouseup', onMouseUp);
             container.removeEventListener('contextmenu', onContextMenu);
             document.removeEventListener('copy', onNativeCopy);
-            container.removeEventListener('paste', onNativePaste, true);
+            document.removeEventListener('paste', onNativePaste, true);
+            container.removeEventListener('focusin', onContainerFocusIn);
+            container.removeEventListener('focusout', onContainerFocusOut);
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
