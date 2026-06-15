@@ -727,43 +727,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               return false;
             }
 
-            // Ctrl+V — image-aware paste: upload image to /tmp, insert path; fall back to text
+            // Ctrl+V — handled by the native paste event listener below (onNativePaste).
+            // Returning false prevents xterm from processing the keydown, but the browser
+            // still fires a separate paste event. All paste logic lives in onNativePaste
+            // to avoid the duplicate: keydown-handler path + xterm textarea paste path.
             if (!e.shiftKey && (e.key === 'v' || e.key === 'V')) {
-              (async () => {
-                try {
-                  if (navigator.clipboard?.read) {
-                    const clipItems = await navigator.clipboard.read();
-                    for (const clipItem of clipItems) {
-                      const imageType = clipItem.types.find((t) => t.startsWith('image/'));
-                      if (imageType) {
-                        setImageUploadStatus('uploading');
-                        const blob = await clipItem.getType(imageType);
-                        const token = localStorage.getItem('auth_token');
-                        const form = new FormData();
-                        const ext = imageType === 'image/png' ? '.png' : imageType === 'image/jpeg' ? '.jpg' : imageType === 'image/webp' ? '.webp' : imageType === 'image/gif' ? '.gif' : '.png';
-                        form.append('file', new File([blob], `paste${ext}`, { type: imageType }));
-                        const res = await fetch('/api/files/upload-temp', {
-                          method: 'POST',
-                          headers: token ? { Authorization: `Bearer ${token}` } : {},
-                          body: form,
-                        });
-                        if (res.ok) {
-                          const data = await res.json() as { path: string };
-                          socket.send(data.path);
-                          setImageUploadStatus('idle');
-                        } else {
-                          flashImageUpload(false);
-                        }
-                        return;
-                      }
-                    }
-                  }
-                } catch { /* clipboard.read not available or permission denied */ }
-                // No image found — fall back to text paste
-                navigator.clipboard.readText().then((text) => {
-                  if (text) socket.send(text);
-                }).catch(() => {});
-              })();
               return false;
             }
 
@@ -867,6 +835,55 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             flashCopied();
           };
           document.addEventListener('copy', onNativeCopy);
+
+          // Native paste event — fired by the browser when Ctrl+V is pressed.
+          // xterm.js registers its own paste listener on its internal textarea (bubble
+          // phase). We intercept here in the capture phase on the container so our
+          // handler runs first; stopPropagation() prevents xterm's bubble-phase
+          // listener from ever firing, eliminating the duplicate paste.
+          // Ctrl+V in attachCustomKeyEventHandler now just returns false (blocks
+          // xterm's keydown processing) and defers all paste logic to this handler.
+          const onNativePaste = (e: ClipboardEvent) => {
+            if (!container.contains(document.activeElement)) return;
+            e.preventDefault();
+            e.stopPropagation(); // block xterm's textarea bubble-phase paste listener
+            (async () => {
+              // Image check via DataTransferItemList (no clipboard-read permission needed)
+              const items = e.clipboardData?.items ? Array.from(e.clipboardData.items) : [];
+              const imageItem = items.find((it) => it.type.startsWith('image/'));
+              if (imageItem) {
+                const blob = imageItem.getAsFile();
+                if (blob) {
+                  setImageUploadStatus('uploading');
+                  const token = localStorage.getItem('auth_token');
+                  const form = new FormData();
+                  const ext = blob.type === 'image/png' ? '.png' : blob.type === 'image/jpeg' ? '.jpg' : blob.type === 'image/webp' ? '.webp' : blob.type === 'image/gif' ? '.gif' : '.png';
+                  form.append('file', new File([blob], `paste${ext}`, { type: blob.type }));
+                  try {
+                    const res = await fetch('/api/files/upload-temp', {
+                      method: 'POST',
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      body: form,
+                    });
+                    if (res.ok) {
+                      const data = await res.json() as { path: string };
+                      socket.send(data.path);
+                      setImageUploadStatus('idle');
+                    } else {
+                      flashImageUpload(false);
+                    }
+                  } catch {
+                    flashImageUpload(false);
+                  }
+                  return;
+                }
+              }
+              // Text fallback
+              const text = e.clipboardData?.getData('text/plain');
+              if (text) socket.send(text);
+            })();
+          };
+          container.addEventListener('paste', onNativePaste, true); // capture phase
 
           // On touch devices, suppress the native virtual keyboard on tap.
           // Users open it explicitly via the MobileKeyboard FAB "Digitar" button.
@@ -1323,6 +1340,7 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             container.removeEventListener('mouseup', onMouseUp);
             container.removeEventListener('contextmenu', onContextMenu);
             document.removeEventListener('copy', onNativeCopy);
+            container.removeEventListener('paste', onNativePaste, true);
             container.removeEventListener('touchstart', onTouchStart);
             container.removeEventListener('touchmove', onTouchMove);
             container.removeEventListener('touchend', onTouchEnd);
