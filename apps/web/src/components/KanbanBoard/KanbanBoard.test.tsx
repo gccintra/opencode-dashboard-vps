@@ -10,6 +10,10 @@ vi.mock('../../lib/api', () => ({
   getToken: () => null,
   saveToken: () => {},
   clearToken: () => {},
+  // Rich-task additions: the board now loads project labels for the filter bar.
+  fetchLabels: () => Promise.resolve([]),
+  fetchProjectSessions: () => Promise.resolve([]),
+  fetchTaskAttachments: () => Promise.resolve([]),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
