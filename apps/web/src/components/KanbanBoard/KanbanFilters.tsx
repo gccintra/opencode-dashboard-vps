@@ -1,3 +1,6 @@
+import { LabelChip } from './LabelChip';
+import type { Label } from '../../lib/api';
+
 interface Project {
   id: string;
   name: string;
@@ -5,6 +8,7 @@ interface Project {
 
 export interface KanbanFiltersState {
   projectIds: string[];
+  labelIds: string[];
   type: string; // 'all' | 'task' | 'issue'
   query: string;
   sort: string; // 'created' | 'updated' | 'manual'
@@ -13,19 +17,25 @@ export interface KanbanFiltersState {
 interface KanbanFiltersProps {
   filters: KanbanFiltersState;
   projects: Project[];
+  /** Labels available for filtering (across the currently loaded projects). */
+  labels?: Label[];
   onChange: (filters: KanbanFiltersState) => void;
 }
 
 export const DEFAULT_FILTERS: KanbanFiltersState = {
   projectIds: [],
+  labelIds: [],
   type: 'all',
   query: '',
   sort: 'manual',
 };
 
-export function KanbanFilters({ filters, projects, onChange }: KanbanFiltersProps) {
+export function KanbanFilters({ filters, projects, labels = [], onChange }: KanbanFiltersProps) {
   const hasActiveFilters =
-    filters.projectIds.length > 0 || filters.type !== 'all' || filters.query.trim() !== '';
+    filters.projectIds.length > 0 ||
+    filters.labelIds.length > 0 ||
+    filters.type !== 'all' ||
+    filters.query.trim() !== '';
 
   const clearFilters = () => {
     onChange({ ...DEFAULT_FILTERS });
@@ -36,6 +46,13 @@ export function KanbanFilters({ filters, projects, onChange }: KanbanFiltersProp
       ? filters.projectIds.filter((p) => p !== id)
       : [...filters.projectIds, id];
     onChange({ ...filters, projectIds: next });
+  };
+
+  const toggleLabel = (id: string) => {
+    const next = filters.labelIds.includes(id)
+      ? filters.labelIds.filter((l) => l !== id)
+      : [...filters.labelIds, id];
+    onChange({ ...filters, labelIds: next });
   };
 
   return (
@@ -106,6 +123,26 @@ export function KanbanFilters({ filters, projects, onChange }: KanbanFiltersProp
               }`}
             >
               {project.name}
+            </button>
+          );
+        })}
+
+        {/* Label filter chips (multi-select) */}
+        {labels.map((label) => {
+          const active = filters.labelIds.includes(label.id);
+          return (
+            <button
+              key={label.id}
+              onClick={() => toggleLabel(label.id)}
+              aria-pressed={active}
+              aria-label={`Filter by label ${label.name}`}
+              className={`rounded-[6px] border px-[6px] py-[3px] transition-opacity ${
+                active
+                  ? 'border-white/40 opacity-100'
+                  : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+            >
+              <LabelChip label={label} />
             </button>
           );
         })}

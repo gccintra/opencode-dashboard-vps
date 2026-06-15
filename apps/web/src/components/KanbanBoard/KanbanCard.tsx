@@ -6,6 +6,26 @@ import {
   SessionBadge,
   type GitHubLabel,
 } from './TaskBadge';
+import { LabelChip } from './LabelChip';
+
+/** Customizable project label applied to a task. */
+export interface TaskLabel {
+  id: string;
+  projectId: string;
+  name: string;
+  color: string;
+  createdAt: string;
+}
+
+/** Attachment metadata attached to a task. */
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  filename: string;
+  mime: string;
+  size: number;
+  createdAt: string;
+}
 
 export interface Task {
   id: string;
@@ -22,6 +42,10 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   projectName?: string;
+  /** Enriched fields (Fase A) — optional for backward compat with older payloads. */
+  labels?: TaskLabel[];
+  attachments?: TaskAttachment[];
+  sessionStatus?: 'active' | 'expired' | null;
 }
 
 interface KanbanCardProps {
@@ -34,6 +58,7 @@ interface KanbanCardProps {
 export function KanbanCard({ task, onEdit, onDelete, draggable = true }: KanbanCardProps) {
   const isGithub = task.source === 'github';
   const labels = task.githubLabels || [];
+  const richLabels = task.labels || [];
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', task.id);
@@ -64,6 +89,15 @@ export function KanbanCard({ task, onEdit, onDelete, draggable = true }: KanbanC
         <p className="font-['Inter'] text-[12px] leading-[1.4] text-[#667] line-clamp-2">
           {task.description}
         </p>
+      )}
+
+      {/* Custom project labels (rich tasks) */}
+      {richLabels.length > 0 && (
+        <div className="flex flex-wrap gap-[4px]">
+          {richLabels.map((label) => (
+            <LabelChip key={label.id} label={label} />
+          ))}
+        </div>
       )}
 
       {/* GitHub labels */}

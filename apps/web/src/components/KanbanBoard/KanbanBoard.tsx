@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { apiFetch, type ApiError } from '../../lib/api';
+import { apiFetch, fetchLabels, type ApiError, type Label } from '../../lib/api';
 import type { Task } from './KanbanCard';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanFilters, DEFAULT_FILTERS, type KanbanFiltersState } from './KanbanFilters';
 import { TaskModal, type TaskFormData } from './TaskModal';
+import { TaskDetail } from './TaskDetail';
 
 interface Project {
   id: string;
@@ -22,6 +23,7 @@ interface KanbanBoardProps {
 export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +32,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
 
   // Modal state
   const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Task | null>(null);
+  const [detailTarget, setDetailTarget] = useState<Task | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -47,8 +49,27 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
         apiFetch<Task[]>('/api/tasks'),
         apiFetch<Project[]>('/api/projects'),
       ]);
+      const projectList = Array.isArray(projectsData) ? projectsData : [];
       setTasks(Array.isArray(tasksData) ? tasksData : []);
-      setProjects(Array.isArray(projectsData) ? projectsData : []);
+      setProjects(projectList);
+
+      // Load labels across all projects (best-effort) for the filter bar.
+      const labelLists = await Promise.all(
+        projectList.map((p) => fetchLabels(p.id).catch(() => [] as Label[])),
+      );
+      // De-duplicate by id (labels are project-scoped, so ids are unique).
+      const seen = new Set<string>();
+      const merged: Label[] = [];
+      for (const list of labelLists) {
+        for (const label of list) {
+          if (!seen.has(label.id)) {
+            seen.add(label.id);
+            merged.push(label);
+          }
+        }
+      }
+      merged.sort((a, b) => a.name.localeCompare(b.name));
+      setLabels(merged);
     } catch (err) {
       setError((err as ApiError).message || 'Failed to load tasks');
     } finally {
@@ -113,31 +134,6 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
     [fetchData],
   );
 
-  // ── Edit task ──
-  const handleEdit = useCallback(
-    async (data: TaskFormData) => {
-      if (!editTarget) return;
-      setFormError(null);
-      setFormLoading(true);
-      try {
-        await apiFetch(`/api/tasks/${editTarget.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            title: data.title,
-            description: data.description || undefined,
-          }),
-        });
-        setEditTarget(null);
-        await fetchData();
-      } catch (err) {
-        setFormError((err as ApiError).message || 'Failed to update task');
-      } finally {
-        setFormLoading(false);
-      }
-    },
-    [editTarget, fetchData],
-  );
-
   // ── Delete task ──
   const handleDelete = useCallback(
     async (taskId: string) => {
@@ -161,6 +157,14 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
     // Project filter
     if (filters.projectIds.length > 0) {
       list = list.filter((t) => filters.projectIds.includes(t.projectId));
+    }
+
+    // Label filter (task must have ALL selected labels)
+    if (filters.labelIds.length > 0) {
+      list = list.filter((t) => {
+        const ids = new Set((t.labels || []).map((l) => l.id));
+        return filters.labelIds.every((id) => ids.has(id));
+      });
     }
 
     // Type filter
@@ -238,7 +242,12 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
 
         {/* Filters */}
         <div className="mb-[20px]">
-          <KanbanFilters filters={filters} projects={projects} onChange={setFilters} />
+          <KanbanFilters
+            filters={filters}
+            projects={projects}
+            labels={labels}
+            onChange={setFilters}
+          />
         </div>
 
         {/* Loading */}
@@ -317,10 +326,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
                   title={col.id}
                   count={col.tasks.length}
                   tasks={col.tasks}
-                  onEdit={(task) => {
-                    setFormError(null);
-                    setEditTarget(task);
-                  }}
+                  onEdit={(task) => setDetailTarget(task)}
                   onDelete={handleDelete}
                   onDrop={handleMove}
                 />
@@ -388,12 +394,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
                             </button>
                           ))}
                         </div>
-                        <div
-                          onClick={() => {
-                            setFormError(null);
-                            setEditTarget(task);
-                          }}
-                        >
+                        <div onClick={() => setDetailTarget(task)}>
                           {/* We reuse the KanbanCard styling via a simple rendition */}
                           <div className="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[14px] cursor-pointer">
                             <h4 className="font-['Inter'] text-[13.5px] font-semibold text-[#f0f0f0]">
@@ -453,21 +454,14 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
         loading={formLoading}
       />
 
-      {/* ── Edit Modal ── */}
-      <TaskModal
-        open={editTarget !== null}
-        title="Edit Task"
-        initial={{
-          title: editTarget?.title || '',
-          description: editTarget?.description || '',
-          projectId: editTarget?.projectId || '',
-        }}
-        projects={projects}
-        onClose={() => setEditTarget(null)}
-        onSubmit={handleEdit}
-        error={formError}
-        loading={formLoading}
-      />
+      {/* ── Task Detail (rich) ── */}
+      {detailTarget && (
+        <TaskDetail
+          task={detailTarget}
+          onChanged={fetchData}
+          onClose={() => setDetailTarget(null)}
+        />
+      )}
 
       {/* ── Delete Confirmation Dialog ── */}
       {deleteTarget !== null && (

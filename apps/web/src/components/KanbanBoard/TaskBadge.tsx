@@ -48,6 +48,65 @@ export function LabelBadge({ label }: { label: GitHubLabel }) {
   );
 }
 
+/**
+ * Custom (project) colored label chip.
+ *
+ * Unlike GitHub's `LabelBadge` (which receives a 6-char hex without `#`),
+ * custom labels store a full `#rgb`/`#rrggbb` value. We normalize to a 6-char
+ * hex for the luminance contrast check used to pick readable text color.
+ */
+function normalizeHex(color: string): string {
+  let hex = color.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  }
+  return hex;
+}
+
+export function LabelChip({
+  name,
+  color,
+  onRemove,
+}: {
+  name: string;
+  color: string;
+  onRemove?: () => void;
+}) {
+  const textColor = labelTextColor(normalizeHex(color));
+  return (
+    <span
+      className="inline-flex items-center gap-[4px] rounded-[4px] px-[6px] py-[1px] font-['Inter'] text-[10px] font-medium"
+      style={{ backgroundColor: color, color: textColor }}
+    >
+      {name}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label={`Remove label ${name}`}
+          className="ml-[1px] flex size-[12px] items-center justify-center rounded-[3px] hover:bg-black/20"
+          style={{ color: textColor }}
+        >
+          <svg width="7" height="7" viewBox="0 0 8 8" fill="none">
+            <path
+              d="M1 1l6 6M7 1l-6 6"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      )}
+    </span>
+  );
+}
+
 /** Badge for project name */
 export function ProjectBadge({ name }: { name: string }) {
   return (
