@@ -131,6 +131,14 @@ export function getSessionMetaById(sessionId: string): SessionMeta | undefined {
 }
 
 /**
+ * Return all session metadata entries belonging to a given project.
+ * Reuses the single in-memory source of truth — does NOT duplicate state.
+ */
+export function getSessionMetaByProject(projectId: string): SessionMeta[] {
+  return Array.from(sessionMeta.values()).filter((s) => s.projectId === projectId);
+}
+
+/**
  * Test helper: inject session metadata directly (for test setup).
  */
 export function setSessionMeta(sessionId: string, meta: SessionMeta): void {

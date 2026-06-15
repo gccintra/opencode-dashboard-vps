@@ -9,12 +9,73 @@ import {
   unlinkSync,
   readdirSync,
 } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { join } from 'node:path';
+import { getPtyManager } from '../pty/manager';
+import { getSessionMetaByProject } from './sessions';
+import { getAttachmentsDir, getDataDir, resolveSafePath } from '../lib/dataDir';
+import { toLabel, type LabelDto } from './labels';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbRow = Record<string, any>;
 
-/** Map a raw DB row to the API response shape */
+/** Attachment DTO returned in enriched task responses. */
+export interface AttachmentDto {
+  id: string;
+  taskId: string;
+  filename: string;
+  mime: string;
+  size: number;
+  createdAt: string;
+}
+
+function toAttachment(row: DbRow): AttachmentDto {
+  return {
+    id: row.id as string,
+    taskId: row.task_id as string,
+    filename: row.filename as string,
+    mime: row.mime as string,
+    size: row.size as number,
+    createdAt: row.created_at as string,
+  };
+}
+
+/** Fetch labels applied to a task. */
+function getTaskLabels(db: ReturnType<typeof getDb>, taskId: string): LabelDto[] {
+  const rows = db
+    .query(
+      `SELECT l.* FROM labels l
+       JOIN task_labels tl ON tl.label_id = l.id
+       WHERE tl.task_id = ?
+       ORDER BY l.name COLLATE NOCASE ASC`,
+    )
+    .all(taskId) as DbRow[];
+  return rows.map(toLabel);
+}
+
+/** Fetch attachment metadata for a task. */
+function getTaskAttachments(db: ReturnType<typeof getDb>, taskId: string): AttachmentDto[] {
+  const rows = db
+    .query('SELECT * FROM task_attachments WHERE task_id = ? ORDER BY created_at ASC')
+    .all(taskId) as DbRow[];
+  return rows.map(toAttachment);
+}
+
+/**
+ * Derive the live session status for an associated session_id.
+ * Sessions are volatile (reset on restart). null/exited/killed → 'expired';
+ * any tracked status otherwise → 'active'. No association → null.
+ */
+function deriveSessionStatus(sessionId: string | null): 'active' | 'expired' | null {
+  if (!sessionId) return null;
+  const status = getPtyManager().getSessionStatus(sessionId);
+  if (status === null || status === 'exited' || status === 'killed') return 'expired';
+  return 'active';
+}
+
+/**
+ * Map a raw DB row to the API response shape, enriched with labels,
+ * attachments, and live session status.
+ */
 function toTask(row: DbRow) {
   let labels: unknown = null;
   if (row.github_labels) {
@@ -24,8 +85,11 @@ function toTask(row: DbRow) {
       labels = null;
     }
   }
+  const db = getDb();
+  const taskId = row.id as string;
+  const sessionId = (row.session_id as string) || null;
   return {
-    id: row.id as string,
+    id: taskId,
     projectId: row.project_id as string,
     projectName: (row.project_name as string) || null,
     title: row.title as string,
@@ -36,9 +100,12 @@ function toTask(row: DbRow) {
     githubIssueUrl: (row.github_issue_url as string) || null,
     githubLabels: labels,
     githubIssueNumber: (row.github_issue_number as number) || null,
-    sessionId: (row.session_id as string) || null,
+    sessionId,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    labels: getTaskLabels(db, taskId),
+    attachments: getTaskAttachments(db, taskId),
+    sessionStatus: deriveSessionStatus(sessionId),
   };
 }
 
@@ -556,4 +623,329 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         }),
       },
     ),
+  )
+
+  // ── PUT /api/tasks/:id/labels — replace applied labels ──
+  .guard(authGuard, (app) =>
+    app.put(
+      '/tasks/:id/labels',
+      ({ params: { id }, body, set }) => {
+        const db = getDb();
+        const task = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow | null;
+        if (!task) {
+          set.status = 404;
+          return { error: 'Task not found' };
+        }
+
+        const labelIds = Array.isArray(body.labelIds) ? body.labelIds : [];
+
+        // Validate every label belongs to the task's project
+        for (const labelId of labelIds) {
+          const label = db
+            .query('SELECT id, project_id FROM labels WHERE id = ?')
+            .get(labelId) as DbRow | null;
+          if (!label) {
+            set.status = 400;
+            return { error: `Label not found: ${labelId}` };
+          }
+          if (label.project_id !== task.project_id) {
+            set.status = 400;
+            return { error: `Label ${labelId} does not belong to the task's project` };
+          }
+        }
+
+        // Replace the set of applied labels
+        db.run('DELETE FROM task_labels WHERE task_id = ?', [id]);
+        for (const labelId of labelIds) {
+          db.run('INSERT OR IGNORE INTO task_labels (task_id, label_id) VALUES (?, ?)', [
+            id,
+            labelId,
+          ]);
+        }
+
+        const updated = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow;
+        return toTask(updated);
+      },
+      {
+        body: t.Object({
+          labelIds: t.Array(t.String()),
+        }),
+      },
+    ),
+  )
+
+  // ── POST /api/tasks/:id/attachments — upload attachment (multipart) ──
+  .guard(authGuard, (app) =>
+    app.post('/tasks/:id/attachments', async ({ params: { id }, request, set }) => {
+      const db = getDb();
+      const task = db.query('SELECT id FROM tasks WHERE id = ?').get(id) as DbRow | null;
+      if (!task) {
+        set.status = 404;
+        return { error: 'Task not found' };
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let rawForm: any;
+      try {
+        rawForm = await request.formData();
+      } catch {
+        set.status = 400;
+        return { error: 'invalid multipart form data' };
+      }
+
+      const file = rawForm.get('file');
+      if (!file || !(file instanceof File)) {
+        set.status = 400;
+        return { error: 'missing file field' };
+      }
+
+      const MAX = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX) {
+        set.status = 413;
+        return { error: 'file too large (max 10MB)' };
+      }
+
+      const ext = ATTACHMENT_MIME_WHITELIST[file.type];
+      if (!ext) {
+        set.status = 415;
+        return { error: `unsupported file type: ${file.type || 'unknown'}` };
+      }
+
+      const attId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const filename = `${attId}${ext}`;
+      const dir = getAttachmentsDir(id);
+
+      // All file I/O goes through resolveSafePath against the neutral base dir
+      const pathResult = resolveSafePath(dir, filename);
+      if ('error' in pathResult) {
+        set.status = pathResult.status;
+        return { error: pathResult.error };
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      writeFileSync(pathResult.resolved, buffer);
+
+      const relPath = join('attachments', id, filename);
+      const originalName = (file.name as string) || filename;
+      db.run(
+        `INSERT INTO task_attachments (id, task_id, filename, rel_path, mime, size, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [attId, id, originalName, relPath, file.type, file.size, now],
+      );
+
+      const row = db.query('SELECT * FROM task_attachments WHERE id = ?').get(attId) as DbRow;
+      set.status = 201;
+      return toAttachment(row);
+    }),
+  )
+
+  // ── GET /api/tasks/:id/attachments — list attachments ──
+  .guard(authGuard, (app) =>
+    app.get('/tasks/:id/attachments', ({ params: { id }, set }) => {
+      const db = getDb();
+      const task = db.query('SELECT id FROM tasks WHERE id = ?').get(id) as DbRow | null;
+      if (!task) {
+        set.status = 404;
+        return { error: 'Task not found' };
+      }
+      return getTaskAttachments(db, id);
+    }),
+  )
+
+  // ── GET /api/tasks/:id/attachments/:attId — serve binary ──
+  .guard(authGuard, (app) =>
+    app.get('/tasks/:id/attachments/:attId', ({ params: { id, attId }, set }) => {
+      const db = getDb();
+      const row = db
+        .query('SELECT * FROM task_attachments WHERE id = ? AND task_id = ?')
+        .get(attId, id) as DbRow | null;
+      if (!row) {
+        set.status = 404;
+        return { error: 'Attachment not found' };
+      }
+
+      // Resolve the stored rel_path safely against the neutral data dir
+      const pathResult = resolveSafePath(getDataDir(), row.rel_path as string);
+      if ('error' in pathResult) {
+        set.status = pathResult.status;
+        return { error: pathResult.error };
+      }
+      if (!existsSync(pathResult.resolved)) {
+        set.status = 404;
+        return { error: 'Attachment file missing on disk' };
+      }
+
+      const buffer = readFileSync(pathResult.resolved);
+      const contentType = (row.mime as string) || 'application/octet-stream';
+      // Defense-in-depth: prevent MIME sniffing so a mislabeled/crafted file
+      // cannot be reinterpreted as executable content (e.g. HTML/SVG) by the browser.
+      set.headers['Content-Type'] = contentType;
+      set.headers['X-Content-Type-Options'] = 'nosniff';
+      set.headers['Content-Disposition'] =
+        `inline; filename="${(row.filename as string).replace(/"/g, '')}"`;
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': contentType,
+          'X-Content-Type-Options': 'nosniff',
+          'Content-Disposition': `inline; filename="${(row.filename as string).replace(/"/g, '')}"`,
+        },
+      });
+    }),
+  )
+
+  // ── DELETE /api/tasks/:id/attachments/:attId — remove row + file ──
+  .guard(authGuard, (app) =>
+    app.delete('/tasks/:id/attachments/:attId', ({ params: { id, attId }, set }) => {
+      const db = getDb();
+      const row = db
+        .query('SELECT * FROM task_attachments WHERE id = ? AND task_id = ?')
+        .get(attId, id) as DbRow | null;
+      if (!row) {
+        set.status = 404;
+        return { error: 'Attachment not found' };
+      }
+
+      const pathResult = resolveSafePath(getDataDir(), row.rel_path as string);
+      if (!('error' in pathResult) && existsSync(pathResult.resolved)) {
+        try {
+          unlinkSync(pathResult.resolved);
+        } catch (err) {
+          console.error(
+            `[tasks] failed to delete attachment file ${row.rel_path}:`,
+            (err as Error).message,
+          );
+        }
+      }
+
+      db.run('DELETE FROM task_attachments WHERE id = ?', [attId]);
+      set.status = 200;
+      return { deleted: true };
+    }),
+  )
+
+  // ── PUT /api/tasks/:id/session — associate/dissociate a session ──
+  .guard(authGuard, (app) =>
+    app.put(
+      '/tasks/:id/session',
+      ({ params: { id }, body, set }) => {
+        const db = getDb();
+        const task = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow | null;
+        if (!task) {
+          set.status = 404;
+          return { error: 'Task not found' };
+        }
+
+        const sessionId = body.sessionId ?? null;
+
+        if (sessionId !== null) {
+          // Session must exist and belong to the task's project.
+          const projectSessions = getSessionMetaByProject(task.project_id as string);
+          const match = projectSessions.find((s) => s.sessionId === sessionId);
+          if (!match) {
+            set.status = 400;
+            return { error: 'Session does not exist or does not belong to this task\'s project' };
+          }
+        }
+
+        const now = new Date().toISOString();
+        db.run('UPDATE tasks SET session_id = ?, updated_at = ? WHERE id = ?', [
+          sessionId,
+          now,
+          id,
+        ]);
+
+        const updated = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow;
+        return toTask(updated);
+      },
+      {
+        body: t.Object({
+          sessionId: t.Union([t.String(), t.Null()]),
+        }),
+      },
+    ),
+  )
+
+  // ── POST /api/tasks/:id/implement — inject prompt into associated session ──
+  .guard(authGuard, (app) =>
+    app.post('/tasks/:id/implement', ({ params: { id }, set }) => {
+      const db = getDb();
+      const task = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow | null;
+      if (!task) {
+        set.status = 404;
+        return { error: 'Task not found' };
+      }
+
+      const sessionId = (task.session_id as string) || null;
+      if (!sessionId) {
+        set.status = 409;
+        return { error: 'No session associated with this task. Associate a session first.' };
+      }
+
+      const status = deriveSessionStatus(sessionId);
+      if (status !== 'active') {
+        set.status = 409;
+        return {
+          error: 'The associated session has expired. Re-associate a live session.',
+        };
+      }
+
+      const prompt = buildImplementPrompt(db, task);
+      getPtyManager().writeToSession(sessionId, prompt + '\n');
+
+      return { started: true };
+    }),
   );
+
+/** Whitelisted attachment MIME types → file extension. */
+const ATTACHMENT_MIME_WHITELIST: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/bmp': '.bmp',
+  // NOTE: image/svg+xml is intentionally excluded. SVG can embed <script> and
+  // would execute as stored-XSS on the app origin when served inline.
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+  'text/markdown': '.md',
+  'application/json': '.json',
+  'application/zip': '.zip',
+};
+
+/**
+ * Build a deterministic implementation prompt from a task: title, body
+ * (markdown description) and absolute paths of attachments. CLI-agnostic plain
+ * text injected via PTY stdin.
+ *
+ * Acceptance criteria: in Fase A there is no separate structured criteria field.
+ * Acceptance criteria live INSIDE the markdown body (`task.description`), so they
+ * are already included in the prompt by emitting the full description verbatim.
+ * Fase B may introduce a dedicated criteria field; when it does, append it here.
+ */
+function buildImplementPrompt(db: ReturnType<typeof getDb>, task: DbRow): string {
+  const lines: string[] = [];
+  lines.push(`# Task: ${task.title as string}`);
+  lines.push('');
+  if (task.description) {
+    // Full markdown body — includes acceptance criteria embedded in the body (Fase A).
+    lines.push(task.description as string);
+    lines.push('');
+  }
+
+  const attachments = db
+    .query('SELECT * FROM task_attachments WHERE task_id = ? ORDER BY created_at ASC')
+    .all(task.id as string) as DbRow[];
+  if (attachments.length > 0) {
+    lines.push('## Attachments');
+    const dataDir = getDataDir();
+    for (const att of attachments) {
+      lines.push(`- ${att.filename as string}: ${join(dataDir, att.rel_path as string)}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('Please implement this task.');
+  return lines.join('\n');
+}
