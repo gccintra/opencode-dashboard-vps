@@ -155,8 +155,8 @@ These are documented failures that exist in the repo and are not regressions:
 - `ProjectDetail.test.tsx` — 37/38 fail (API mock setup issue)
 - `Projects.test.tsx` — ~8 fail (`harnesses.map is not a function`)
 - `Sidebar.test.tsx` — 1 fail (duplicate DOM text)
-- `sessions.test.ts` (server) — 5 fail (mock assertion mismatches)
-- `ws/handler.test.ts` (server) — 1 fail (`ws.closed` is null when expected to have close code 1011)
+- `sessions.test.ts` (server) — 3 fail (mock assertion mismatches; spawn/exit-callback/single-bash-failure cases)
+- `ws/handler.test.ts` (server) — 21 fail (`manager.getDetectedStatus is not a function`; the test mock predates commit `10abf6d` which added `getDetectedStatus()` to `handleOpen`). Verified identical on a clean `develop` worktree — NOT a regression.
 
 When running the full suite, V8 coverage output may be absent if uncaught exceptions abort vitest. Run coverage scoped to a specific file to work around this:
 ```bash

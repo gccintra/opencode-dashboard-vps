@@ -272,17 +272,20 @@ export function MobileKeyboard({
   onCopy,
   onPaste,
   onSelectAll,
+  onUpload,
   inline = false,
 }: {
   onKey: (seq: string) => void;
   onCopy: () => void;
   onPaste: () => void;
   onSelectAll: () => void;
+  onUpload?: (file: File) => void;
   /** When true, renders as an inline button (for footer bars). Popup opens upward via absolute positioning relative to the wrapper. */
   inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -339,10 +342,27 @@ export function MobileKeyboard({
       <button
         type="button"
         onClick={openNativeKeyboard}
-        className="mb-3 w-full rounded-md px-3 py-[10px] text-sm font-semibold text-[#aaff00] bg-[rgba(170,255,0,0.08)] border border-[rgba(170,255,0,0.25)] active:bg-[rgba(170,255,0,0.2)] transition-colors select-none"
+        className="mb-2 w-full rounded-md px-3 py-[10px] text-sm font-semibold text-[#aaff00] bg-[rgba(170,255,0,0.08)] border border-[rgba(170,255,0,0.25)] active:bg-[rgba(170,255,0,0.2)] transition-colors select-none"
       >
         ⌨ Digitar texto
       </button>
+      {/* File upload — opens native file picker; path sent to PTY after server upload */}
+      <label className="mb-3 flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-[10px] text-sm font-semibold text-[#bd93f9] bg-[rgba(189,147,249,0.06)] border border-[rgba(189,147,249,0.25)] active:bg-[rgba(189,147,249,0.15)] transition-colors select-none">
+        📎 Enviar arquivo
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              onUpload?.(file);
+              e.target.value = '';
+              setOpen(false);
+            }
+          }}
+        />
+      </label>
       {/* Copy / Paste / Select */}
       <div className="mb-3 grid grid-cols-3 gap-[6px]">
         <button type="button" onClick={onSelectAll} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#f1fa8c] bg-[rgba(241,250,140,0.06)] border border-[rgba(241,250,140,0.2)] active:bg-[rgba(241,250,140,0.15)] transition-colors select-none">Sel. tudo</button>
@@ -501,6 +521,61 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       setImageUploadStatus(ok ? 'idle' : 'error');
       if (!ok) setTimeout(() => setImageUploadStatus('idle'), 2000);
     }, []);
+
+    // Shared helper: upload a File to /tmp via upload-temp, then send the path to the PTY.
+    const uploadFileAndSend = useCallback(async (file: File) => {
+      setImageUploadStatus('uploading');
+      const token = localStorage.getItem('auth_token');
+      const form = new FormData();
+      form.append('file', file);
+      try {
+        const res = await fetch('/api/files/upload-temp', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: form,
+        });
+        if (res.ok) {
+          const data = await res.json() as { path: string };
+          socket.send(data.path);
+          setImageUploadStatus('idle');
+        } else {
+          flashImageUpload(false);
+        }
+      } catch {
+        flashImageUpload(false);
+      }
+    }, [socket, flashImageUpload]);
+
+    // Image-aware paste for mobile keyboard button. Uses navigator.clipboard.read()
+    // (requires user gesture — onClick qualifies) to detect images; falls back to
+    // readText() for plain text.
+    const handleMobilePaste = useCallback(() => {
+      (async () => {
+        try {
+          if (navigator.clipboard?.read) {
+            const clipItems = await navigator.clipboard.read();
+            for (const clipItem of clipItems) {
+              const imageType = clipItem.types.find((t) => t.startsWith('image/'));
+              if (imageType) {
+                const blob = await clipItem.getType(imageType);
+                const ext =
+                  imageType === 'image/png' ? '.png'
+                  : imageType === 'image/jpeg' ? '.jpg'
+                  : imageType === 'image/webp' ? '.webp'
+                  : imageType === 'image/gif' ? '.gif'
+                  : '.png';
+                await uploadFileAndSend(new File([blob], `paste${ext}`, { type: imageType }));
+                return;
+              }
+            }
+          }
+        } catch { /* clipboard.read not available or permission denied */ }
+        // No image found — fall back to plain text
+        navigator.clipboard.readText().then((text) => {
+          if (text) socket.send(text);
+        }).catch(() => {});
+      })();
+    }, [socket, uploadFileAndSend]);
 
     // Loading overlay: shown until xterm.js is fully initialised (font loaded +
     // terminal.open() + flushBuffer() complete). Reset on every session change.
@@ -727,18 +802,22 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               return false;
             }
 
-            // Ctrl+V — handled by the native paste event listener below (onNativePaste).
-            // Returning false prevents xterm from processing the keydown, but the browser
-            // still fires a separate paste event. All paste logic lives in onNativePaste
-            // to avoid the duplicate: keydown-handler path + xterm textarea paste path.
+            // Ctrl+V — let the browser fire its native paste event; onNativePaste
+            // (document-level capture below) intercepts it before xterm's textarea
+            // listener and handles both images and plain text.
             if (!e.shiftKey && (e.key === 'v' || e.key === 'V')) {
               return false;
             }
 
-            // Ctrl+Shift+V — text paste; all paste logic lives in onNativePaste.
-            // Returning false prevents xterm from processing the keydown; the
-            // browser still fires a paste event which onNativePaste handles.
+            // Ctrl+Shift+V — text-only paste. Ctrl+Shift+V does NOT fire a native
+            // paste event in Chrome/Firefox, so we must read the clipboard explicitly
+            // here. e.preventDefault() suppresses any browser paste fallback to avoid
+            // a second path if some browsers DO fire paste for Ctrl+Shift+V.
             if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+              e.preventDefault();
+              navigator.clipboard.readText().then((text) => {
+                if (text) socket.send(text);
+              }).catch(() => {});
               return false;
             }
 
@@ -1503,11 +1582,8 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               const sel = terminalRef.current?.getSelection() ?? '';
               if (sel) navigator.clipboard.writeText(sel).catch(() => {});
             }}
-            onPaste={() => {
-              navigator.clipboard.readText().then((text) => {
-                if (text) socket.send(text);
-              }).catch(() => {});
-            }}
+            onPaste={handleMobilePaste}
+            onUpload={uploadFileAndSend}
           />
         )}
       </div>
