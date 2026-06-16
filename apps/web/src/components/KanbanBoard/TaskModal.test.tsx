@@ -21,6 +21,7 @@ const baseInitial: TaskFormData = {
   description: '',
   projectId: 'proj-1',
   column: 'backlog',
+  priority: 'medium',
   labelIds: [],
 };
 
