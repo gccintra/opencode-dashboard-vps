@@ -69,7 +69,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[480px] rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[480px] rounded-[12px] border border-white/[0.07] bg-[#111118] p-[24px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-[16px]">
@@ -78,7 +78,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
           </h3>
           <button
             onClick={onClose}
-            className="text-[#556] hover:text-[#889] transition-colors text-[18px] leading-none"
+            className="text-[#5a626c] hover:text-[#9aa3ad] transition-colors text-[18px] leading-none"
           >
             ✕
           </button>
@@ -88,16 +88,16 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="flex items-center gap-[4px] mb-[12px] flex-wrap">
           <button
             onClick={() => setCurrentPath('/')}
-            className="font-['Inter'] text-[13px] text-[#556] hover:text-[#af0] transition-colors"
+            className="font-['Inter'] text-[13px] text-[#5a626c] hover:text-[#b3e502] transition-colors"
           >
             /
           </button>
           {breadcrumbs.map((crumb) => (
             <span key={crumb.path} className="flex items-center gap-[4px]">
-              <span className="text-[#445] text-[13px]">/</span>
+              <span className="text-[#5a626c] text-[13px]">/</span>
               <button
                 onClick={() => setCurrentPath(crumb.path)}
-                className="font-['Inter'] text-[13px] text-[#556] hover:text-[#af0] truncate max-w-[120px] transition-colors"
+                className="font-['Inter'] text-[13px] text-[#5a626c] hover:text-[#b3e502] truncate max-w-[120px] transition-colors"
               >
                 {crumb.label}
               </button>
@@ -106,7 +106,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         </div>
 
         {/* Current path */}
-        <div className="mb-[12px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[8px] font-['JetBrains_Mono'] text-[12px] text-[#889]">
+        <div className="mb-[12px] rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[8px] font-['JetBrains_Mono'] text-[12px] text-[#9aa3ad]">
           {currentPath}
         </div>
 
@@ -114,14 +114,14 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="max-h-[240px] overflow-y-auto rounded-[8px] border border-[rgba(255,255,255,0.06)] bg-[#0a0a0f]">
           {loading ? (
             <div className="flex items-center justify-center py-[24px]">
-              <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#af0] border-t-transparent" />
+              <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
             </div>
           ) : error ? (
             <div className="px-[12px] py-[16px] font-['Inter'] text-[13px] text-red-400 text-center">
               {error}
             </div>
           ) : entries.length === 0 ? (
-            <div className="px-[12px] py-[16px] font-['Inter'] text-[13px] text-[#445] text-center">
+            <div className="px-[12px] py-[16px] font-['Inter'] text-[13px] text-[#5a626c] text-center">
               No directories found
             </div>
           ) : (
@@ -136,7 +136,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#556"
+                  stroke="#5a626c"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -153,13 +153,13 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="mt-[16px] flex justify-end gap-[10px]">
           <button
             onClick={onClose}
-            className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSelect}
-            className="rounded-[6px] bg-[#af0] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors"
+            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors"
           >
             Select this directory
           </button>

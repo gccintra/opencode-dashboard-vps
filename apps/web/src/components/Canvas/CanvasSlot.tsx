@@ -92,7 +92,7 @@ function SlotHeader({
               if (e.key === 'Escape') setEditing(false);
             }}
             onBlur={saveEdit}
-            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(170,255,0,0.3)] rounded-[3px] px-[5px] py-[1px] font-['Inter'] text-[11px] text-[#f0f0f0] focus:outline-none"
+            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[5px] py-[1px] font-['Inter'] text-[11px] text-[#f0f0f0] focus:outline-none"
           />
         ) : (
           <span
@@ -101,9 +101,9 @@ function SlotHeader({
             title={onRename ? 'Clique para renomear' : undefined}
           >
             {projectName && (
-              <span className="text-[#556]">{projectName} — </span>
+              <span className="text-[#5a626c]">{projectName} — </span>
             )}
-            <span className="text-[#889]">{sessionName}</span>
+            <span className="text-[#9aa3ad]">{sessionName}</span>
           </span>
         )}
         {!editing && sessionStatus && (
@@ -151,7 +151,7 @@ function SlotHeader({
             className={`flex items-center justify-center h-[18px] rounded-[3px] transition-colors ${
               killPending
                 ? 'px-[5px] bg-[rgba(255,85,68,0.18)] text-[#f54] text-[9px] font-semibold font-[\'Inter\']'
-                : 'size-[18px] text-[#556] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)]'
+                : 'size-[18px] text-[#5a626c] hover:text-[#f54] hover:bg-[rgba(255,85,68,0.1)]'
             }`}
             title={killPending ? 'Clique novamente para confirmar' : 'Encerrar sessão'}
             aria-label="Encerrar sessão"
@@ -166,7 +166,7 @@ function SlotHeader({
         )}
         <button
           onClick={onRemove}
-          className="flex items-center justify-center size-[18px] rounded-[3px] text-[#445] hover:text-[#889] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+          className="flex items-center justify-center size-[18px] rounded-[3px] text-[#5a626c] hover:text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
           title="Remover do canvas (mantém sessão ativa)"
           aria-label="Remover sessão do slot"
           data-testid="remove-slot-btn"
@@ -196,7 +196,7 @@ function EmptySlotPlaceholder({
       className="flex flex-1 flex-col items-center justify-center gap-[12px] p-[16px]"
       data-testid={`slot-placeholder-${slotIndex}`}
     >
-      <div className="flex flex-col items-center gap-[6px] text-[#445]">
+      <div className="flex flex-col items-center gap-[6px] text-[#5a626c]">
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
           <rect x="3" y="5" width="22" height="18" rx="2" stroke="currentColor" strokeWidth="1.2" />
           <path d="M14 10v8M10 14h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -211,7 +211,7 @@ function EmptySlotPlaceholder({
             e.target.value = '';
           }}
           defaultValue=""
-          className="w-full max-w-[160px] rounded-[5px] border border-[rgba(255,255,255,0.08)] bg-[#1a1a23] px-[8px] py-[5px] font-['Inter'] text-[12px] text-[#889] focus:outline-none focus:border-[rgba(170,255,0,0.3)]"
+          className="w-full max-w-[160px] rounded-[5px] border border-white/[0.07] bg-[#0a0a0f] px-[8px] py-[5px] font-['Inter'] text-[12px] text-[#9aa3ad] focus:outline-none focus:border-[rgba(179,229,2,0.3)]"
           aria-label="Selecionar sessão"
           data-testid={`slot-session-select-${slotIndex}`}
         >
@@ -227,7 +227,7 @@ function EmptySlotPlaceholder({
       {onCreateSession && (
         <button
           onClick={onCreateSession}
-          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(170,255,0,0.1)] border border-[rgba(170,255,0,0.2)] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#af0] hover:bg-[rgba(170,255,0,0.16)] transition-colors"
+          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(179,229,2,0.1)] border border-[rgba(179,229,2,0.2)] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.16)] transition-colors"
           data-testid={`slot-new-session-btn-${slotIndex}`}
         >
           <span className="text-[14px] leading-none font-light">+</span>
@@ -300,8 +300,8 @@ export function CanvasSlot({
 
   const borderStyle = sessionId
     ? isFocused
-      ? 'border-[#af0]'
-      : 'border-[rgba(255,255,255,0.08)]'
+      ? 'border-[#b3e502]'
+      : 'border-white/[0.07]'
     : 'border-dashed border-[rgba(255,255,255,0.1)]';
 
   return (

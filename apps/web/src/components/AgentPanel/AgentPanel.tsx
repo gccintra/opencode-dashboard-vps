@@ -146,7 +146,7 @@ export default function AgentPanel({
       {!compact && (
         <div className="flex items-center gap-[8px] px-[16px] py-[8px]">
           <button
-            className="flex flex-1 items-center gap-[8px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#0d0d14] px-[12px] py-[6px] font-['Inter'] text-[12px] text-[#556] hover:border-[rgba(255,255,255,0.16)] transition-colors"
+            className="flex flex-1 items-center gap-[8px] rounded-[6px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[6px] font-['Inter'] text-[12px] text-[#5a626c] hover:border-white/[0.14] transition-colors"
             onClick={() => setSearchOpen(true)}
             data-testid="search-trigger"
           >
@@ -160,7 +160,7 @@ export default function AgentPanel({
               />
             </svg>
             <span>Buscar agentes...</span>
-            <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#445]">Ctrl+K</span>
+            <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">Ctrl+K</span>
           </button>
         </div>
       )}
@@ -169,7 +169,7 @@ export default function AgentPanel({
       {effectiveFilter && (
         <div className="px-[16px] pb-[4px]">
           <button
-            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(170,255,0,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#af0] hover:bg-[rgba(170,255,0,0.12)] transition-colors"
+            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(179,229,2,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#b3e502] hover:bg-[rgba(179,229,2,0.12)] transition-colors"
             onClick={() => handleFilterClick(null)}
           >
             {effectiveFilter === 'waiting'
@@ -177,7 +177,7 @@ export default function AgentPanel({
               : effectiveFilter === 'active'
                 ? 'Ativos'
                 : 'Finalizados'}
-            <span className="text-[#889]">×</span>
+            <span className="text-[#9aa3ad]">×</span>
           </button>
         </div>
       )}
@@ -186,14 +186,14 @@ export default function AgentPanel({
       <div className="flex-1 overflow-y-auto px-[16px] pb-[16px]">
         {loading && agents.length === 0 ? (
           <div className="flex items-center justify-center py-[32px]">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#af0] border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
           </div>
         ) : error ? (
           <div className="py-[16px] text-center font-['Inter'] text-[12px] text-[#f54]">
             {error}
           </div>
         ) : filteredAgents.length === 0 ? (
-          <div className="py-[32px] text-center font-['Inter'] text-[13px] text-[#556]">
+          <div className="py-[32px] text-center font-['Inter'] text-[13px] text-[#5a626c]">
             {agents.length === 0
               ? 'Nenhum agente ativo. Abra uma sessão em um projeto.'
               : 'Nenhum agente encontrado para este filtro.'}
@@ -228,11 +228,11 @@ export default function AgentPanel({
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/70" onClick={() => setSearchOpen(false)} />
           {/* Modal */}
-          <div className="relative z-10 w-full max-w-[480px] rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#16161f] shadow-2xl">
-            <div className="flex items-center gap-[8px] border-b border-[rgba(255,255,255,0.08)] px-[16px] py-[12px]">
+          <div className="relative z-10 w-full max-w-[480px] rounded-[12px] border border-white/[0.07] bg-[#16161f] shadow-2xl">
+            <div className="flex items-center gap-[8px] border-b border-white/[0.07] px-[16px] py-[12px]">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="7" cy="7" r="5" stroke="#889" strokeWidth="1.25" />
-                <path d="M11 11l4 4" stroke="#889" strokeWidth="1.25" strokeLinecap="round" />
+                <circle cx="7" cy="7" r="5" stroke="#9aa3ad" strokeWidth="1.25" />
+                <path d="M11 11l4 4" stroke="#9aa3ad" strokeWidth="1.25" strokeLinecap="round" />
               </svg>
               <input
                 className="flex-1 bg-transparent font-['Inter'] text-[14px] text-[#f0f0f0] placeholder-[#556] outline-none"
@@ -246,11 +246,11 @@ export default function AgentPanel({
                 autoFocus
                 data-testid="search-input"
               />
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#445]">esc</span>
+              <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">esc</span>
             </div>
             <div className="max-h-[320px] overflow-y-auto py-[4px]">
               {searchResults.length === 0 && searchQuery.trim() ? (
-                <div className="px-[16px] py-[16px] text-center font-['Inter'] text-[13px] text-[#556]">
+                <div className="px-[16px] py-[16px] text-center font-['Inter'] text-[13px] text-[#5a626c]">
                   Nenhuma sessão encontrada
                 </div>
               ) : (
@@ -259,7 +259,7 @@ export default function AgentPanel({
                     key={agent.id}
                     className={`flex cursor-pointer items-center gap-[10px] px-[16px] py-[10px] transition-colors ${
                       idx === searchIndex
-                        ? 'bg-[rgba(170,255,0,0.08)]'
+                        ? 'bg-[rgba(179,229,2,0.08)]'
                         : 'hover:bg-[rgba(255,255,255,0.03)]'
                     }`}
                     onClick={() => {
@@ -285,7 +285,7 @@ export default function AgentPanel({
                     <span className="flex-1 truncate font-['Inter'] text-[13px] font-medium text-[#f0f0f0]">
                       {agent.name}
                     </span>
-                    <span className="shrink-0 truncate font-['Inter'] text-[11px] text-[#889] max-w-[140px]">
+                    <span className="shrink-0 truncate font-['Inter'] text-[11px] text-[#9aa3ad] max-w-[140px]">
                       {agent.projectName || (agent.type === 'emergency' ? '/root' : '—')}
                     </span>
                   </div>

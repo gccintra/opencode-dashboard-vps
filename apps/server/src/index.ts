@@ -6,6 +6,7 @@ import { initDb, getDb, getDbPath, getDbIntegrityResult } from './db/client';
 import { scanResources } from './routes/resources';
 import { healthRoutes } from './routes/health';
 import { tasksRoutes } from './routes/tasks';
+import { labelsRoutes } from './routes/labels';
 import { githubRoutes, startGithubPolling } from './routes/github';
 import { authRoutes } from './auth';
 import { projectsRoutes } from './routes/projects';
@@ -18,6 +19,9 @@ import { wsRoutes } from './ws/handler';
 import { getPtyManager } from './pty/manager';
 import { systemRoutes } from './routes/system';
 import { canvasesRoutes } from './routes/canvases';
+import { kanbanColumnsRoutes } from './routes/kanban-columns';
+import { taskActivityRoutes } from './routes/task-activity';
+import { taskLinksRoutes } from './routes/task-links';
 
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
@@ -137,6 +141,10 @@ app
   .use(harnessesRoutes)
   .use(sessionsRoutes)
   .use(tasksRoutes)
+  .use(labelsRoutes)
+  .use(kanbanColumnsRoutes)
+  .use(taskActivityRoutes)
+  .use(taskLinksRoutes)
   .use(agentsRoutes)
   .use(resourcesRoutes)
   .use(filesRoutes)

@@ -150,12 +150,12 @@ describe('CanvasSlot — focus styles', () => {
   it('applies green border class when focused', () => {
     render(<CanvasSlot {...filledProps} isFocused />);
     const slot = screen.getByTestId('canvas-slot-1');
-    expect(slot.className).toContain('border-[#af0]');
+    expect(slot.className).toContain('border-[#b3e502]');
   });
 
   it('applies muted border class when not focused', () => {
     render(<CanvasSlot {...filledProps} isFocused={false} />);
     const slot = screen.getByTestId('canvas-slot-1');
-    expect(slot.className).toContain('border-[rgba(255,255,255,0.08)]');
+    expect(slot.className).toContain('border-white/[0.07]');
   });
 });

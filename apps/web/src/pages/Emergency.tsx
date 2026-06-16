@@ -172,7 +172,7 @@ export default function EmergencyPage() {
             </p>
             <button
               onClick={() => navigate('/projects')}
-              className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#f0f0f0] hover:border-[rgba(255,255,255,0.16)] transition-colors"
+              className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#f0f0f0] hover:border-white/[0.14] transition-colors"
             >
               Back to Projects
             </button>
@@ -186,19 +186,24 @@ export default function EmergencyPage() {
     return (
       <div className="flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
         <div className="flex items-center justify-center flex-1 p-8 text-center">
-          <p className="font-['Inter'] text-[14px] text-[#889]">No emergency session active.</p>
+          <p className="font-['Inter'] text-[14px] text-[#9aa3ad]">No emergency session active.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
+    <div className="relative flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
+      {/* Atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.3, background: 'radial-gradient(circle, rgba(179,229,2,0.15), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-grid" />
+      </div>
       {/* Header with emergency styling */}
-      <header className="flex shrink-0 items-center gap-[12px] border-b-2 border-[#f54] bg-[#0a0a0f] px-[24px] pb-[18px] pt-[18px] sm:px-[32px]">
+      <header className="relative z-10 flex shrink-0 items-center gap-[12px] border-b-2 border-[#f54] bg-[#0a0a0f] px-[24px] pb-[18px] pt-[18px] sm:px-[32px]">
         <button
           onClick={() => navigate('/projects')}
-          className="flex items-center gap-[4px] font-['Inter'] text-[13px] font-medium text-[#889] hover:text-[#ccd] transition-colors"
+          className="flex items-center gap-[4px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors"
         >
           <BackArrowIcon />
           Projects

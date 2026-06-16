@@ -143,7 +143,7 @@ export default function AgentCard({
       className={`relative rounded-[8px] border bg-[#111118] px-[12px] py-[10px] transition-all select-none ${
         isEmergency
           ? 'border-[rgba(255,85,68,0.4)] bg-[rgba(255,85,68,0.04)]'
-          : 'border-[rgba(255,255,255,0.08)]'
+          : 'border-white/[0.07]'
       } ${isFinished ? 'opacity-50' : ''} ${stale ? 'border-[rgba(255,170,0,0.3)]' : ''} ${
         pulse ? 'animate-pulse' : ''
       }`}
@@ -159,7 +159,7 @@ export default function AgentCard({
         {renaming ? (
           <input
             ref={renameInputRef}
-            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(170,255,0,0.3)] bg-[#0d0d14] px-[6px] py-[1px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
+            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -181,12 +181,12 @@ export default function AgentCard({
 
       {/* Middle line: project + uptime */}
       <div className="mt-[4px] flex items-center gap-[8px] cursor-pointer" onClick={handleClick}>
-        <span className="min-w-0 truncate font-['Inter'] text-[11px] text-[#889]">
+        <span className="min-w-0 truncate font-['Inter'] text-[11px] text-[#9aa3ad]">
           {agent.projectName || (isEmergency ? '/root' : '—')}
         </span>
-        <span className="shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#556]">{uptime}</span>
+        <span className="shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">{uptime}</span>
         {isFinished && (
-          <span className="shrink-0 font-['Inter'] text-[10px] text-[#445]">ended</span>
+          <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">ended</span>
         )}
         {stale && !isFinished && (
           <span className="shrink-0 font-['Inter'] text-[10px] text-[#fa0]">stale</span>
@@ -195,7 +195,7 @@ export default function AgentCard({
 
       {/* Bottom line: output preview */}
       <div className="mt-[4px] cursor-pointer" onClick={handleClick}>
-        <span className="block truncate font-['JetBrains_Mono'] text-[10px] leading-[16px] text-[#556]">
+        <span className="block truncate font-['JetBrains_Mono'] text-[10px] leading-[16px] text-[#5a626c]">
           {agent.outputPreview}
         </span>
       </div>
@@ -209,7 +209,7 @@ export default function AgentCard({
             navigate('/tasks');
           }}
         >
-          <span className="font-['Inter'] text-[11px] text-[#af0] hover:underline">
+          <span className="font-['Inter'] text-[11px] text-[#b3e502] hover:underline">
             {'📋 '}
             {agent.linkedTaskTitle}
           </span>
@@ -220,7 +220,7 @@ export default function AgentCard({
       <div className="mt-[6px] flex items-center gap-[4px]">
         {showCreateTask && !isFinished && !isEmergency && (
           <button
-            className="flex items-center gap-[3px] rounded-[4px] border border-[rgba(255,255,255,0.08)] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#889] hover:border-[rgba(170,255,0,0.3)] hover:text-[#af0] transition-colors"
+            className="flex items-center gap-[3px] rounded-[4px] border border-white/[0.07] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onCreateTask?.(agent);
@@ -231,7 +231,7 @@ export default function AgentCard({
           </button>
         )}
         <button
-          className="flex size-[20px] items-center justify-center rounded-[3px] text-[#445] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#f0f0f0] transition-colors"
+          className="flex size-[20px] items-center justify-center rounded-[3px] text-[#5a626c] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#f0f0f0] transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             setRenaming(true);
@@ -256,7 +256,7 @@ export default function AgentCard({
               {isEmergency ? 'End' : 'Yes'}
             </button>
             <button
-              className="rounded-[3px] bg-[rgba(255,255,255,0.08)] px-[6px] py-[1px] font-['Inter'] text-[10px] text-[#889] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+              className="rounded-[3px] bg-[rgba(255,255,255,0.08)] px-[6px] py-[1px] font-['Inter'] text-[10px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirmClose(false);
@@ -268,7 +268,7 @@ export default function AgentCard({
           </div>
         ) : (
           <button
-            className="flex size-[20px] items-center justify-center rounded-[3px] text-[#445] hover:bg-[rgba(255,50,50,0.15)] hover:text-[#f54] transition-colors"
+            className="flex size-[20px] items-center justify-center rounded-[3px] text-[#5a626c] hover:bg-[rgba(255,50,50,0.15)] hover:text-[#f54] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               setConfirmClose(true);

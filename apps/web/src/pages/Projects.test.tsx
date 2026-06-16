@@ -183,13 +183,16 @@ describe('ProjectsPage', () => {
       expect(screen.getByText('/home/user/projects/api-service')).toBeInTheDocument();
     });
 
-    it('renders session status labels on each card', async () => {
+    it('renders a live-session indicator on each card', async () => {
       mockProjectsResponse();
       renderPage();
 
+      // Cards surface only live sessions now — waiting/finished counts were
+      // removed as not meaningful on the projects overview. With no active
+      // sessions in the mock, every card shows the idle indicator.
       await waitFor(() => {
-        const activeLabels = screen.getAllByText('Active');
-        expect(activeLabels.length).toBeGreaterThanOrEqual(2);
+        const idle = screen.getAllByText('No active sessions');
+        expect(idle.length).toBeGreaterThanOrEqual(2);
       });
     });
 

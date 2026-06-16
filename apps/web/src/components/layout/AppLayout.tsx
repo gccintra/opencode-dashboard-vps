@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import Sidebar, { AlfLogo } from './Sidebar';
 import { FileClipboardProvider } from '../../context/FileClipboardContext';
 import GlobalClipboardToast from '../GlobalClipboardToast';
 
@@ -21,21 +21,22 @@ export default function AppLayout() {
     <FileClipboardProvider>
       <div className="flex h-dvh bg-[#0a0a0f]">
         <Sidebar />
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {/* ── Mobile top bar — hidden on lg+ (sidebar is static there) ── */}
-          <div className="flex h-[48px] shrink-0 items-center gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] px-4 lg:hidden">
+          <div className="flex h-[48px] shrink-0 items-center gap-3 border-b border-white/[0.07] bg-[#0a0a0f] px-4 lg:hidden">
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('sidebar:open'))}
-              className="flex size-[32px] shrink-0 items-center justify-center rounded-[6px] text-[#889] hover:text-[#f0f0f0] active:text-[#f0f0f0]"
+              className="flex size-[32px] shrink-0 items-center justify-center rounded-[6px] text-[#9aa3ad] hover:text-[#f0f0f0] active:text-[#f0f0f0]"
               aria-label="Open menu"
               data-testid="hamburger-button"
             >
               <HamburgerIcon />
             </button>
-            <span className="font-['JetBrains_Mono'] text-[15px] font-medium tracking-[-0.5px] text-[#af0]">
-              {'> _'}
+            <AlfLogo size={26} />
+            <span className="flex items-baseline gap-[3px] font-['Syne'] text-[15px] font-extrabold tracking-[-0.5px]">
+              <span className="text-[#f2f3f5]">ALF</span>
+              <span className="text-[#b3e502]">code</span>
             </span>
-            <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">OpenCode</span>
           </div>
 
           {/* ── Page content ── */}

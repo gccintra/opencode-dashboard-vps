@@ -181,18 +181,20 @@ describe('sessions routes', () => {
       expect(typeof session.createdAt).toBe('number');
     });
 
-    it('calls ptyManager.spawnSession with the project directory and bash', async () => {
+    it('calls ptyManager.spawnSession with the project directory and the pty-sighup-exec bash wrapper', async () => {
       const token = await getToken();
       await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
       );
 
       expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
-      const [sessionId, cwd, command] = mockManager.spawnSession.mock.calls[0]!;
+      const [sessionId, cwd, command, args] = mockManager.spawnSession.mock.calls[0]!;
       expect(typeof sessionId).toBe('string');
       expect(sessionId.length).toBeGreaterThan(0);
       expect(cwd).toBe(join(testDir, 'project-dir'));
-      expect(command).toBe('bash');
+      // Spawned via the pty-sighup-exec wrapper (SIG_IGN before exec bash).
+      expect(command).toBe('pty-sighup-exec');
+      expect(args).toEqual(['bash']);
     });
 
     it('uses custom name from request body when provided', async () => {
@@ -270,7 +272,8 @@ describe('sessions routes', () => {
       const body = (await res.json()) as { error: string };
       expect(body.error).toContain('spawn failed');
       expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
-      expect(mockManager.spawnSession.mock.calls[0]?.[2]).toBe('bash');
+      expect(mockManager.spawnSession.mock.calls[0]?.[2]).toBe('pty-sighup-exec');
+      expect(mockManager.spawnSession.mock.calls[0]?.[3]).toEqual(['bash']);
     });
 
     it('returns 500 and rolls back metadata when both spawns fail', async () => {
@@ -330,23 +333,28 @@ describe('sessions routes', () => {
       expect(typeof cb).toBe('function');
     });
 
-    it('updates session status to exited when the exit callback fires', async () => {
+    it('auto-respawns the session when the exit callback fires within the SIGHUP window', async () => {
       const token = await getToken();
-      const createRes = await app.handle(
+      await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
       );
-      const created = (await createRes.json()) as { sessionId: string };
+      expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
 
-      // Simulate the manager firing the exit callback.
       const exitCb = mockManager.onSessionExit.mock.calls.at(-1)?.[1] as
         | ((code: number) => void)
         | undefined;
-      exitCb?.(0);
 
-      const listRes = await app.handle(authReq(token, `/api/projects/${projectId}/sessions`));
-      const list = (await listRes.json()) as Array<{ sessionId: string; status: string }>;
-      const found = list.find((s) => s.sessionId === created.sessionId);
-      expect(found?.status).toBe('finished');
+      // A quick exit is treated as a SIGHUP-race victim: the session is
+      // re-spawned (after a 2s drain) under the same id rather than finished.
+      vi.useFakeTimers();
+      try {
+        exitCb?.(0);
+        await vi.advanceTimersByTimeAsync(2100);
+        expect(mockManager.spawnSession).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -585,6 +593,60 @@ describe('sessions routes', () => {
       );
 
       expect(res.status).toBe(422);
+    });
+  });
+
+  // ── POST /api/projects/:id/sessions — agentType ──────────────────
+
+  describe('POST /api/projects/:id/sessions — agentType', () => {
+    it('writes opencode initialCmd when agentType is opencode', async () => {
+      const token = await getToken();
+      await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, {
+          method: 'POST',
+          body: { agentType: 'opencode' },
+        }),
+      );
+      expect(mockManager.writeToSession).toHaveBeenCalledTimes(1);
+      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
+      expect(writtenCmd).toContain('opencode');
+      expect(writtenCmd).not.toContain('claude');
+    });
+
+    it('writes claude initialCmd when agentType is claude', async () => {
+      const token = await getToken();
+      await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, {
+          method: 'POST',
+          body: { agentType: 'claude' },
+        }),
+      );
+      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
+      expect(writtenCmd).toContain('claude');
+      expect(writtenCmd).not.toMatch(/^opencode/);
+    });
+
+    it('defaults to claude initialCmd when agentType is not provided', async () => {
+      const token = await getToken();
+      await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, {
+          method: 'POST',
+          body: {},
+        }),
+      );
+      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
+      expect(writtenCmd).toContain('claude');
+    });
+
+    it('returns 201 with agentType opencode in request', async () => {
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, {
+          method: 'POST',
+          body: { agentType: 'opencode' },
+        }),
+      );
+      expect(res.status).toBe(201);
     });
   });
 });

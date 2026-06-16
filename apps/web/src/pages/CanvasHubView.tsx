@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { ThemePicker, MobileKeyboard } from '../components/Terminal';
+import { MobileKeyboard, TerminalStatusBar } from '../components/Terminal';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
@@ -83,7 +83,9 @@ function useViewportHeight() {
 }
 
 function isValidProjectId(id: unknown): id is string {
-  return !!id && typeof id === 'string' && id !== 'undefined' && id !== 'null' && id.trim().length > 0;
+  return (
+    !!id && typeof id === 'string' && id !== 'undefined' && id !== 'null' && id.trim().length > 0
+  );
 }
 
 /* ── Project picker modal (same as Canvas.tsx) ── */
@@ -110,19 +112,28 @@ function ProjectPickerModal({
           <span className="w-[36px] h-[4px] rounded-full bg-[rgba(255,255,255,0.15)]" />
         </div>
         <div className="flex items-center justify-between px-[16px] pt-[12px] pb-[12px] border-b border-[rgba(255,255,255,0.06)] shrink-0">
-          <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">Criar sessão em qual projeto?</span>
+          <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
+            Criar sessão em qual projeto?
+          </span>
           <button
             onClick={onDismiss}
-            className="flex items-center justify-center size-[26px] rounded-[5px] text-[#556] hover:text-[#889] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+            className="flex items-center justify-center size-[26px] rounded-[5px] text-[#5a626c] hover:text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <path
+                d="M2 2l6 6M8 2l-6 6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
         <div className="flex flex-col overflow-y-auto py-[6px]">
           {projects.length === 0 && (
-            <p className="px-[16px] py-[14px] font-['Inter'] text-[13px] text-[#556]">Nenhum projeto encontrado.</p>
+            <p className="px-[16px] py-[14px] font-['Inter'] text-[13px] text-[#5a626c]">
+              Nenhum projeto encontrado.
+            </p>
           )}
           {projects.map((p) => (
             <button
@@ -130,10 +141,24 @@ function ProjectPickerModal({
               onClick={() => onSelect(p.id)}
               className="flex items-center gap-[12px] px-[16px] py-[14px] text-left active:bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
             >
-              <span className="shrink-0 size-[8px] rounded-full bg-[rgba(170,255,0,0.5)]" />
-              <span className="flex-1 min-w-0 truncate font-['Inter'] text-[14px] text-[#ccd]">{p.name}</span>
-              <svg className="shrink-0 text-[#445]" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              <span className="shrink-0 size-[8px] rounded-full bg-[rgba(179,229,2,0.5)]" />
+              <span className="flex-1 min-w-0 truncate font-['Inter'] text-[14px] text-[#ccd]">
+                {p.name}
+              </span>
+              <svg
+                className="shrink-0 text-[#5a626c]"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+              >
+                <path
+                  d="M5 3l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           ))}
@@ -146,17 +171,13 @@ function ProjectPickerModal({
 
 /* ── Inline rename input for canvas name in header ── */
 
-function CanvasNameEdit({
-  name,
-  onSave,
-}: {
-  name: string;
-  onSave: (name: string) => void;
-}) {
+function CanvasNameEdit({ name, onSave }: { name: string; onSave: (name: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
 
-  useEffect(() => { setValue(name); }, [name]);
+  useEffect(() => {
+    setValue(name);
+  }, [name]);
 
   const save = useCallback(() => {
     setEditing(false);
@@ -173,10 +194,13 @@ function CanvasNameEdit({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') save();
-          if (e.key === 'Escape') { setEditing(false); setValue(name); }
+          if (e.key === 'Escape') {
+            setEditing(false);
+            setValue(name);
+          }
         }}
         onBlur={save}
-        className="bg-[rgba(255,255,255,0.06)] border border-[rgba(170,255,0,0.3)] rounded-[5px] px-[8px] py-[3px] font-['Inter'] text-[14px] font-semibold text-[#f0f0f0] focus:outline-none max-w-[200px]"
+        className="bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[5px] px-[8px] py-[3px] font-['Inter'] text-[14px] font-semibold text-[#f0f0f0] focus:outline-none max-w-[200px]"
         data-testid="canvas-hub-view-name-input"
       />
     );
@@ -185,7 +209,7 @@ function CanvasNameEdit({
   return (
     <button
       onClick={() => setEditing(true)}
-      className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0] hover:text-[#af0] transition-colors truncate max-w-[200px]"
+      className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0] hover:text-[#b3e502] transition-colors truncate max-w-[200px]"
       title="Clique para renomear"
       data-testid="canvas-hub-view-name"
     >
@@ -216,7 +240,12 @@ export default function CanvasHubViewPage() {
       const data = await apiFetch<CanvasData>(`/api/canvases/${id}`);
       setCanvas(data);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 404) {
+      if (
+        err &&
+        typeof err === 'object' &&
+        'status' in err &&
+        (err as { status: number }).status === 404
+      ) {
         setNotFound(true);
       }
     }
@@ -267,54 +296,70 @@ export default function CanvasHubViewPage() {
   }, [fetchCanvas, fetchSessions]);
 
   /* ── Layout change ── */
-  const handleLayoutChange = useCallback(async (cols: number, rows: number) => {
-    if (!id) return;
-    try {
-      const updated = await apiFetch<CanvasData>(`/api/canvases/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ cols, rows }),
-      });
-      setCanvas(updated);
-    } catch {
-      // silent
-    }
-  }, [id]);
+  const handleLayoutChange = useCallback(
+    async (cols: number, rows: number) => {
+      if (!id) return;
+      try {
+        const updated = await apiFetch<CanvasData>(`/api/canvases/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ cols, rows }),
+        });
+        setCanvas(updated);
+      } catch {
+        // silent
+      }
+    },
+    [id],
+  );
 
   /* ── Slot management — synced with API ── */
 
-  const handleAssignSlot = useCallback(async (slotIndex: number, sessionId: string) => {
-    if (!id) return;
-    try {
-      await apiFetch(`/api/canvases/${id}/slots/${slotIndex}`, {
-        method: 'PUT',
-        body: JSON.stringify({ sessionId }),
-      });
-      setCanvas((prev) => prev ? { ...prev, slots: { ...prev.slots, [slotIndex]: sessionId } } : prev);
-    } catch {
-      // silent
-    }
-  }, [id]);
+  const handleAssignSlot = useCallback(
+    async (slotIndex: number, sessionId: string) => {
+      if (!id) return;
+      try {
+        await apiFetch(`/api/canvases/${id}/slots/${slotIndex}`, {
+          method: 'PUT',
+          body: JSON.stringify({ sessionId }),
+        });
+        setCanvas((prev) =>
+          prev ? { ...prev, slots: { ...prev.slots, [slotIndex]: sessionId } } : prev,
+        );
+      } catch {
+        // silent
+      }
+    },
+    [id],
+  );
 
-  const handleClearSlot = useCallback(async (slotIndex: number) => {
-    if (!id) return;
-    try {
-      await apiFetch(`/api/canvases/${id}/slots/${slotIndex}`, { method: 'DELETE' });
-      setCanvas((prev) => prev ? { ...prev, slots: { ...prev.slots, [slotIndex]: null } } : prev);
-    } catch {
-      // silent
-    }
-  }, [id]);
+  const handleClearSlot = useCallback(
+    async (slotIndex: number) => {
+      if (!id) return;
+      try {
+        await apiFetch(`/api/canvases/${id}/slots/${slotIndex}`, { method: 'DELETE' });
+        setCanvas((prev) =>
+          prev ? { ...prev, slots: { ...prev.slots, [slotIndex]: null } } : prev,
+        );
+      } catch {
+        // silent
+      }
+    },
+    [id],
+  );
 
   // Mobile: assign with auto-grow — if slot exceeds current capacity, expand layout first
-  const handleAssignSlotMobile = useCallback(async (slotIndex: number, sessionId: string) => {
-    if (!canvas) return;
-    const currentCapacity = canvas.cols * canvas.rows;
-    if (slotIndex >= currentCapacity) {
-      const newLayout = getAutoGrowLayout(slotIndex + 1);
-      await handleLayoutChange(newLayout.cols, newLayout.rows);
-    }
-    await handleAssignSlot(slotIndex, sessionId);
-  }, [canvas, handleLayoutChange, handleAssignSlot]);
+  const handleAssignSlotMobile = useCallback(
+    async (slotIndex: number, sessionId: string) => {
+      if (!canvas) return;
+      const currentCapacity = canvas.cols * canvas.rows;
+      if (slotIndex >= currentCapacity) {
+        const newLayout = getAutoGrowLayout(slotIndex + 1);
+        await handleLayoutChange(newLayout.cols, newLayout.rows);
+      }
+      await handleAssignSlot(slotIndex, sessionId);
+    },
+    [canvas, handleLayoutChange, handleAssignSlot],
+  );
 
   // Mobile slots: always MAX_MOBILE_SLOTS entries, dead sessions treated as null
   const mobileSlots: (string | null)[] = useMemo(() => {
@@ -339,18 +384,21 @@ export default function CanvasHubViewPage() {
   }, [canvas, sessions]);
 
   /* ── Name rename ── */
-  const handleRename = useCallback(async (name: string) => {
-    if (!id) return;
-    try {
-      await apiFetch(`/api/canvases/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ name }),
-      });
-      setCanvas((prev) => prev ? { ...prev, name } : prev);
-    } catch {
-      // silent
-    }
-  }, [id]);
+  const handleRename = useCallback(
+    async (name: string) => {
+      if (!id) return;
+      try {
+        await apiFetch(`/api/canvases/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name }),
+        });
+        setCanvas((prev) => (prev ? { ...prev, name } : prev));
+      } catch {
+        // silent
+      }
+    },
+    [id],
+  );
 
   /* ── Kill session ── */
   const handleKillSession = useCallback(async (sessionId: string) => {
@@ -370,7 +418,9 @@ export default function CanvasHubViewPage() {
         method: 'PUT',
         body: JSON.stringify({ name: newName }),
       });
-      setSessions((prev) => prev.map((s) => (s.sessionId === sessionId ? { ...s, name: newName } : s)));
+      setSessions((prev) =>
+        prev.map((s) => (s.sessionId === sessionId ? { ...s, name: newName } : s)),
+      );
     } catch {
       // silent
     }
@@ -411,7 +461,9 @@ export default function CanvasHubViewPage() {
     }
     return defaultFontSize;
   });
-  useEffect(() => { localStorage.setItem('terminalFontSize', String(fontSize)); }, [fontSize]);
+  useEffect(() => {
+    localStorage.setItem('terminalFontSize', String(fontSize));
+  }, [fontSize]);
 
   const handleZoomIn = useCallback(() => setFontSize((p) => Math.min(p + 1, FONT_SIZE_MAX)), []);
   const handleZoomOut = useCallback(() => setFontSize((p) => Math.max(p - 1, FONT_SIZE_MIN)), []);
@@ -420,9 +472,16 @@ export default function CanvasHubViewPage() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key === '=' || e.key === '+') { e.preventDefault(); handleZoomIn(); }
-      else if (e.key === '-') { e.preventDefault(); handleZoomOut(); }
-      else if (e.key === '0') { e.preventDefault(); handleZoomReset(); }
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        handleZoomIn();
+      } else if (e.key === '-') {
+        e.preventDefault();
+        handleZoomOut();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        handleZoomReset();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -430,15 +489,30 @@ export default function CanvasHubViewPage() {
 
   /* ── Theme ── */
   const [themeId, setThemeId] = useState<string>(() => getThemeId());
-  const handleThemeChange = useCallback((tid: string) => { setThemeId(tid); saveThemeId(tid); }, []);
+  const handleThemeChange = useCallback((tid: string) => {
+    setThemeId(tid);
+    saveThemeId(tid);
+  }, []);
 
   /* ── Render ── */
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
-        <svg className="animate-spin size-[28px] text-[#556]" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
-          <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <svg className="animate-spin size-[28px] text-[#5a626c]" viewBox="0 0 24 24" fill="none">
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeOpacity="0.25"
+          />
+          <path
+            d="M21 12a9 9 0 00-9-9"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       </div>
     );
@@ -447,10 +521,10 @@ export default function CanvasHubViewPage() {
   if (notFound || !canvas) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-[16px] bg-[#0a0a0f]">
-        <p className="font-['Inter'] text-[16px] text-[#889]">Canvas não encontrado</p>
+        <p className="font-['Inter'] text-[16px] text-[#9aa3ad]">Canvas não encontrado</p>
         <button
           onClick={() => navigate('/canvas')}
-          className="font-['Inter'] text-[13px] text-[#af0] hover:underline"
+          className="font-['Inter'] text-[13px] text-[#b3e502] hover:underline"
         >
           Voltar para Canvas Hub
         </button>
@@ -459,17 +533,28 @@ export default function CanvasHubViewPage() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden bg-[#0a0a0f]" style={{ height: `${viewportHeight}px` }}>
+    <div
+      className="flex flex-col overflow-hidden bg-[#0a0a0f]"
+      style={{ height: `${viewportHeight}px` }}
+    >
       {/* Header — hidden on mobile (CanvasMobile TopBar takes over) */}
-      <header className={`${isMobile ? 'hidden' : 'flex'} shrink-0 items-center justify-between gap-[12px] border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px] py-[10px]`}>
+      <header
+        className={`${isMobile ? 'hidden' : 'flex'} shrink-0 items-center justify-between gap-[12px] border-b border-white/[0.07] bg-[#111118] px-[20px] py-[10px]`}
+      >
         {/* Left: back + name */}
         <div className="flex items-center gap-[8px] min-w-0">
           <button
             onClick={() => navigate('/canvas')}
-            className="flex items-center gap-[4px] shrink-0 font-['Inter'] text-[12px] text-[#556] hover:text-[#889] transition-colors"
+            className="flex items-center gap-[4px] shrink-0 font-['Inter'] text-[12px] text-[#5a626c] hover:text-[#9aa3ad] transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M7.5 2L4 6l3.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M7.5 2L4 6l3.5 4"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Canvas
           </button>
@@ -479,7 +564,7 @@ export default function CanvasHubViewPage() {
 
         {/* Right: layout controls */}
         <div className="flex items-center gap-[8px] shrink-0">
-          <span className="font-['Inter'] text-[11px] text-[#556]">Layout:</span>
+          <span className="font-['Inter'] text-[11px] text-[#5a626c]">Layout:</span>
           <div className="flex items-center gap-[4px]" role="group" aria-label="Layout">
             {CANVAS_LAYOUTS.map((opt) => {
               const isActive = canvas.cols === opt.cols && canvas.rows === opt.rows;
@@ -490,8 +575,8 @@ export default function CanvasHubViewPage() {
                   aria-pressed={isActive}
                   className={`rounded-[5px] px-[8px] py-[4px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                     isActive
-                      ? 'bg-[rgba(170,255,0,0.15)] text-[#af0] border border-[rgba(170,255,0,0.3)]'
-                      : 'border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.15)] hover:text-[#ccd]'
+                      ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                      : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
                   }`}
                 >
                   {opt.label}
@@ -516,7 +601,6 @@ export default function CanvasHubViewPage() {
             onRename={handleRenameSession}
             projectName={canvas.name}
             onToggleSidebar={() => navigate('/canvas')}
-            hideKeyboardFAB
             externalSlots={mobileSlots}
             onAssignSlot={handleAssignSlotMobile}
             onClearSlot={handleClearSlot}
@@ -555,42 +639,17 @@ export default function CanvasHubViewPage() {
         />
       )}
 
-      {/* Footer: font + theme + keyboard */}
-      <div className="flex shrink-0 items-center justify-end gap-[8px] border-t border-[rgba(170,255,0,0.1)] bg-[rgba(170,255,0,0.06)] px-[20px] py-[5px]">
-        <ThemePicker themeId={themeId} onChange={handleThemeChange} />
-        <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
-        <div className="flex items-center gap-[2px]">
-          <button
-            onClick={handleZoomOut}
-            disabled={fontSize <= FONT_SIZE_MIN}
-            title="Diminuir fonte (Ctrl+-)"
-            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
-          >
-            A<span className="text-[8px] leading-none relative top-[1px]">-</span>
-          </button>
-          <button
-            onClick={handleZoomReset}
-            title={`Fonte: ${fontSize}px — clique para resetar`}
-            className={`flex items-center justify-center h-[20px] min-w-[28px] px-[4px] rounded-[3px] font-['JetBrains_Mono'] text-[10px] transition-colors select-none ${
-              fontSize === defaultFontSize
-                ? 'text-[rgba(170,255,0,0.3)] hover:text-[rgba(170,255,0,0.6)]'
-                : 'text-[rgba(170,255,0,0.8)] bg-[rgba(170,255,0,0.08)] hover:bg-[rgba(170,255,0,0.14)]'
-            }`}
-          >
-            {fontSize}px
-          </button>
-          <button
-            onClick={handleZoomIn}
-            disabled={fontSize >= FONT_SIZE_MAX}
-            title="Aumentar fonte (Ctrl++)"
-            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
-          >
-            A<span className="text-[8px] leading-none relative top-[1px]">+</span>
-          </button>
-        </div>
-        {isMobile && (
-          <>
-            <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
+      {/* Footer: standard terminal bar (CPU/RAM + theme + zoom + keyboard) */}
+      <TerminalStatusBar
+        fontSize={fontSize}
+        defaultFontSize={defaultFontSize}
+        themeId={themeId}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomReset={handleZoomReset}
+        onThemeChange={handleThemeChange}
+        mobileKeyboard={
+          isMobile ? (
             <MobileKeyboard
               inline
               onKey={(seq) => canvasMobileRef.current?.sendKey(seq)}
@@ -600,14 +659,17 @@ export default function CanvasHubViewPage() {
                 if (sel) navigator.clipboard.writeText(sel).catch(() => {});
               }}
               onPaste={() => {
-                navigator.clipboard.readText().then((text) => {
-                  if (text) canvasMobileRef.current?.sendKey(text);
-                }).catch(() => {});
+                navigator.clipboard
+                  .readText()
+                  .then((text) => {
+                    if (text) canvasMobileRef.current?.sendKey(text);
+                  })
+                  .catch(() => {});
               }}
             />
-          </>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

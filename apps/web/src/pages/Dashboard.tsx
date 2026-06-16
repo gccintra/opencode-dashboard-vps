@@ -30,9 +30,9 @@ type MobileTab = 'kanban' | 'agents' | 'projects';
 function KanbanIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="2" y="2" width="5.5" height="18" rx="1" fill={active ? '#af0' : '#556'} />
-      <rect x="8.25" y="8" width="5.5" height="12" rx="1" fill={active ? '#af0' : '#556'} />
-      <rect x="14.5" y="5" width="5.5" height="15" rx="1" fill={active ? '#af0' : '#556'} />
+      <rect x="2" y="2" width="5.5" height="18" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="8.25" y="8" width="5.5" height="12" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="14.5" y="5" width="5.5" height="15" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
     </svg>
   );
 }
@@ -46,19 +46,19 @@ function AgentsIcon({ active }: { active: boolean }) {
         width="18"
         height="11"
         rx="2"
-        stroke={active ? '#af0' : '#556'}
+        stroke={active ? '#b3e502' : '#5a626c'}
         strokeWidth="1.5"
       />
-      <path d="M7 18h8" stroke={active ? '#af0' : '#556'} strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="11" y1="14" x2="11" y2="18" stroke={active ? '#af0' : '#556'} strokeWidth="1.5" />
+      <path d="M7 18h8" stroke={active ? '#b3e502' : '#5a626c'} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="11" y1="14" x2="11" y2="18" stroke={active ? '#b3e502' : '#5a626c'} strokeWidth="1.5" />
       <rect
         x="7"
         y="6"
         width="8"
         height="5"
         rx="1"
-        fill={active ? '#af0' : 'none'}
-        stroke={active ? '#af0' : '#556'}
+        fill={active ? '#b3e502' : 'none'}
+        stroke={active ? '#b3e502' : '#5a626c'}
         strokeWidth="0.5"
         opacity="0.4"
       />
@@ -69,15 +69,15 @@ function AgentsIcon({ active }: { active: boolean }) {
 function ProjectsIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="2" y="2" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="8.5" y="2" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="15" y="2" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="2" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="8.5" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="15" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="2" y="15" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="8.5" y="15" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
-      <rect x="15" y="15" width="5" height="5" rx="1.25" fill={active ? '#af0' : '#556'} />
+      <rect x="2" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="8.5" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="15" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="2" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="8.5" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="15" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="2" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="8.5" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="15" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
     </svg>
   );
 }
@@ -100,12 +100,12 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
   if (loading)
     return (
       <div className="flex justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#af0] border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
       </div>
     );
   if (projects.length === 0)
     return (
-      <div className="py-8 text-center font-['Inter'] text-[13px] text-[#556]">
+      <div className="py-8 text-center font-['Inter'] text-[13px] text-[#5a626c]">
         Nenhum projeto cadastrado
       </div>
     );
@@ -115,7 +115,7 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
       {projects.map((p) => (
         <div
           key={p.id}
-          className="cursor-pointer rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[16px] hover:border-[rgba(255,255,255,0.16)] transition-colors"
+          className="cursor-pointer rounded-[8px] border border-white/[0.07] bg-[#111118] p-[16px] hover:border-white/[0.14] transition-colors"
           onClick={() => onSelect(p.id)}
         >
           <h3 className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0]">{p.name}</h3>
@@ -188,33 +188,41 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex h-full flex-col bg-[#0a0a0f]">
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
+      {/* Atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.4, background: 'radial-gradient(circle, rgba(179,229,2,0.2), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.32, animationDelay: '-9s', background: 'radial-gradient(circle, rgba(139,92,246,0.16), rgba(139,92,246,0) 70%)' }} />
+        <div className="kb-grid" />
+      </div>
       {/* Header */}
-      <header className="flex shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-[16px] py-[10px]">
+      <header className="relative z-10 shrink-0 flex items-center justify-between border-b border-white/[0.06] px-[16px] py-[10px] backdrop-blur-md">
         <div className="flex items-center gap-[10px]">
-          <span className="font-['JetBrains_Mono'] text-[16px] font-medium text-[#af0] opacity-75">
+          <span className="font-['JetBrains_Mono'] text-[16px] font-medium text-[#b3e502] opacity-75">
             {'> _'}
           </span>
-          <h1 className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0] hidden sm:block">
+          <h1 className="font-['Syne'] text-[17px] font-bold tracking-[-0.5px] text-white hidden sm:block">
             Dashboard
           </h1>
         </div>
         <button
           onClick={logout}
-          className="rounded-[4px] border border-[rgba(255,255,255,0.08)] px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+          className="flex h-[30px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
         >
           Sair
         </button>
       </header>
 
       {/* Metrics bar (always visible) */}
-      <MetricsBar metrics={metrics} activeFilter={statusFilter} onFilterClick={setStatusFilter} />
+      <div className="relative z-10">
+        <MetricsBar metrics={metrics} activeFilter={statusFilter} onFilterClick={setStatusFilter} />
+      </div>
 
       {/* Content area */}
       {isMobile ? (
         <>
           {/* Mobile tab content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="relative z-10 flex-1 overflow-y-auto">
             {mobileTab === 'kanban' && (
               <div className="h-full">
                 <KanbanBoard />
@@ -233,12 +241,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Mobile bottom tabs */}
-          <nav className="flex shrink-0 border-t border-[rgba(255,255,255,0.08)] bg-[#0d0d14]">
+          <nav className="relative z-10 flex shrink-0 border-t border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">
             {tabs.map(({ key, label, Icon }) => (
               <button
                 key={key}
                 className={`flex flex-1 flex-col items-center gap-[2px] py-[10px] transition-colors ${
-                  mobileTab === key ? 'text-[#af0]' : 'text-[#556] hover:text-[#889]'
+                  mobileTab === key ? 'text-[#b3e502]' : 'text-[#5a626c] hover:text-[#9aa3ad]'
                 }`}
                 onClick={() => setMobileTab(key)}
                 data-testid={`mobile-tab-${key}`}
@@ -251,9 +259,9 @@ export default function DashboardPage() {
         </>
       ) : (
         /* Desktop layout: AgentPanel sidebar + Kanban center */
-        <div className="flex flex-1 overflow-hidden">
+        <div className="relative z-10 flex flex-1 overflow-hidden">
           {/* Agent panel sidebar */}
-          <aside className="w-[280px] shrink-0 border-r border-[rgba(255,255,255,0.08)] overflow-y-auto">
+          <aside className="w-[280px] shrink-0 border-r border-white/[0.06] overflow-y-auto">
             <AgentPanel
               compact
               showCreateTask
