@@ -10,10 +10,16 @@ import {
   readdirSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { getPtyManager } from '../pty/manager';
 import { getSessionMetaByProject } from './sessions';
 import { getAttachmentsDir, getDataDir, resolveSafePath } from '../lib/dataDir';
 import { toLabel, type LabelDto } from './labels';
+import { extractMarkdownDescription } from './resources';
+import { logActivity } from '../lib/taskActivity';
+
+const execFileAsync = promisify(execFile);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbRow = Record<string, any>;
@@ -95,12 +101,24 @@ function toTask(row: DbRow) {
     title: row.title as string,
     description: (row.description as string) || null,
     source: row.source as string,
+    priority: (row.priority as string) || 'medium',
+    commentCount: (row.comment_count as number) ?? 0,
+    linkCount: (row.link_count as number) ?? 0,
     column: row['column'] as string,
+    columnName: (row.column_name as string) || null,
+    columnCategory: (row.column_category as string) || null,
+    columnColor: (row.column_color as string) || null,
     sortOrder: row.sort_order as number,
+    issueNumber: (row.issue_number as number) || null,
     githubIssueUrl: (row.github_issue_url as string) || null,
     githubLabels: labels,
     githubIssueNumber: (row.github_issue_number as number) || null,
     sessionId,
+    agentType: (row.agent_type as string) ?? null,
+    agentName: (row.agent_name as string) ?? null,
+    agentSource: (row.agent_source as string) ?? null,
+    model: (row.model as string) ?? null,
+    effort: (row.effort as string) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     labels: getTaskLabels(db, taskId),
@@ -196,6 +214,81 @@ function removeTaskMd(projectDirectory: string, taskId: string): void {
   }
 }
 
+/** A selectable agent or command discovered in a project's config dirs. */
+interface CatalogEntry {
+  name: string;
+  description: string;
+}
+
+/**
+ * Scan a directory of `*.md` agent/command definitions, returning one entry per
+ * file with a description extracted from its markdown (frontmatter-aware).
+ * Missing/unreadable dirs yield an empty list.
+ */
+function scanAgentDir(dir: string): CatalogEntry[] {
+  if (!existsSync(dir)) return [];
+  const out: CatalogEntry[] = [];
+  try {
+    for (const entry of readdirSync(dir)) {
+      if (!entry.endsWith('.md')) continue;
+      let description = '';
+      try {
+        description = extractMarkdownDescription(readFileSync(join(dir, entry), 'utf-8'));
+      } catch {
+        // skip unreadable file
+      }
+      out.push({ name: entry.replace(/\.md$/, ''), description });
+    }
+  } catch {
+    // graceful — directory read error is non-fatal
+  }
+  return out;
+}
+
+/** Merge catalog entries by name (first wins) and sort alphabetically. */
+function mergeCatalog(...lists: CatalogEntry[][]): CatalogEntry[] {
+  const byName = new Map<string, CatalogEntry>();
+  for (const list of lists) {
+    for (const entry of list) {
+      if (!byName.has(entry.name)) byName.set(entry.name, entry);
+    }
+  }
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Claude `--model` accepts these aliases (always available, no install probe). */
+const CLAUDE_MODELS: Array<{ id: string; label: string }> = [
+  { id: 'opus', label: 'Opus (most capable)' },
+  { id: 'sonnet', label: 'Sonnet (balanced)' },
+  { id: 'haiku', label: 'Haiku (fastest)' },
+];
+
+/** Cached `opencode models` result — the probe is slow, so memoize it. */
+let cachedOpencodeModels: Array<{ id: string; label: string }> | null = null;
+
+/**
+ * List opencode models via `opencode models`. Runs async (never blocks the
+ * event loop), caches the result, and degrades to an empty list if opencode is
+ * not installed — the UI falls back to free-text model entry in that case.
+ */
+async function getOpencodeModels(): Promise<Array<{ id: string; label: string }>> {
+  if (cachedOpencodeModels) return cachedOpencodeModels;
+  try {
+    const { stdout } = await execFileAsync('opencode', ['models'], {
+      timeout: 15_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    const ids = stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    cachedOpencodeModels = ids.map((id) => ({ id, label: id }));
+  } catch {
+    cachedOpencodeModels = [];
+  }
+  return cachedOpencodeModels;
+}
+
 export const tasksRoutes = new Elysia({ prefix: '/api' })
   // ── GET /api/tasks — global task list (all projects, for kanban) ──
   .guard(authGuard, (app) =>
@@ -207,10 +300,17 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         const projectFilter = (query as { projectId?: string }).projectId;
 
         let sql =
-          'SELECT t.*, p.name as project_name FROM tasks t JOIN projects p ON t.project_id = p.id WHERE 1=1';
+          `SELECT t.*, p.name as project_name,
+                  kc.name as column_name, kc.category as column_category, kc.color as column_color,
+                  (SELECT COUNT(*) FROM task_activity ta WHERE ta.task_id = t.id AND ta.type = 'comment') as comment_count,
+                  (SELECT COUNT(*) FROM task_links tl WHERE tl.source_task_id = t.id OR tl.target_task_id = t.id) as link_count
+           FROM tasks t
+           JOIN projects p ON t.project_id = p.id
+           LEFT JOIN kanban_columns kc ON kc.id = t."column"
+           WHERE 1=1`;
         const params: (string | number)[] = [];
 
-        if (statusFilter && ['backlog', 'in_progress', 'done'].includes(statusFilter)) {
+        if (statusFilter) {
           sql += ' AND t."column" = ?';
           params.push(statusFilter);
         }
@@ -256,6 +356,9 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         const taskId = crypto.randomUUID();
         const now = new Date().toISOString();
         const column = body.column || 'backlog';
+        const priority = ['low', 'medium', 'high'].includes(body.priority ?? '')
+          ? (body.priority as string)
+          : 'medium';
 
         // Get max sort_order for column
         const maxOrder = db
@@ -265,9 +368,15 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           .get(projectId, column) as DbRow;
         const sortOrder = (maxOrder.max_order as number) + 1;
 
+        // Auto-assign sequential issue number per project
+        const maxIssue = db
+          .query('SELECT COALESCE(MAX(issue_number), 0) as max_num FROM tasks WHERE project_id = ?')
+          .get(projectId) as DbRow;
+        const issueNumber = (maxIssue.max_num as number) + 1;
+
         db.run(
-          `INSERT INTO tasks (id, project_id, title, description, source, "column", sort_order, session_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO tasks (id, project_id, title, description, source, "column", priority, sort_order, issue_number, session_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             taskId,
             projectId,
@@ -275,15 +384,28 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
             body.description?.trim() || null,
             body.source || 'local',
             column,
+            priority,
             sortOrder,
+            issueNumber,
             body.sessionId || null,
             now,
             now,
           ],
         );
 
+        logActivity(db, taskId, { type: 'created' });
+
         // Write .md file to project directory
-        const task = db.query('SELECT * FROM tasks WHERE id = ?').get(taskId) as DbRow;
+        const task = db
+          .query(
+            `SELECT t.*, p.name as project_name,
+                    kc.name as column_name, kc.category as column_category, kc.color as column_color
+             FROM tasks t
+             JOIN projects p ON t.project_id = p.id
+             LEFT JOIN kanban_columns kc ON kc.id = t."column"
+             WHERE t.id = ?`,
+          )
+          .get(taskId) as DbRow;
         writeTaskMd(project.directory as string, taskId, task);
 
         set.status = 201;
@@ -294,6 +416,9 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           title: t.String(),
           description: t.Optional(t.String()),
           column: t.Optional(t.String()),
+          priority: t.Optional(
+            t.Union([t.Literal('low'), t.Literal('medium'), t.Literal('high')]),
+          ),
           source: t.Optional(t.String()),
           sessionId: t.Optional(t.String()),
         }),
@@ -314,27 +439,37 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
       }
 
       const rows = db
-        .query(`SELECT * FROM tasks WHERE project_id = ? ORDER BY "column", sort_order ASC`)
+        .query(
+          `SELECT t.*, p.name as project_name,
+                  kc.name as column_name, kc.category as column_category, kc.color as column_color
+           FROM tasks t
+           JOIN projects p ON t.project_id = p.id
+           LEFT JOIN kanban_columns kc ON kc.id = t."column"
+           WHERE t.project_id = ?
+           ORDER BY t."column", t.sort_order ASC`,
+        )
         .all(projectId) as DbRow[];
       return rows.map(toTask);
     }),
   )
 
-  // ── GET /api/tasks (global) ──────────────────────────────────
+  // ── GET /api/tasks (global, second mount — kept for backward compat) ──
   .guard(authGuard, (app) =>
     app.get('/tasks', () => {
       const db = getDb();
       const rows = db
         .query(
-          `SELECT t.*, p.name as project_name FROM tasks t
+          `SELECT t.*, p.name as project_name,
+                  kc.name as column_name, kc.category as column_category, kc.color as column_color,
+                  (SELECT COUNT(*) FROM task_activity ta WHERE ta.task_id = t.id AND ta.type = 'comment') as comment_count,
+                  (SELECT COUNT(*) FROM task_links tl WHERE tl.source_task_id = t.id OR tl.target_task_id = t.id) as link_count
+           FROM tasks t
            JOIN projects p ON t.project_id = p.id
+           LEFT JOIN kanban_columns kc ON kc.id = t."column"
            ORDER BY t."column", t.sort_order ASC`,
         )
         .all() as DbRow[];
-      return rows.map((row) => {
-        const task = toTask(row);
-        return { ...task, projectName: row.project_name as string };
-      });
+      return rows.map(toTask);
     }),
   )
 
@@ -373,6 +508,36 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           values.push(body.column);
         }
 
+        if (body.priority !== undefined) {
+          updates.push('priority = ?');
+          values.push(body.priority);
+        }
+
+        if (body.agentType !== undefined) {
+          updates.push('agent_type = ?');
+          values.push(body.agentType);
+        }
+
+        if (body.agentName !== undefined) {
+          updates.push('agent_name = ?');
+          values.push(body.agentName);
+        }
+
+        if (body.agentSource !== undefined) {
+          updates.push('agent_source = ?');
+          values.push(body.agentSource);
+        }
+
+        if (body.model !== undefined) {
+          updates.push('model = ?');
+          values.push(body.model);
+        }
+
+        if (body.effort !== undefined) {
+          updates.push('effort = ?');
+          values.push(body.effort);
+        }
+
         if (updates.length === 0) {
           return toTask(existing);
         }
@@ -384,7 +549,53 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
 
         db.run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, values);
 
-        const updated = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow;
+        // Log field changes to the activity timeline (only when value changed).
+        if (body.title !== undefined && body.title.trim() !== (existing.title ?? '')) {
+          logActivity(db, id, {
+            type: 'title_changed',
+            field: 'title',
+            oldValue: (existing.title as string) ?? null,
+            newValue: body.title.trim(),
+          });
+        }
+        if (
+          body.description !== undefined &&
+          (body.description.trim() || null) !== (existing.description ?? null)
+        ) {
+          logActivity(db, id, {
+            type: 'description_changed',
+            field: 'description',
+            oldValue: (existing.description as string) ?? null,
+            newValue: body.description.trim() || null,
+          });
+        }
+        if (body.priority !== undefined && body.priority !== existing.priority) {
+          logActivity(db, id, {
+            type: 'priority_changed',
+            field: 'priority',
+            oldValue: (existing.priority as string) ?? null,
+            newValue: body.priority,
+          });
+        }
+        if (body.column !== undefined && body.column !== existing['column']) {
+          logActivity(db, id, {
+            type: 'moved',
+            field: 'column',
+            oldValue: (existing['column'] as string) ?? null,
+            newValue: body.column,
+          });
+        }
+
+        const updated = db
+          .query(
+            `SELECT t.*, p.name as project_name,
+                    kc.name as column_name, kc.category as column_category, kc.color as column_color
+             FROM tasks t
+             JOIN projects p ON t.project_id = p.id
+             LEFT JOIN kanban_columns kc ON kc.id = t."column"
+             WHERE t.id = ?`,
+          )
+          .get(id) as DbRow;
 
         // Sync .md file
         const project = db
@@ -401,6 +612,14 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           title: t.Optional(t.String()),
           description: t.Optional(t.String()),
           column: t.Optional(t.String()),
+          priority: t.Optional(
+            t.Union([t.Literal('low'), t.Literal('medium'), t.Literal('high')]),
+          ),
+          agentType: t.Optional(t.Union([t.Literal('opencode'), t.Literal('claude'), t.Null()])),
+          agentName: t.Optional(t.Union([t.String(), t.Null()])),
+          agentSource: t.Optional(t.Union([t.Literal('agents'), t.Literal('commands'), t.Null()])),
+          model: t.Optional(t.Union([t.String(), t.Null()])),
+          effort: t.Optional(t.Union([t.String(), t.Null()])),
         }),
       },
     ),
@@ -445,9 +664,14 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         }
 
         const newColumn = body.column;
-        if (!['backlog', 'in_progress', 'done'].includes(newColumn)) {
+
+        // Validate column exists in kanban_columns
+        const colExists = db
+          .query('SELECT id FROM kanban_columns WHERE id = ?')
+          .get(newColumn) as { id: string } | null;
+        if (!colExists) {
           set.status = 400;
-          return { error: 'Invalid column. Must be backlog, in_progress, or done' };
+          return { error: `Column "${newColumn}" not found` };
         }
 
         const now = new Date().toISOString();
@@ -467,7 +691,25 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           id,
         ]);
 
-        const updated = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow;
+        if (newColumn !== existing['column']) {
+          logActivity(db, id, {
+            type: 'moved',
+            field: 'column',
+            oldValue: (existing['column'] as string) ?? null,
+            newValue: newColumn,
+          });
+        }
+
+        const updated = db
+          .query(
+            `SELECT t.*, p.name as project_name,
+                    kc.name as column_name, kc.category as column_category, kc.color as column_color
+             FROM tasks t
+             JOIN projects p ON t.project_id = p.id
+             LEFT JOIN kanban_columns kc ON kc.id = t."column"
+             WHERE t.id = ?`,
+          )
+          .get(id) as DbRow;
 
         // Sync .md
         const project = db
@@ -639,20 +881,27 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
 
         const labelIds = Array.isArray(body.labelIds) ? body.labelIds : [];
 
-        // Validate every label belongs to the task's project
+        // Validate every label exists
         for (const labelId of labelIds) {
           const label = db
-            .query('SELECT id, project_id FROM labels WHERE id = ?')
+            .query('SELECT id FROM labels WHERE id = ?')
             .get(labelId) as DbRow | null;
           if (!label) {
             set.status = 400;
             return { error: `Label not found: ${labelId}` };
           }
-          if (label.project_id !== task.project_id) {
-            set.status = 400;
-            return { error: `Label ${labelId} does not belong to the task's project` };
-          }
         }
+
+        // Diff old vs new applied labels for the activity timeline
+        const prevIds = (
+          db.query('SELECT label_id FROM task_labels WHERE task_id = ?').all(id) as DbRow[]
+        ).map((r) => r.label_id as string);
+        const prevSet = new Set(prevIds);
+        const nextSet = new Set(labelIds);
+        const labelName = (labelId: string): string => {
+          const row = db.query('SELECT name FROM labels WHERE id = ?').get(labelId) as DbRow | null;
+          return (row?.name as string) ?? labelId;
+        };
 
         // Replace the set of applied labels
         db.run('DELETE FROM task_labels WHERE task_id = ?', [id]);
@@ -661,6 +910,21 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
             id,
             labelId,
           ]);
+        }
+
+        for (const labelId of labelIds) {
+          if (!prevSet.has(labelId)) {
+            logActivity(db, id, { type: 'label_added', newValue: labelId, body: labelName(labelId) });
+          }
+        }
+        for (const labelId of prevIds) {
+          if (!nextSet.has(labelId)) {
+            logActivity(db, id, {
+              type: 'label_removed',
+              oldValue: labelId,
+              body: labelName(labelId),
+            });
+          }
         }
 
         const updated = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow;
@@ -866,9 +1130,76 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
     ),
   )
 
+  // ── GET /api/projects/:id/agent-hint — detect .opencode / .claude dirs ──
+  .guard(authGuard, (app) =>
+    app.get('/projects/:id/agent-hint', ({ params: { id }, set }) => {
+      const db = getDb();
+      const project = db
+        .query('SELECT * FROM projects WHERE id = ?')
+        .get(id) as DbRow | null;
+      if (!project) {
+        set.status = 404;
+        return { error: 'Project not found' };
+      }
+      const dir = project.directory as string;
+      const hasOpencode = existsSync(join(dir, '.opencode'));
+      const hasClaude = existsSync(join(dir, '.claude'));
+      const hint =
+        hasOpencode && hasClaude
+          ? 'both'
+          : hasOpencode
+            ? 'opencode'
+            : hasClaude
+              ? 'claude'
+              : null;
+      return { hint, hasOpencode, hasClaude };
+    }),
+  )
+
+  // ── GET /api/projects/:id/agent-catalog — list agents/commands in project dirs ──
+  .guard(authGuard, (app) =>
+    app.get('/projects/:id/agent-catalog', ({ params: { id }, set }) => {
+      const db = getDb();
+      const project = db
+        .query('SELECT directory FROM projects WHERE id = ?')
+        .get(id) as DbRow | null;
+      if (!project) {
+        set.status = 404;
+        return { error: 'Project not found' };
+      }
+      const dir = project.directory as string;
+      // opencode uses `.opencode/agent` (singular); accept `agents` too as a fallback.
+      const projectAgents = mergeCatalog(
+        scanAgentDir(join(dir, '.opencode', 'agent')),
+        scanAgentDir(join(dir, '.opencode', 'agents')),
+      );
+      // Prepend opencode built-in agents (build + plan) — always available.
+      const OPENCODE_BUILTIN: CatalogEntry[] = [
+        { name: 'build', description: 'Default build agent — implements tasks directly' },
+        { name: 'plan', description: 'Default plan agent — creates a plan before implementing' },
+      ];
+      const opencodeAgents = mergeCatalog(OPENCODE_BUILTIN, projectAgents);
+      const claudeAgents = mergeCatalog(scanAgentDir(join(dir, '.claude', 'agents')));
+      const claudeCommands = mergeCatalog(scanAgentDir(join(dir, '.claude', 'commands')));
+      return {
+        opencode: { agents: opencodeAgents },
+        claude: { agents: claudeAgents, commands: claudeCommands },
+      };
+    }),
+  )
+
+  // ── GET /api/agent-models?runtime=opencode|claude — list selectable LLMs ──
+  .guard(authGuard, (app) =>
+    app.get('/agent-models', async ({ query }) => {
+      const runtime = (query as { runtime?: string }).runtime;
+      const models = runtime === 'opencode' ? await getOpencodeModels() : CLAUDE_MODELS;
+      return { models };
+    }),
+  )
+
   // ── POST /api/tasks/:id/implement — inject prompt into associated session ──
   .guard(authGuard, (app) =>
-    app.post('/tasks/:id/implement', ({ params: { id }, set }) => {
+    app.post('/tasks/:id/implement', ({ params: { id }, body, set }) => {
       const db = getDb();
       const task = db.query('SELECT * FROM tasks WHERE id = ?').get(id) as DbRow | null;
       if (!task) {
@@ -890,10 +1221,82 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         };
       }
 
-      const prompt = buildImplementPrompt(db, task);
-      getPtyManager().writeToSession(sessionId, prompt + '\n');
+      // Build the prompt. Claude "commands" are slash-commands (no --agent flag
+      // was used at spawn), so prefix the selected command name.
+      let text = buildImplementPrompt(db, task);
+      if (task.agent_source === 'commands' && task.agent_name) {
+        text = `/${task.agent_name as string} ${text}`;
+      }
 
+      // The delay lets a freshly-spawned CLI (opencode is slow to boot) finish
+      // loading before the prompt is typed in. Clamp to [0, 30s]. Read from the
+      // (optional, untyped) body so no-body POSTs stay valid.
+      const rawDelay = (body as { delayMs?: number } | null | undefined)?.delayMs;
+      const delayMs = Math.min(Math.max(Math.trunc(Number(rawDelay) || 0), 0), 30_000);
+
+      const spawnId = crypto.randomUUID();
+      const spawnNow = new Date().toISOString();
+      db.run(
+        `INSERT INTO task_spawn_events (id, task_id, session_id, runtime, agent_name, model, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          spawnId,
+          id,
+          sessionId,
+          task.agent_type || null,
+          task.agent_name || null,
+          task.model || null,
+          spawnNow,
+        ],
+      );
+
+      const write = () => {
+        try {
+          if (deriveSessionStatus(sessionId) !== 'active') return;
+          getPtyManager().writeToSession(sessionId, text);
+          setTimeout(() => {
+            try {
+              getPtyManager().writeToSession(sessionId, '\r');
+            } catch {
+              // non-fatal
+            }
+          }, 50);
+        } catch (err) {
+          console.error(`[tasks] implement write failed for ${id}:`, (err as Error).message);
+        }
+      };
+
+      if (delayMs > 0) {
+        setTimeout(write, delayMs);
+        return { started: true, delayedMs: delayMs };
+      }
+      write();
       return { started: true };
+    }),
+  )
+
+  // ── GET /api/tasks/:id/spawn-history — list implement events ──
+  .guard(authGuard, (app) =>
+    app.get('/tasks/:id/spawn-history', ({ params: { id }, set }) => {
+      const db = getDb();
+      const task = db.query('SELECT id FROM tasks WHERE id = ?').get(id) as DbRow | null;
+      if (!task) {
+        set.status = 404;
+        return { error: 'Task not found' };
+      }
+      const rows = db
+        .query(
+          'SELECT * FROM task_spawn_events WHERE task_id = ? ORDER BY created_at DESC LIMIT 30',
+        )
+        .all(id) as DbRow[];
+      return rows.map((r) => ({
+        id: r.id as string,
+        sessionId: (r.session_id as string) || null,
+        runtime: (r.runtime as string) || null,
+        agentName: (r.agent_name as string) || null,
+        model: (r.model as string) || null,
+        createdAt: r.created_at as string,
+      }));
     }),
   );
 

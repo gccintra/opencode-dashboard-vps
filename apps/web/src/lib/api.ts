@@ -148,11 +148,53 @@ export async function applyHarnessToProject(
   });
 }
 
+// ── Kanban Columns ──
+
+export type KanbanCategory = 'backlog' | 'unstarted' | 'started' | 'completed' | 'canceled';
+
+export interface KanbanColumn {
+  id: string;
+  name: string;
+  category: KanbanCategory;
+  color: string;
+  sortOrder: number;
+  createdAt: string;
+  taskCount?: number;
+}
+
+export async function fetchKanbanColumns(): Promise<KanbanColumn[]> {
+  return apiFetch<KanbanColumn[]>('/api/kanban-columns');
+}
+
+export async function createKanbanColumn(data: {
+  name: string;
+  category: KanbanCategory;
+  color?: string;
+}): Promise<KanbanColumn> {
+  return apiFetch<KanbanColumn>('/api/kanban-columns', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateKanbanColumn(
+  id: string,
+  data: { name?: string; color?: string; sortOrder?: number },
+): Promise<KanbanColumn> {
+  return apiFetch<KanbanColumn>(`/api/kanban-columns/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteKanbanColumn(id: string): Promise<void> {
+  await apiFetch(`/api/kanban-columns/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 // ── Labels & Attachments (rich tasks) ──
 
 export interface Label {
   id: string;
-  projectId: string;
   name: string;
   color: string;
   createdAt: string;
@@ -167,15 +209,12 @@ export interface Attachment {
   createdAt: string;
 }
 
-export async function fetchLabels(projectId: string): Promise<Label[]> {
-  return apiFetch<Label[]>(`/api/projects/${encodeURIComponent(projectId)}/labels`);
+export async function fetchLabels(): Promise<Label[]> {
+  return apiFetch<Label[]>('/api/labels');
 }
 
-export async function createLabel(
-  projectId: string,
-  data: { name: string; color: string },
-): Promise<Label> {
-  return apiFetch<Label>(`/api/projects/${encodeURIComponent(projectId)}/labels`, {
+export async function createLabel(data: { name: string; color: string }): Promise<Label> {
+  return apiFetch<Label>('/api/labels', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -295,11 +334,207 @@ export async function setTaskSession<T = unknown>(
   });
 }
 
-export async function implementTask(taskId: string): Promise<{ started: boolean }> {
-  return apiFetch<{ started: boolean }>(
+export async function implementTask(
+  taskId: string,
+  delayMs?: number,
+): Promise<{ started: boolean; delayedMs?: number }> {
+  return apiFetch<{ started: boolean; delayedMs?: number }>(
     `/api/tasks/${encodeURIComponent(taskId)}/implement`,
-    { method: 'POST' },
+    {
+      method: 'POST',
+      body: JSON.stringify(delayMs && delayMs > 0 ? { delayMs } : {}),
+    },
   );
+}
+
+export interface SpawnEvent {
+  id: string;
+  sessionId: string | null;
+  runtime: string | null;
+  agentName: string | null;
+  model: string | null;
+  createdAt: string;
+}
+
+export async function fetchSpawnHistory(taskId: string): Promise<SpawnEvent[]> {
+  return apiFetch<SpawnEvent[]>(`/api/tasks/${encodeURIComponent(taskId)}/spawn-history`);
+}
+
+// ── Task priority ──
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export async function updateTaskPriority(taskId: string, priority: TaskPriority): Promise<void> {
+  await apiFetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ priority }),
+  });
+}
+
+// ── Task activity timeline + comments ──
+export type ActivityType =
+  | 'created'
+  | 'moved'
+  | 'title_changed'
+  | 'description_changed'
+  | 'priority_changed'
+  | 'label_added'
+  | 'label_removed'
+  | 'linked'
+  | 'unlinked'
+  | 'comment';
+
+export interface TaskActivity {
+  id: string;
+  taskId: string;
+  type: ActivityType;
+  body: string | null;
+  field: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchTaskActivity(taskId: string): Promise<TaskActivity[]> {
+  return apiFetch<TaskActivity[]>(`/api/tasks/${encodeURIComponent(taskId)}/activity`);
+}
+
+export async function postComment(taskId: string, body: string): Promise<TaskActivity> {
+  return apiFetch<TaskActivity>(`/api/tasks/${encodeURIComponent(taskId)}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function editComment(
+  taskId: string,
+  commentId: string,
+  body: string,
+): Promise<TaskActivity> {
+  return apiFetch<TaskActivity>(
+    `/api/tasks/${encodeURIComponent(taskId)}/comments/${encodeURIComponent(commentId)}`,
+    { method: 'PUT', body: JSON.stringify({ body }) },
+  );
+}
+
+export async function deleteComment(taskId: string, commentId: string): Promise<void> {
+  await apiFetch(
+    `/api/tasks/${encodeURIComponent(taskId)}/comments/${encodeURIComponent(commentId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+// ── Task links (GitLab-style typed relations) ──
+export type LinkType = 'relates_to' | 'blocks' | 'blocked_by' | 'duplicates';
+
+export interface TaskLink {
+  id: string;
+  type: LinkType;
+  createdAt: string;
+  task: {
+    id: string;
+    title: string;
+    column: string;
+    columnName: string | null;
+    projectName: string | null;
+  };
+}
+
+export async function fetchTaskLinks(taskId: string): Promise<TaskLink[]> {
+  return apiFetch<TaskLink[]>(`/api/tasks/${encodeURIComponent(taskId)}/links`);
+}
+
+export async function createTaskLink(
+  taskId: string,
+  targetTaskId: string,
+  type: LinkType,
+): Promise<TaskLink> {
+  return apiFetch<TaskLink>(`/api/tasks/${encodeURIComponent(taskId)}/links`, {
+    method: 'POST',
+    body: JSON.stringify({ targetTaskId, type }),
+  });
+}
+
+export async function deleteTaskLink(taskId: string, linkId: string): Promise<void> {
+  await apiFetch(
+    `/api/tasks/${encodeURIComponent(taskId)}/links/${encodeURIComponent(linkId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export async function setTaskAgentType(
+  taskId: string,
+  agentType: 'opencode' | 'claude' | null,
+): Promise<void> {
+  await apiFetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ agentType }),
+  });
+}
+
+/** Agent/command selected for a task, plus the LLM model. */
+export type AgentSource = 'agents' | 'commands';
+
+export interface TaskAgentConfig {
+  agentType?: 'opencode' | 'claude' | null;
+  agentName?: string | null;
+  agentSource?: AgentSource | null;
+  model?: string | null;
+  /** Reasoning effort: claude `--effort`, opencode `--variant`. */
+  effort?: string | null;
+}
+
+/** Persist the chosen agent/command + model on a task. */
+export async function updateTaskAgentConfig(
+  taskId: string,
+  config: TaskAgentConfig,
+): Promise<void> {
+  await apiFetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(config),
+  });
+}
+
+export interface CatalogEntry {
+  name: string;
+  description: string;
+}
+
+export interface AgentCatalog {
+  opencode: { agents: CatalogEntry[] };
+  claude: { agents: CatalogEntry[]; commands: CatalogEntry[] };
+}
+
+/** List agents/commands discovered in a project's `.claude` / `.opencode` dirs. */
+export async function fetchAgentCatalog(projectId: string): Promise<AgentCatalog> {
+  return apiFetch<AgentCatalog>(
+    `/api/projects/${encodeURIComponent(projectId)}/agent-catalog`,
+  );
+}
+
+export interface AgentModel {
+  id: string;
+  label: string;
+}
+
+/** List selectable LLM models for a runtime (claude aliases or `opencode models`). */
+export async function fetchAgentModels(
+  runtime: 'opencode' | 'claude',
+): Promise<AgentModel[]> {
+  const data = await apiFetch<{ models: AgentModel[] }>(
+    `/api/agent-models?runtime=${encodeURIComponent(runtime)}`,
+  );
+  return Array.isArray(data.models) ? data.models : [];
+}
+
+export interface AgentHint {
+  hint: 'opencode' | 'claude' | 'both' | null;
+  hasOpencode: boolean;
+  hasClaude: boolean;
+}
+
+export async function fetchAgentHint(projectId: string): Promise<AgentHint> {
+  return apiFetch<AgentHint>(`/api/projects/${encodeURIComponent(projectId)}/agent-hint`);
 }
 
 export interface ProjectSession {
@@ -313,6 +548,29 @@ export interface ProjectSession {
 export async function fetchProjectSessions(projectId: string): Promise<ProjectSession[]> {
   return apiFetch<ProjectSession[]>(
     `/api/projects/${encodeURIComponent(projectId)}/sessions`,
+  );
+}
+
+/** Create a new PTY session for a project. */
+export async function createSession(
+  projectId: string,
+  opts?: {
+    name?: string;
+    cols?: number;
+    rows?: number;
+    agentType?: 'opencode' | 'claude';
+    model?: string;
+    agent?: string;
+    agentSource?: AgentSource;
+    effort?: string;
+  },
+): Promise<ProjectSession> {
+  return apiFetch<ProjectSession>(
+    `/api/projects/${encodeURIComponent(projectId)}/sessions`,
+    {
+      method: 'POST',
+      body: JSON.stringify(opts ?? {}),
+    },
   );
 }
 

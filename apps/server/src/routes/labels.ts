@@ -8,7 +8,6 @@ type DbRow = Record<string, any>;
 /** Public label shape returned by the API. */
 export interface LabelDto {
   id: string;
-  projectId: string;
   name: string;
   color: string;
   createdAt: string;
@@ -18,7 +17,6 @@ export interface LabelDto {
 export function toLabel(row: DbRow): LabelDto {
   return {
     id: row.id as string,
-    projectId: row.project_id as string,
     name: row.name as string,
     color: row.color as string,
     createdAt: row.created_at as string,
@@ -31,37 +29,23 @@ export function isValidHexColor(color: unknown): color is string {
 }
 
 export const labelsRoutes = new Elysia({ prefix: '/api' })
-  // ── GET /api/projects/:id/labels — list labels for a project ──
+  // ── GET /api/labels — list all global labels ──
   .guard(authGuard, (app) =>
-    app.get('/projects/:id/labels', ({ params: { id: projectId }, set }) => {
+    app.get('/labels', () => {
       const db = getDb();
-      const project = db
-        .query('SELECT id FROM projects WHERE id = ?')
-        .get(projectId) as DbRow | null;
-      if (!project) {
-        set.status = 404;
-        return { error: 'Project not found' };
-      }
       const rows = db
-        .query('SELECT * FROM labels WHERE project_id = ? ORDER BY name COLLATE NOCASE ASC')
-        .all(projectId) as DbRow[];
+        .query('SELECT * FROM labels ORDER BY name COLLATE NOCASE ASC')
+        .all() as DbRow[];
       return rows.map(toLabel);
     }),
   )
 
-  // ── POST /api/projects/:id/labels — create label ──
+  // ── POST /api/labels — create global label ──
   .guard(authGuard, (app) =>
     app.post(
-      '/projects/:id/labels',
-      ({ params: { id: projectId }, body, set }) => {
+      '/labels',
+      ({ body, set }) => {
         const db = getDb();
-        const project = db
-          .query('SELECT id FROM projects WHERE id = ?')
-          .get(projectId) as DbRow | null;
-        if (!project) {
-          set.status = 404;
-          return { error: 'Project not found' };
-        }
 
         const name = (body.name || '').trim();
         if (!name) {
@@ -73,20 +57,19 @@ export const labelsRoutes = new Elysia({ prefix: '/api' })
           return { error: 'color must be a hex value (#rgb or #rrggbb)' };
         }
 
-        // Reject duplicate name within the project (case-insensitive)
         const dup = db
-          .query('SELECT id FROM labels WHERE project_id = ? AND name = ? COLLATE NOCASE')
-          .get(projectId, name) as DbRow | null;
+          .query('SELECT id FROM labels WHERE name = ? COLLATE NOCASE')
+          .get(name) as DbRow | null;
         if (dup) {
           set.status = 409;
-          return { error: 'A label with this name already exists in the project' };
+          return { error: 'A label with this name already exists' };
         }
 
         const id = crypto.randomUUID();
         const now = new Date().toISOString();
         db.run(
-          'INSERT INTO labels (id, project_id, name, color, created_at) VALUES (?, ?, ?, ?, ?)',
-          [id, projectId, name, body.color, now],
+          'INSERT INTO labels (id, name, color, created_at) VALUES (?, ?, ?, ?)',
+          [id, name, body.color, now],
         );
         const row = db.query('SELECT * FROM labels WHERE id = ?').get(id) as DbRow;
         set.status = 201;
@@ -122,15 +105,12 @@ export const labelsRoutes = new Elysia({ prefix: '/api' })
             set.status = 400;
             return { error: 'name cannot be empty' };
           }
-          // Reject duplicate name within the same project (excluding this label)
           const dup = db
-            .query(
-              'SELECT id FROM labels WHERE project_id = ? AND name = ? COLLATE NOCASE AND id != ?',
-            )
-            .get(existing.project_id, name, id) as DbRow | null;
+            .query('SELECT id FROM labels WHERE name = ? COLLATE NOCASE AND id != ?')
+            .get(name, id) as DbRow | null;
           if (dup) {
             set.status = 409;
-            return { error: 'A label with this name already exists in the project' };
+            return { error: 'A label with this name already exists' };
           }
           updates.push('name = ?');
           values.push(name);

@@ -47,6 +47,52 @@ export interface SessionMeta {
 /** In-memory store of session metadata. Reset on server restart. */
 const sessionMeta = new Map<string, SessionMeta>();
 
+/** Single-quote a string for safe inclusion in a bash command. */
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Build the CLI launch command written to the PTY after spawn. Configures the
+ * chosen runtime (opencode/claude) with `--agent` and `--model` flags.
+ *
+ * Claude "commands" are NOT agents — they are slash-commands injected together
+ * with the prompt later (see tasks.ts implement), so they never produce a
+ * `--agent` flag here. opencode resources are always agents.
+ *
+ * `exec zsh` keeps the PTY alive after the CLI exits (falls back to bash).
+ */
+export function buildCliCommand(opts: {
+  agentType?: 'opencode' | 'claude';
+  model?: string;
+  agent?: string;
+  agentSource?: 'agents' | 'commands';
+  effort?: string;
+}): string {
+  const runtime = opts.agentType === 'opencode' ? 'opencode' : 'claude';
+  const parts: string[] = [runtime];
+
+  const agent = opts.agent?.trim();
+  const useAgentFlag = !!agent && (runtime === 'opencode' || opts.agentSource === 'agents');
+  if (useAgentFlag) {
+    parts.push('--agent', shellQuote(agent!));
+  }
+
+  const model = opts.model?.trim();
+  if (model) {
+    parts.push('--model', shellQuote(model));
+  }
+
+  // Reasoning effort flag differs per runtime: claude uses `--effort <level>`,
+  // opencode uses `--variant <level>` (provider-specific reasoning effort).
+  const effort = opts.effort?.trim();
+  if (effort) {
+    parts.push(runtime === 'opencode' ? '--variant' : '--effort', shellQuote(effort));
+  }
+
+  return `${parts.join(' ')}; exec zsh 2>&1 || exec bash\n`;
+}
+
 /**
  * Compute the next sequential session name for a project.
  *
@@ -272,7 +318,15 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           const spawnCommand = 'pty-sighup-exec';
           const spawnArgs = ['bash'];
           // The command written to the winner's PTY after successful spawn.
-          const initialCmd = 'claude; exec zsh 2>&1 || exec bash\n';
+          // agentType 'opencode' → opencode CLI; default (claude/undefined) → claude CLI.
+          // Configured with the selected agent (--agent) and LLM (--model).
+          const initialCmd = buildCliCommand({
+            agentType: body?.agentType,
+            model: body?.model,
+            agent: body?.agent,
+            agentSource: body?.agentSource,
+            effort: body?.effort,
+          });
 
           try {
             await manager.spawnSession(
@@ -384,6 +438,11 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           name: t.Optional(t.String()),
           cols: t.Optional(t.Number()),
           rows: t.Optional(t.Number()),
+          agentType: t.Optional(t.Union([t.Literal('opencode'), t.Literal('claude')])),
+          model: t.Optional(t.String()),
+          agent: t.Optional(t.String()),
+          agentSource: t.Optional(t.Union([t.Literal('agents'), t.Literal('commands')])),
+          effort: t.Optional(t.String()),
         }),
       },
     )

@@ -57,7 +57,7 @@ const MCPS_DIR = join(OPENCODE_DIR, 'mcps');
  * Returns the first substantive non-empty line, stripping leading
  * bullet markers (`* `, `- `).
  */
-function extractMarkdownDescription(content: string): string {
+export function extractMarkdownDescription(content: string): string {
   let lines = content.split('\n');
   // Strip YAML frontmatter if present
   if (lines[0]?.trim() === '---') {
