@@ -760,11 +760,11 @@ export const filesBaseRoutes = new Elysia({ prefix: '/api/files' }).guard(authGu
         }),
       },
     )
-    // ── POST /api/files/upload-temp — save clipboard image to /tmp ───────
+    // ── POST /api/files/upload-temp — save a pasted/uploaded file to /tmp ──
     .post(
       '/upload-temp',
       async ({ request, set }) => {
-        const tmpDir = '/tmp/opencode-paste-images';
+        const tmpDir = '/tmp/opencode-paste-files';
         if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -788,16 +788,17 @@ export const filesBaseRoutes = new Elysia({ prefix: '/api/files' }).guard(authGu
           return { error: 'file too large (max 10MB)' };
         }
 
-        const extMap: Record<string, string> = {
-          'image/png': '.png',
-          'image/jpeg': '.jpg',
-          'image/jpg': '.jpg',
-          'image/gif': '.gif',
-          'image/webp': '.webp',
-          'image/bmp': '.bmp',
-          'image/svg+xml': '.svg',
+        const mimeToExt: Record<string, string> = {
+          'image/png': '.png', 'image/jpeg': '.jpg', 'image/jpg': '.jpg',
+          'image/gif': '.gif', 'image/webp': '.webp', 'image/bmp': '.bmp',
+          'image/svg+xml': '.svg', 'image/heic': '.heic', 'image/heif': '.heif',
+          'text/plain': '.txt', 'text/markdown': '.md', 'text/csv': '.csv',
+          'application/json': '.json', 'application/pdf': '.pdf',
+          'application/zip': '.zip',
         };
-        const ext = extMap[file.type] ?? '.png';
+        // Prefer MIME map; fall back to original filename extension; last resort .bin
+        const extFromName = file.name ? '.' + file.name.split('.').pop() : '';
+        const ext = mimeToExt[file.type] ?? (extFromName.length > 1 ? extFromName : '.bin');
         const filename = `paste-${Date.now()}${ext}`;
         const destPath = join(tmpDir, filename);
 
