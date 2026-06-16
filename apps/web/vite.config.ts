@@ -16,9 +16,9 @@ export default defineConfig(({ mode }) => {
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'OpenCode Dashboard',
-        short_name: 'OpenCode',
-        description: 'Dashboard for managing multiple opencode CLI sessions',
+        name: 'ALF code',
+        short_name: 'ALF code',
+        description: 'ALF code — manage multiple opencode CLI sessions',
         start_url: '/',
         display: 'standalone',
         background_color: '#0a0a0f',

@@ -24,7 +24,11 @@ function priorityLabel(v: string | null): string {
 }
 
 /** Human-readable sentence for a non-comment (system) event. */
-function describe(ev: TaskActivity, columnName: (id: string | null) => string): string {
+function describe(
+  ev: TaskActivity,
+  columnName: (id: string | null) => string,
+  projectName: (id: string | null) => string,
+): string {
   switch (ev.type) {
     case 'created':
       return 'created this task';
@@ -36,6 +40,8 @@ function describe(ev: TaskActivity, columnName: (id: string | null) => string): 
       return 'updated the description';
     case 'priority_changed':
       return `changed priority from ${priorityLabel(ev.oldValue)} to ${priorityLabel(ev.newValue)}`;
+    case 'project_changed':
+      return `moved from ${projectName(ev.oldValue)} to ${projectName(ev.newValue)}`;
     case 'label_added':
       return `added label ${ev.body ?? ev.newValue ?? ''}`;
     case 'label_removed':
@@ -52,6 +58,7 @@ function describe(ev: TaskActivity, columnName: (id: string | null) => string): 
 interface ActivityTimelineProps {
   taskId: string;
   kanbanColumns?: KanbanColumn[];
+  projects?: { id: string; name: string }[];
   onChanged?: () => void;
   /** Bump to silently re-fetch the timeline after an external mutation. */
   refreshKey?: number;
@@ -61,6 +68,7 @@ interface ActivityTimelineProps {
 export function ActivityTimeline({
   taskId,
   kanbanColumns = [],
+  projects = [],
   onChanged,
   refreshKey,
 }: ActivityTimelineProps) {
@@ -75,6 +83,11 @@ export function ActivityTimeline({
   const columnName = (id: string | null): string => {
     if (!id) return '—';
     return kanbanColumns.find((c) => c.id === id)?.name ?? id;
+  };
+
+  const projectName = (id: string | null): string => {
+    if (!id) return '—';
+    return projects.find((p) => p.id === id)?.name ?? id;
   };
 
   // Silent re-fetch (no spinner) — used by own actions and external refreshKey bumps.
@@ -232,7 +245,7 @@ export function ActivityTimeline({
               <li key={ev.id} className="flex items-start gap-[8px] px-[2px]">
                 <span className="mt-[5px] size-[6px] shrink-0 rounded-full bg-white/20" />
                 <p className="font-['Inter'] text-[12px] leading-[1.5] text-[#7a828c]">
-                  <span className="text-[#9aa3ad]">{describe(ev, columnName)}</span>
+                  <span className="text-[#9aa3ad]">{describe(ev, columnName, projectName)}</span>
                   <span className="text-[#454c55]"> · {fmtTime(ev.createdAt)}</span>
                 </p>
               </li>

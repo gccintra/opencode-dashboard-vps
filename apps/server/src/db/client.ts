@@ -155,6 +155,7 @@ export function initDb(dbPath?: string): Database {
   if (tasksTableDef.includes("'backlog', 'in_progress', 'done'")) {
     db.exec(`
       PRAGMA foreign_keys = OFF;
+      DROP TABLE IF EXISTS tasks_new;
       CREATE TABLE tasks_new (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -172,6 +173,7 @@ export function initDb(dbPath?: string): Database {
         agent_name TEXT,
         agent_source TEXT CHECK(agent_source IN ('agents', 'commands')),
         model TEXT,
+        effort TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -245,6 +247,41 @@ export function initDb(dbPath?: string): Database {
       PRAGMA foreign_keys = ON;
     `);
     console.log('[db] migrated: labels table made global (project_id removed)');
+  }
+
+  // Migration: add 'project_changed' to task_activity.type CHECK constraint.
+  const activityTableDef = (
+    db.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='task_activity'").get() as
+      | { sql: string }
+      | null
+  )?.sql ?? '';
+  if (activityTableDef && !activityTableDef.includes("'project_changed'")) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE task_activity_new (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN (
+          'created', 'moved', 'title_changed', 'description_changed',
+          'priority_changed', 'project_changed', 'label_added', 'label_removed',
+          'linked', 'unlinked', 'comment'
+        )),
+        body TEXT,
+        field TEXT,
+        old_value TEXT,
+        new_value TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      ) STRICT;
+      INSERT INTO task_activity_new SELECT * FROM task_activity;
+      DROP TABLE task_activity;
+      ALTER TABLE task_activity_new RENAME TO task_activity;
+      CREATE INDEX IF NOT EXISTS idx_task_activity_task
+        ON task_activity(task_id, created_at);
+      PRAGMA foreign_keys = ON;
+    `);
+    console.log("[db] migrated: added 'project_changed' to task_activity.type CHECK");
   }
 
   currentDbPath = path;
