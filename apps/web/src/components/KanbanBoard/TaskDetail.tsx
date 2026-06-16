@@ -13,6 +13,7 @@ import {
   fetchTaskAttachments,
   implementTask,
   updateTaskAgentConfig,
+  updateTaskProject,
   setTaskSession,
   updateTaskPriority,
   type AgentCatalog,
@@ -115,6 +116,11 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
   );
   const [spawning, setSpawning] = useState(false);
 
+  // ── Project selection ──
+  const [currentProjectId, setCurrentProjectId] = useState(task.projectId);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [savingProject, setSavingProject] = useState(false);
+
   // ── Agent selection ──
   const [agentHint, setAgentHint] = useState<AgentHint | null>(null);
   const [localAgentType, setLocalAgentType] = useState<'opencode' | 'claude' | null>(
@@ -170,7 +176,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
     return agentSource === 'commands' ? catalog.claude.commands : catalog.claude.agents;
   }, [catalog, runtime, agentSource]);
 
-  // Load attachments, sessions, agent hint, and the agent catalog on open.
+  // Load attachments, sessions, projects, agent hint, and the agent catalog on open.
   useEffect(() => {
     let cancelled = false;
     fetchTaskAttachments(task.id)
@@ -186,6 +192,12 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
       .catch(() => {
         if (!cancelled) setSessions([]);
       });
+
+    apiFetch<{ id: string; name: string }[]>('/api/projects')
+      .then((data) => {
+        if (!cancelled) setProjects(Array.isArray(data) ? data : []);
+      })
+      .catch(() => { /* non-fatal */ });
 
     fetchAgentHint(task.projectId)
       .then((hint) => {
@@ -293,6 +305,24 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
       setError((err as ApiError).message || 'Failed to update priority');
     } finally {
       setSavingPriority(false);
+    }
+  };
+
+  // ── Change project ──
+  const changeProject = async (nextProjectId: string) => {
+    if (nextProjectId === currentProjectId) return;
+    const prev = currentProjectId;
+    setCurrentProjectId(nextProjectId);
+    setSavingProject(true);
+    setError(null);
+    try {
+      await updateTaskProject(task.id, nextProjectId);
+      notifyChanged();
+    } catch (err) {
+      setCurrentProjectId(prev);
+      setError((err as ApiError).message || 'Failed to update project');
+    } finally {
+      setSavingProject(false);
     }
   };
 
@@ -782,6 +812,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                 <ActivityTimeline
                   taskId={task.id}
                   kanbanColumns={kanbanColumns}
+                  projects={projects}
                   onChanged={notifyChanged}
                   refreshKey={activityVersion}
                 />
@@ -837,6 +868,29 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* PROJECT */}
+              <div>
+                <p className={`mb-[8px] ${SECTION_LABEL}`}>Project</p>
+                <select
+                  value={currentProjectId}
+                  onChange={(e) => changeProject(e.target.value)}
+                  disabled={savingProject || projects.length === 0}
+                  aria-label="Project"
+                  className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40 disabled:opacity-50"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-[#111118]">
+                      {p.name}
+                    </option>
+                  ))}
+                  {!projects.some((p) => p.id === currentProjectId) && currentProjectId && (
+                    <option value={currentProjectId} className="bg-[#111118]">
+                      {task.projectName ?? currentProjectId.slice(0, 8)}
+                    </option>
+                  )}
+                </select>
               </div>
 
               {/* LABELS */}

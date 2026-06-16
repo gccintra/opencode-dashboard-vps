@@ -370,6 +370,13 @@ export async function updateTaskPriority(taskId: string, priority: TaskPriority)
   });
 }
 
+export async function updateTaskProject(taskId: string, projectId: string): Promise<void> {
+  await apiFetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ projectId }),
+  });
+}
+
 // ── Task activity timeline + comments ──
 export type ActivityType =
   | 'created'
@@ -377,6 +384,7 @@ export type ActivityType =
   | 'title_changed'
   | 'description_changed'
   | 'priority_changed'
+  | 'project_changed'
   | 'label_added'
   | 'label_removed'
   | 'linked'
