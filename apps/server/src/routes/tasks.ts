@@ -406,8 +406,6 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
              WHERE t.id = ?`,
           )
           .get(taskId) as DbRow;
-        writeTaskMd(project.directory as string, taskId, task);
-
         set.status = 201;
         return toTask(task);
       },
@@ -624,33 +622,6 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
           )
           .get(id) as DbRow;
 
-        // Sync .md file — remove from old project dir and write to new one
-        const newProjectId = body.projectId?.trim();
-        if (newProjectId && newProjectId !== existing.project_id) {
-          // Project changed: remove .md from old dir
-          const oldProject = db
-            .query('SELECT directory FROM projects WHERE id = ?')
-            .get(existing.project_id) as DbRow;
-          if (oldProject) {
-            removeTaskMd(oldProject.directory as string, id);
-          }
-          // Write .md to new project dir
-          const newProject = db
-            .query('SELECT directory FROM projects WHERE id = ?')
-            .get(newProjectId) as DbRow;
-          if (newProject) {
-            writeTaskMd(newProject.directory as string, id, updated);
-          }
-        } else {
-          // Project unchanged — write .md to current project dir
-          const project = db
-            .query('SELECT directory FROM projects WHERE id = ?')
-            .get(updated.project_id) as DbRow;
-          if (project) {
-            writeTaskMd(project.directory as string, id, updated);
-          }
-        }
-
         return toTask(updated);
       },
       {
@@ -682,16 +653,7 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         return { error: 'Task not found' };
       }
 
-      const project = db
-        .query('SELECT directory FROM projects WHERE id = ?')
-        .get(existing.project_id) as DbRow;
-
       db.run('DELETE FROM tasks WHERE id = ?', [id]);
-
-      // Remove .md file
-      if (project) {
-        removeTaskMd(project.directory as string, id);
-      }
 
       set.status = 200;
       return { deleted: true };
@@ -757,14 +719,6 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
              WHERE t.id = ?`,
           )
           .get(id) as DbRow;
-
-        // Sync .md
-        const project = db
-          .query('SELECT directory FROM projects WHERE id = ?')
-          .get(existing.project_id) as DbRow;
-        if (project) {
-          writeTaskMd(project.directory as string, id, updated);
-        }
 
         return toTask(updated);
       },
