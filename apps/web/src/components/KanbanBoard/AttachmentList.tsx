@@ -58,11 +58,11 @@ function AttachmentThumb({ taskId, att }: { taskId: string; att: Attachment }) {
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
       <path
         d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7-7Z"
-        stroke="#556"
+        stroke="#5a626c"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path d="M13 2v7h7" stroke="#556" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M13 2v7h7" stroke="#5a626c" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 
@@ -175,17 +175,17 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
           {attachments.map((att) => (
             <li
               key={att.id}
-              className="group relative flex flex-col overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]"
+              className="group relative flex flex-col overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#0a0a0f]"
             >
               <AttachmentThumb taskId={taskId} att={att} />
               <div className="flex items-center gap-[4px] px-[6px] py-[4px]">
                 <span
-                  className="flex-1 truncate font-['Inter'] text-[10px] text-[#889]"
+                  className="flex-1 truncate font-['Inter'] text-[10px] text-[#9aa3ad]"
                   title={att.filename}
                 >
                   {att.filename}
                 </span>
-                <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-[#445]">
+                <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-[#5a626c]">
                   {formatSize(att.size)}
                 </span>
               </div>
@@ -223,7 +223,7 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center justify-center gap-[6px] rounded-[8px] border border-dashed border-[rgba(255,255,255,0.12)] px-[12px] py-[10px] font-['Inter'] text-[12px] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#ccd] disabled:opacity-50"
+        className="flex items-center justify-center gap-[6px] rounded-[8px] border border-dashed border-[rgba(255,255,255,0.12)] px-[12px] py-[10px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] disabled:opacity-50"
       >
         {uploading ? (
           'Uploading…'

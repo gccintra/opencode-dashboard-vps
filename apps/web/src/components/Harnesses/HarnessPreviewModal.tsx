@@ -42,7 +42,7 @@ export default function HarnessPreviewModal({
     if (!selectedHarnessId) {
       return (
         <div className="flex items-center justify-center py-[48px]">
-          <span className="font-['Inter'] text-[14px] text-[#556]">
+          <span className="font-['Inter'] text-[14px] text-[#5a626c]">
             Select a template to preview its files
           </span>
         </div>
@@ -66,7 +66,7 @@ export default function HarnessPreviewModal({
     if (!preview) {
       return (
         <div className="flex items-center justify-center py-[48px]">
-          <span className="font-['Inter'] text-[14px] text-[#556]">
+          <span className="font-['Inter'] text-[14px] text-[#5a626c]">
             Select a template to preview its files
           </span>
         </div>
@@ -91,7 +91,7 @@ export default function HarnessPreviewModal({
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[560px] rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[560px] rounded-[12px] border border-white/[0.07] bg-[#111118] p-[24px]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -101,7 +101,7 @@ export default function HarnessPreviewModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-[#556] hover:text-[#889] transition-colors text-[18px] leading-none"
+            className="text-[#5a626c] hover:text-[#9aa3ad] transition-colors text-[18px] leading-none"
           >
             ✕
           </button>
@@ -109,7 +109,7 @@ export default function HarnessPreviewModal({
 
         {/* Harness selector */}
         <div className="mb-[16px]">
-          <label className="mb-[6px] block font-['Inter'] text-[13px] font-medium text-[#889]">
+          <label className="mb-[6px] block font-['Inter'] text-[13px] font-medium text-[#9aa3ad]">
             Template
           </label>
           {harnessesLoading ? (
@@ -120,7 +120,7 @@ export default function HarnessPreviewModal({
               onChange={(e) =>
                 onHarnessChange(e.target.value || null)
               }
-              className="w-full rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#af0] transition-colors"
+              className="w-full rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#b3e502] transition-colors"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
@@ -128,7 +128,7 @@ export default function HarnessPreviewModal({
                 backgroundSize: '14px',
               }}
             >
-              <option value="" className="bg-[#0a0a0f] text-[#556]">
+              <option value="" className="bg-[#0a0a0f] text-[#5a626c]">
                 Select a template...
               </option>
               {harnesses.map((h) => (
@@ -143,7 +143,7 @@ export default function HarnessPreviewModal({
             </select>
           )}
           {selectedHarness && (
-            <p className="mt-[6px] font-['Inter'] text-[12px] text-[#556]">
+            <p className="mt-[6px] font-['Inter'] text-[12px] text-[#5a626c]">
               {selectedHarness.description}
             </p>
           )}
@@ -153,7 +153,7 @@ export default function HarnessPreviewModal({
         <div className="mb-[16px] border-t border-[rgba(255,255,255,0.06)]" />
 
         {/* Preview label */}
-        <div className="mb-[8px] font-['Inter'] text-[13px] font-medium text-[#889]">
+        <div className="mb-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad]">
           Preview
         </div>
 
@@ -192,7 +192,7 @@ export default function HarnessPreviewModal({
               type="checkbox"
               checked={overwrite}
               onChange={(e) => setOverwrite(e.target.checked)}
-              className="h-[16px] w-[16px] rounded-[3px] border border-[rgba(255,255,255,0.12)] bg-[#0a0a0f] accent-[#af0] cursor-pointer"
+              className="h-[16px] w-[16px] rounded-[3px] border border-[rgba(255,255,255,0.12)] bg-[#0a0a0f] accent-[#b3e502] cursor-pointer"
             />
             <span className="font-['Inter'] text-[13px] text-[#ccd]">
               Overwrite existing files
@@ -229,14 +229,14 @@ export default function HarnessPreviewModal({
           <button
             onClick={onClose}
             disabled={applying}
-            className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={() => onApply(overwrite)}
             disabled={!selectedHarnessId || applying}
-            className="rounded-[6px] bg-[#af0] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
+            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
           >
             {applying ? (
               <>

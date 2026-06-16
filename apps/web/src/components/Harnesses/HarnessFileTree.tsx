@@ -73,12 +73,12 @@ function FileIcon() {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
       <path
         d="M3.5 1.5h4.5l3 3v8a1 1 0 01-1 1H3.5a1 1 0 01-1-1v-10a1 1 0 011-1z"
-        stroke="#889"
+        stroke="#9aa3ad"
         strokeWidth="1.2"
-        fill="#889"
+        fill="#9aa3ad"
         fillOpacity="0.1"
       />
-      <path d="M8 1.5v3h3" stroke="#889" strokeWidth="1.2" fill="none" />
+      <path d="M8 1.5v3h3" stroke="#9aa3ad" strokeWidth="1.2" fill="none" />
     </svg>
   );
 }
@@ -173,7 +173,7 @@ function TreeNode({
 
         {/* Size (files only) */}
         {!isDir && entry.size > 0 && (
-          <span className="ml-auto shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#556]">
+          <span className="ml-auto shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
             {formatSize(entry.size)}
           </span>
         )}
@@ -198,7 +198,7 @@ function TreeNode({
       {/* Empty folder indicator */}
       {isDir && expanded && (!entry.children || entry.children.length === 0) && (
         <div
-          className="py-1 font-['Inter'] text-[11px] text-[#556]"
+          className="py-1 font-['Inter'] text-[11px] text-[#5a626c]"
           style={{ paddingLeft: `${paddingLeft + 28}px` }}
         >
           Empty
@@ -238,7 +238,7 @@ function EmptyState() {
         height="32"
         viewBox="0 0 32 32"
         fill="none"
-        className="mb-3 text-[#445]"
+        className="mb-3 text-[#5a626c]"
       >
         <path
           d="M6 8h20v18a2 2 0 01-2 2H8a2 2 0 01-2-2V8z"
@@ -251,7 +251,7 @@ function EmptyState() {
           strokeWidth="1.5"
         />
       </svg>
-      <p className="font-['Inter'] text-[13px] text-[#556]">No files</p>
+      <p className="font-['Inter'] text-[13px] text-[#5a626c]">No files</p>
     </div>
   );
 }

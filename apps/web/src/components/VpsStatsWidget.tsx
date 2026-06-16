@@ -25,12 +25,12 @@ export function VpsStatsWidget() {
       <span className="flex items-center gap-[5px] font-['JetBrains_Mono'] text-[10px]">
         <span className="shrink-0 size-[6px] rounded-full" style={{ backgroundColor: cpuColor }} />
         <span style={{ color: cpuColor }}>CPU</span>
-        <span className="text-[#889]">{stats.cpu}%</span>
+        <span className="text-[#9aa3ad]">{stats.cpu}%</span>
       </span>
       <span className="flex items-center gap-[5px] font-['JetBrains_Mono'] text-[10px]">
         <span className="shrink-0 size-[6px] rounded-full" style={{ backgroundColor: memColor }} />
         <span style={{ color: memColor }}>RAM</span>
-        <span className="text-[#889]">{fmtBytes(stats.memUsed)}/{fmtBytes(stats.memTotal)}</span>
+        <span className="text-[#9aa3ad]">{fmtBytes(stats.memUsed)}/{fmtBytes(stats.memTotal)}</span>
         <span style={{ color: memColor }}>({memPct}%)</span>
       </span>
     </div>

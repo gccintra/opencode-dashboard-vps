@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AlfLogo } from '../components/layout/Sidebar';
 
 function EyeIcon() {
   return (
@@ -49,8 +50,8 @@ function LockIcon() {
       xmlns="http://www.w3.org/2000/svg"
       className="opacity-70"
     >
-      <rect x="2.5" y="5" width="6" height="4.5" rx="1" stroke="#556" strokeWidth="1" />
-      <path d="M3.5 5V3.5a2 2 0 014 0V5" stroke="#556" strokeWidth="1" strokeLinecap="round" />
+      <rect x="2.5" y="5" width="6" height="4.5" rx="1" stroke="#5a626c" strokeWidth="1" />
+      <path d="M3.5 5V3.5a2 2 0 014 0V5" stroke="#5a626c" strokeWidth="1" strokeLinecap="round" />
     </svg>
   );
 }
@@ -107,7 +108,7 @@ export default function LoginPage() {
         className="absolute inset-0"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse at 50% 40%, rgba(30,30,60,0.5) 0%, transparent 70%), radial-gradient(ellipse at 50% 30%, rgba(170,255,0,0.04) 0%, transparent 60%)',
+            'radial-gradient(ellipse at 50% 40%, rgba(30,30,60,0.5) 0%, transparent 70%), radial-gradient(ellipse at 50% 30%, rgba(179,229,2,0.04) 0%, transparent 60%)',
         }}
       />
 
@@ -124,21 +125,20 @@ export default function LoginPage() {
       <div className="relative flex w-full max-w-[420px] flex-col items-center gap-8">
         {/* Banner */}
         <div className="flex items-center gap-3">
-          <span className="font-['JetBrains_Mono'] text-[18px] font-medium leading-[18px] tracking-[-0.36px] text-[#af0] opacity-75">
-            {'> _'}
-          </span>
-          <span className="font-['Inter'] text-[16px] font-semibold leading-6 tracking-[-0.16px] text-[#f0f0f0]">
-            OpenCode Dashboard
+          <AlfLogo size={32} />
+          <span className="flex items-baseline gap-[5px] font-['Syne'] text-[20px] font-extrabold tracking-[-0.5px]">
+            <span className="text-[#f2f3f5]">ALF</span>
+            <span className="text-[#b3e502]">code</span>
           </span>
         </div>
 
         {/* Main Card */}
         <div
-          className="w-full max-w-[333px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-px"
+          className="w-full max-w-[333px] border border-white/[0.07] bg-[#111118] p-px"
           style={{
             borderRadius: '2px',
             boxShadow:
-              '0 0 0 1px rgba(170,255,0,0.08), 0 24px 64px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)',
+              '0 0 0 1px rgba(179,229,2,0.08), 0 24px 64px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)',
           }}
         >
           {/* Green gradient top line */}
@@ -146,7 +146,7 @@ export default function LoginPage() {
             className="h-px w-full"
             style={{
               background:
-                'linear-gradient(90deg, transparent 0%, rgb(170,255,0) 30%, rgba(170,255,0,0.4) 60%, transparent 100%)',
+                'linear-gradient(90deg, transparent 0%, rgb(170,255,0) 30%, rgba(179,229,2,0.4) 60%, transparent 100%)',
             }}
           />
 
@@ -156,7 +156,7 @@ export default function LoginPage() {
               <h1 className="font-['Inter'] text-[24px] font-semibold leading-[28.8px] tracking-[-0.6px] text-[#f0f0f0]">
                 Welcome back
               </h1>
-              <p className="font-['Inter'] text-[14px] font-normal leading-[21px] text-[#889]">
+              <p className="font-['Inter'] text-[14px] font-normal leading-[21px] text-[#9aa3ad]">
                 Your VPS sessions, under control.
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="font-['Inter'] text-[14px] font-medium leading-[21px] tracking-[0.14px] text-[#889]"
+                  className="font-['Inter'] text-[14px] font-medium leading-[21px] tracking-[0.14px] text-[#9aa3ad]"
                 >
                   Master Password
                 </label>
@@ -182,7 +182,7 @@ export default function LoginPage() {
                     placeholder={showPassword ? 'Enter your password' : '••••••••••••'}
                     autoFocus
                     autoComplete="current-password"
-                    className="w-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-2.5 font-['JetBrains_Mono'] text-[14px] tracking-[0.7px] text-[#ccd] placeholder-[#556] outline-none transition-colors focus:border-[rgba(170,255,0,0.3)]"
+                    className="w-full border border-white/[0.07] bg-[rgba(255,255,255,0.03)] px-4 py-2.5 font-['JetBrains_Mono'] text-[14px] tracking-[0.7px] text-[#ccd] placeholder-[#556] outline-none transition-colors focus:border-[rgba(179,229,2,0.3)]"
                     style={{ borderRadius: '2px', paddingRight: '44px' }}
                   />
                   <button
@@ -207,7 +207,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isDisabled}
-                className="relative flex w-full items-center justify-center overflow-hidden bg-[#af0] py-[13.5px] font-['Inter'] text-[14px] font-semibold tracking-[0.28px] text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="relative flex w-full items-center justify-center overflow-hidden bg-[#b3e502] py-[13.5px] font-['Inter'] text-[14px] font-semibold tracking-[0.28px] text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ borderRadius: '2px' }}
               >
                 {/* Shine effect */}
@@ -226,14 +226,14 @@ export default function LoginPage() {
             </form>
 
             {/* Footer */}
-            <div className="mt-5 border-t border-[rgba(255,255,255,0.08)] pt-5">
+            <div className="mt-5 border-t border-white/[0.07] pt-5">
               <div className="flex items-center gap-[7px]">
                 <LockIcon />
-                <span className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.22px] text-[#556]">
+                <span className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.22px] text-[#5a626c]">
                   Single user access
                 </span>
                 <span className="mx-0.5 h-[3px] w-[3px] rounded-[1.5px] bg-[#556]" />
-                <span className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.22px] text-[#556]">
+                <span className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.22px] text-[#5a626c]">
                   JWT secured
                 </span>
               </div>
@@ -242,7 +242,7 @@ export default function LoginPage() {
         </div>
 
         {/* Version */}
-        <p className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.44px] text-[#556] opacity-60">
+        <p className="font-['JetBrains_Mono'] text-[11px] font-normal leading-[16.5px] tracking-[0.44px] text-[#5a626c] opacity-60">
           v0.1.0
         </p>
       </div>

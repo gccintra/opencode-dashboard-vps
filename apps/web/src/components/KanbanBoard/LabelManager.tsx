@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createLabel,
   deleteLabel,
@@ -7,18 +7,19 @@ import {
   type ApiError,
   type Label,
 } from '../../lib/api';
-import { LabelChip } from './LabelChip';
+import { LabelChip, parseScopedLabel } from './LabelChip';
 
 interface LabelManagerProps {
-  projectId: string;
-  /** Label ids currently applied to the task. */
+  /** Label ids currently applied to the task (empty array in standalone mode). */
   appliedIds: string[];
   /** Toggle a label on/off for the task. */
   onToggle: (labelId: string) => void;
+  /** When false, hides the "New label" form. Default: true. */
+  allowCreate?: boolean;
 }
 
 const PRESET_COLORS = [
-  '#af0',
+  '#b3e502',
   '#fa0',
   '#f55',
   '#5af',
@@ -27,19 +28,75 @@ const PRESET_COLORS = [
   '#f0f',
   '#fd5',
   '#5f5',
-  '#889',
+  '#9aa3ad',
 ];
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
+/** Round swatch palette — modern replacement for the native color input. */
+function SwatchGrid({ current, onPick }: { current: string; onPick: (c: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-[7px]">
+      {PRESET_COLORS.map((c) => {
+        const active = current.toLowerCase() === c.toLowerCase();
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            aria-label={`Pick color ${c}`}
+            aria-pressed={active}
+            className="flex size-[24px] items-center justify-center rounded-full transition-transform hover:scale-110"
+            style={{
+              backgroundColor: c,
+              outline: active ? `2px solid ${c}` : '2px solid transparent',
+              outlineOffset: 2,
+            }}
+          >
+            {active && (
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                <path
+                  d="M2.5 6.5l2.5 2.5 4.5-5"
+                  stroke="#0a0a0f"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
- * Per-project label manager. Lists project labels, lets the user create new
- * ones (name + color), toggle them on the task, and delete labels entirely.
+ * Global label manager. Lists all labels as glass chips, lets the user toggle
+ * them on a task, and (when allowCreate=true) create / recolor / delete labels.
  */
-export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerProps) {
+export function LabelManager({ appliedIds, onToggle, allowCreate = true }: LabelManagerProps) {
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
+
+  // Group labels by GitLab-style scope (GROUP::value). Scoped groups come first
+  // (alphabetical); ungrouped labels fall to the end. `groupStart` flags the
+  // first label of each group so the list can render a group header.
+  const groupedLabels = useMemo(() => {
+    const withScope = labels.map((l) => ({ label: l, scope: parseScopedLabel(l.name).scope }));
+    withScope.sort((a, b) => {
+      if (a.scope === b.scope) return a.label.name.localeCompare(b.label.name);
+      if (a.scope === null) return 1;
+      if (b.scope === null) return -1;
+      return a.scope.localeCompare(b.scope);
+    });
+    return withScope.map((item, i) => ({
+      ...item,
+      groupStart: i === 0 || withScope[i - 1].scope !== item.scope,
+    }));
+  }, [labels]);
 
   // Create form
   const [creating, setCreating] = useState(false);
@@ -50,7 +107,7 @@ export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerPr
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchLabels(projectId)
+    fetchLabels()
       .then((data) => {
         if (!cancelled) setLabels(Array.isArray(data) ? data : []);
       })
@@ -63,7 +120,7 @@ export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerPr
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, []);
 
   const handleCreate = async () => {
     const name = newName.trim();
@@ -78,7 +135,7 @@ export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerPr
     setSaving(true);
     setError(null);
     try {
-      const created = await createLabel(projectId, { name, color: newColor });
+      const created = await createLabel({ name, color: newColor });
       setLabels((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
       setNewName('');
       setCreating(false);
@@ -91,6 +148,7 @@ export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerPr
 
   const handleDelete = async (id: string) => {
     const prev = labels;
+    setPickerFor((p) => (p === id ? null : p));
     setLabels((cur) => cur.filter((l) => l.id !== id));
     try {
       await deleteLabel(id);
@@ -102,160 +160,192 @@ export function LabelManager({ projectId, appliedIds, onToggle }: LabelManagerPr
 
   const handleRecolor = async (label: Label, color: string) => {
     if (!HEX_RE.test(color)) return;
+    setPickerFor(null);
+    // Optimistic recolor so the chip updates instantly.
+    setLabels((cur) => cur.map((l) => (l.id === label.id ? { ...l, color } : l)));
     try {
       const updated = await updateLabel(label.id, { color });
       setLabels((cur) => cur.map((l) => (l.id === label.id ? updated : l)));
     } catch (err) {
+      setLabels((cur) => cur.map((l) => (l.id === label.id ? label : l)));
       setError((err as ApiError).message || 'Failed to update label');
     }
   };
 
+  const previewColor = HEX_RE.test(newColor) ? newColor : '#9aa3ad';
+
   return (
     <div className="flex flex-col gap-[10px]">
       {error && (
-        <p className="rounded-[6px] border border-red-500/30 bg-red-500/10 px-[10px] py-[6px] font-['Inter'] text-[12px] text-red-400">
+        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[12px] py-[8px] font-['Inter'] text-[12px] text-red-400 backdrop-blur-md">
           {error}
         </p>
       )}
 
       {loading ? (
-        <p className="font-['Inter'] text-[12px] text-[#556]">Loading labels…</p>
+        <div className="flex flex-col gap-[8px]">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[44px] animate-pulse rounded-[10px] bg-white/[0.03]" />
+          ))}
+        </div>
       ) : labels.length === 0 ? (
-        <p className="font-['Inter'] text-[12px] text-[#556]">No labels yet for this project.</p>
+        <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center font-['Inter'] text-[12px] text-[#7a828c]">
+          No labels yet.
+        </p>
       ) : (
         <ul className="flex flex-col gap-[6px]">
-          {labels.map((label) => {
+          {groupedLabels.map(({ label, scope, groupStart }) => {
             const applied = appliedIds.includes(label.id);
+            const pickerOpen = pickerFor === label.id;
             return (
-              <li key={label.id} className="flex items-center gap-[8px]">
-                <button
-                  type="button"
-                  onClick={() => onToggle(label.id)}
-                  aria-pressed={applied}
-                  aria-label={`${applied ? 'Remove' : 'Apply'} label ${label.name}`}
-                  className={`flex flex-1 items-center gap-[8px] rounded-[6px] border px-[8px] py-[5px] text-left transition-colors ${
-                    applied
-                      ? 'border-[rgba(170,255,0,0.3)] bg-[rgba(170,255,0,0.06)]'
-                      : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.16)]'
-                  }`}
-                >
-                  <span
-                    className="size-[12px] shrink-0 rounded-[3px]"
-                    style={{ backgroundColor: label.color }}
-                  />
-                  <span className="flex-1 font-['Inter'] text-[12px] text-[#f0f0f0]">
-                    {label.name}
+              <li
+                key={label.id}
+                className="flex flex-col gap-[8px] rounded-[10px] border border-white/[0.06] bg-white/[0.03] px-[10px] py-[8px] backdrop-blur-md transition-colors hover:border-white/[0.12]"
+              >
+                {groupStart && scope && (
+                  <span className="font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+                    {scope}
                   </span>
-                  {applied && (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path
-                        d="M2.5 6.5l2.5 2.5 4.5-5"
-                        stroke="#af0"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                )}
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    type="button"
+                    onClick={() => onToggle(label.id)}
+                    aria-pressed={applied}
+                    aria-label={`${applied ? 'Remove' : 'Apply'} label ${label.name}`}
+                    className="group inline-flex min-w-0 items-center gap-[7px] rounded-[8px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b3e502]/40"
+                  >
+                    <LabelChip label={label} size="md" />
+                    {applied && (
+                      <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                        <path
+                          d="M2.5 6.5l2.5 2.5 4.5-5"
+                          stroke="#b3e502"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </button>
+
+                  <div className="flex-1" />
+
+                  {allowCreate && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPickerFor((p) => (p === label.id ? null : label.id))}
+                        aria-label={`Change color of ${label.name}`}
+                        aria-expanded={pickerOpen}
+                        className={`flex size-[28px] shrink-0 items-center justify-center rounded-[8px] border bg-white/[0.03] transition-colors ${
+                          pickerOpen
+                            ? 'border-[#b3e502]/40 bg-white/[0.06]'
+                            : 'border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <span
+                          className="size-[14px] rounded-full ring-1 ring-inset ring-black/25"
+                          style={{ backgroundColor: label.color }}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(label.id)}
+                        aria-label={`Delete label ${label.name}`}
+                        className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px] border border-white/[0.07] bg-white/[0.03] text-[#7a828c] transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                          <path
+                            d="M2.5 3.5h9M5.5 3.5V2.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1M5.75 6.5v4M8.25 6.5v4M3.75 3.5l.55 8a1 1 0 0 0 1 .9h3.4a1 1 0 0 0 1-.9l.55-8"
+                            stroke="currentColor"
+                            strokeWidth="1.1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </>
                   )}
-                </button>
-                <input
-                  type="color"
-                  value={label.color.length === 4 ? '#000000' : label.color}
-                  onChange={(e) => handleRecolor(label, e.target.value)}
-                  aria-label={`Change color of ${label.name}`}
-                  className="size-[24px] shrink-0 cursor-pointer rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-transparent p-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleDelete(label.id)}
-                  aria-label={`Delete label ${label.name}`}
-                  className="shrink-0 rounded-[4px] p-[4px] text-[#445] hover:text-red-400"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path
-                      d="M2 3h8M4.5 3V2a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1M5 5.5v3M7 5.5v3M3.5 3l.5 7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1l.5-7"
-                      stroke="currentColor"
-                      strokeWidth="1"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
+                </div>
+
+                {/* Inline recolor panel — modern swatch palette, no native picker */}
+                {allowCreate && pickerOpen && (
+                  <div className="rounded-[9px] border border-white/[0.06] bg-[#0a0a0f]/60 p-[10px]">
+                    <SwatchGrid current={label.color} onPick={(c) => handleRecolor(label, c)} />
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
       )}
 
-      {/* Create new label */}
-      {creating ? (
-        <div className="flex flex-col gap-[8px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] p-[10px]">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Label name"
-            autoFocus
-            className="w-full rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[10px] py-[7px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.16)]"
-          />
-          <div className="flex flex-wrap items-center gap-[6px]">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setNewColor(c)}
-                aria-label={`Pick color ${c}`}
-                className={`size-[20px] rounded-[4px] border-2 ${
-                  newColor === c ? 'border-white' : 'border-transparent'
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+      {/* Create new label (only in full manager mode) */}
+      {allowCreate &&
+        (creating ? (
+          <div className="flex flex-col gap-[12px] rounded-[12px] border border-white/[0.07] bg-white/[0.02] p-[12px] backdrop-blur-md">
             <input
-              type="color"
-              value={newColor.length === 4 ? '#000000' : newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              aria-label="Custom color"
-              className="size-[24px] cursor-pointer rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-transparent p-0"
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              placeholder="Label name"
+              autoFocus
+              className="w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[8px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
             />
-            <span className="ml-auto">
-              <LabelChip label={{ name: newName || 'preview', color: newColor }} size="md" />
-            </span>
+
+            <SwatchGrid current={newColor} onPick={setNewColor} />
+
+            <div className="flex items-center gap-[10px]">
+              <input
+                type="text"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                aria-label="Custom hex color"
+                placeholder="#rrggbb"
+                spellCheck={false}
+                className="w-[112px] rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[6px] font-['JetBrains_Mono'] text-[12px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#b3e502]/40"
+              />
+              <span className="ml-auto inline-flex min-w-0">
+                <LabelChip label={{ name: newName.trim() || 'preview', color: previewColor }} size="md" />
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-[8px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreating(false);
+                  setNewName('');
+                  setError(null);
+                }}
+                className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[14px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={saving}
+                className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] py-[7px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
+              >
+                {saving ? 'Adding…' : 'Add label'}
+              </button>
+            </div>
           </div>
-          <div className="flex justify-end gap-[8px]">
-            <button
-              type="button"
-              onClick={() => {
-                setCreating(false);
-                setNewName('');
-                setError(null);
-              }}
-              className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[12px] py-[6px] font-['Inter'] text-[12px] text-[#889] hover:text-[#ccd]"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={saving}
-              className="rounded-[6px] bg-[#af0] px-[12px] py-[6px] font-['Inter'] text-[12px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] disabled:opacity-50"
-            >
-              {saving ? 'Adding…' : 'Add label'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="flex items-center gap-[6px] self-start rounded-[6px] border border-dashed border-[rgba(255,255,255,0.12)] px-[10px] py-[6px] font-['Inter'] text-[12px] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#ccd]"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-          New label
-        </button>
-      )}
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-[6px] self-start rounded-[9px] border border-dashed border-white/[0.12] bg-white/[0.02] px-[12px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] transition-colors hover:border-[#b3e502]/40 hover:text-[#e6e8eb]"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            New label
+          </button>
+        ))}
     </div>
   );
 }

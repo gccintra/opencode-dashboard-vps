@@ -9,6 +9,10 @@
 @import '@fontsource/jetbrains-mono/500.css';
 /* Bold weight required for terminal bold characters (e.g. opencode headers) */
 @import '@fontsource/jetbrains-mono/700.css';
+/* Syne — distinctive geometric display face used for the Tasks board headings */
+@import '@fontsource/syne/600.css';
+@import '@fontsource/syne/700.css';
+@import '@fontsource/syne/800.css';
 
 .editor-syntax-ts,
 .editor-syntax-tsx {
@@ -25,7 +29,7 @@
 }
 
 .editor-syntax-md {
-  caret-color: #af0;
+  caret-color: #b3e502;
 }
 
 .editor-syntax-css {
@@ -87,4 +91,162 @@
 }
 .xterm .xterm-screen {
   line-height: 1 !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Tasks board — "Aurora Glass" aesthetic
+   Scoped to the /tasks route only (classes prefixed `kb-`).
+   ════════════════════════════════════════════════════════════════ */
+
+/* Ambient light blooms drifting behind the frosted-glass board. */
+@keyframes kb-aurora-drift {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+}
+
+/* Staggered card / column entrance. */
+@keyframes kb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sweep of light across the primary CTA. */
+@keyframes kb-sheen {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  60%,
+  100% {
+    transform: translateX(220%) skewX(-12deg);
+  }
+}
+
+.kb-aurora {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+  animation: kb-aurora-drift 22s ease-in-out infinite;
+}
+
+.kb-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 78%);
+}
+
+.kb-rise {
+  animation: kb-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kb-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  transform: translateX(-120%) skewX(-12deg);
+  pointer-events: none;
+}
+.kb-sheen:hover::after {
+  animation: kb-sheen 720ms ease-out;
+}
+
+/* Thin frosted-glass scrollbar for the board's horizontal/vertical tracks. */
+.kb-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.kb-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+.kb-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(179, 229, 2, 0.25);
+}
+/* iOS Safari treats nested scroll containers as "stuck"/janky without this —
+   it opts the track into the native momentum/inertial scroll path. */
+.kb-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Kanban card: a long-press is how mobile starts a drag, so the OS's own
+   long-press affordances (text-selection callout, tap-highlight flash) must
+   be disabled — otherwise they hijack the gesture right as our drag engages,
+   which looks like "the lift animation ran but nothing actually dragged". */
+.kb-card {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-aurora,
+  .kb-rise,
+  .kb-sheen:hover::after {
+    animation: none;
+  }
+  .kb-rise {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Touch-device performance ──────────────────────────────────────
+   On phones/tablets the frosted-glass stack tanks scroll FPS: every
+   card's `backdrop-filter` re-samples the background each scroll frame,
+   and three animated 90px-blur aurora blobs repaint behind it forever.
+   Strip the GPU-heavy effects on coarse-pointer devices — the dark UI
+   reads fine without the live blur, and desktop keeps the full look. */
+@media (hover: none) and (pointer: coarse) {
+  /* Static blurred blobs are cheap (composited once); the infinite
+     animation + will-change layer promotion are what cost. Drop both
+     and shrink the blur radius. */
+  .kb-aurora {
+    animation: none !important;
+    will-change: auto;
+    filter: blur(64px);
+  }
+
+  /* backdrop-filter is the single biggest scroll-jank source. Remove it
+     and back the card with a flat fill that mimics the glass tint. */
+  .kb-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: #16161d !important;
+  }
+
+  /* No staggered entrance on mount — animating a long backlog of cards
+     in at once is its own jank spike. */
+  .kb-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

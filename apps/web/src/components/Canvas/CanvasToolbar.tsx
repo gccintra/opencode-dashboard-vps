@@ -22,10 +22,10 @@ interface CanvasToolbarProps {
 export function CanvasToolbar({ layout, onLayoutChange }: CanvasToolbarProps) {
   return (
     <div
-      className="flex shrink-0 items-center gap-[8px] border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px] py-[10px]"
+      className="flex shrink-0 items-center gap-[8px] border-b border-white/[0.07] bg-[#111118] px-[20px] py-[10px]"
       data-testid="canvas-toolbar"
     >
-      <span className="font-['Inter'] text-[11px] text-[#556] shrink-0">Layout:</span>
+      <span className="font-['Inter'] text-[11px] text-[#5a626c] shrink-0">Layout:</span>
       <div className="flex items-center gap-[4px]" role="group" aria-label="Layout do canvas">
         {LAYOUTS.map((opt) => {
           const isActive = layout.cols === opt.cols && layout.rows === opt.rows;
@@ -36,8 +36,8 @@ export function CanvasToolbar({ layout, onLayoutChange }: CanvasToolbarProps) {
               aria-pressed={isActive}
               className={`rounded-[5px] px-[10px] py-[5px] font-['JetBrains_Mono'] text-[12px] font-medium transition-colors ${
                 isActive
-                  ? 'bg-[rgba(170,255,0,0.15)] text-[#af0] border border-[rgba(170,255,0,0.3)]'
-                  : 'border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.15)] hover:text-[#ccd]'
+                  ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                  : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
               }`}
               data-testid={`layout-btn-${opt.label}`}
             >

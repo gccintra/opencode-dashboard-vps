@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { KanbanBoard, type KanbanFiltersState } from '../components/KanbanBoard';
 
@@ -43,10 +44,13 @@ export default function KanbanPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFilters = filtersFromParams(searchParams);
 
-  const handleFiltersChange = (filters: KanbanFiltersState) => {
-    const next = filtersToUrl(filters);
-    setSearchParams(next, { replace: true });
-  };
+  const handleFiltersChange = useCallback(
+    (filters: KanbanFiltersState) => {
+      const next = filtersToUrl(filters);
+      setSearchParams(next, { replace: true });
+    },
+    [setSearchParams],
+  );
 
   return <KanbanBoard initialFilters={initialFilters} onFiltersChange={handleFiltersChange} />;
 }

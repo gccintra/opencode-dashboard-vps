@@ -81,11 +81,11 @@ function FileTabIcon({ extension }: { extension: string }) {
         '.js': '#f0db4f',
         '.jsx': '#f0db4f',
         '.json': '#f0db4f',
-        '.md': '#af0',
+        '.md': '#b3e502',
         '.css': '#42a5f5',
         '.html': '#e65100',
       } as Record<string, string>
-    )[extension] || '#889';
+    )[extension] || '#9aa3ad';
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0">
       <path
@@ -115,24 +115,24 @@ function UnsavedModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onCancel}
       data-testid="unsaved-modal"
     >
       <div
-        className="w-[300px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-4"
+        className="w-[300px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-2 font-['Inter'] text-[13px] font-medium text-yellow-400">
+        <h3 className="mb-[8px] font-['Syne'] text-[17px] font-bold text-[#fa0]">
           Unsaved Changes
         </h3>
-        <p className="mb-4 font-['Inter'] text-[13px] text-[#889]">
+        <p className="mb-4 font-['Inter'] text-[13px] text-[#9aa3ad]">
           <span className="font-mono text-[#f0f0f0]">{fileName}</span> has unsaved changes.
         </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[4px] px-3 py-1 font-['Inter'] text-[12px] text-[#889] hover:text-[#ccd]"
+            className="rounded-[4px] px-3 py-1 font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
@@ -144,7 +144,7 @@ function UnsavedModal({
           </button>
           <button
             onClick={onSave}
-            className="rounded-[4px] bg-[#af0] px-3 py-1 font-['Inter'] text-[12px] font-medium text-[#0a0a0f]"
+            className="rounded-[4px] bg-[#b3e502] px-3 py-1 font-['Inter'] text-[12px] font-medium text-[#0a0a0f]"
           >
             Save
           </button>
@@ -159,7 +159,7 @@ function UnsavedModal({
 function LanguageBadge({ extension }: { extension: string }) {
   const lang = langFromExtension(extension) || extension.slice(1);
   return (
-    <span className="rounded-[3px] bg-[rgba(255,255,255,0.05)] px-1.5 py-px font-['Inter'] text-[10px] text-[#556]">
+    <span className="rounded-[3px] bg-[rgba(255,255,255,0.05)] px-1.5 py-px font-['Inter'] text-[10px] text-[#5a626c]">
       {lang}
     </span>
   );
@@ -180,14 +180,14 @@ function ThemePicker({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-[3px] bg-[rgba(255,255,255,0.05)] px-1.5 py-px font-['Inter'] text-[10px] text-[#556] hover:text-[#889]"
+        className="rounded-[3px] bg-[rgba(255,255,255,0.05)] px-1.5 py-px font-['Inter'] text-[10px] text-[#5a626c] hover:text-[#9aa3ad]"
       >
         {current}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#14141e] py-1 shadow-xl">
+          <div className="absolute right-0 top-full z-50 mt-1 rounded-[8px] border border-white/[0.08] bg-[#111118] py-1 shadow-xl backdrop-blur-md">
             {names.map((t) => (
               <button
                 key={t}
@@ -195,7 +195,7 @@ function ThemePicker({
                   onChange(t);
                   setOpen(false);
                 }}
-                className={`block w-full px-3 py-1.5 text-left font-['Inter'] text-[12px] hover:bg-[rgba(255,255,255,0.06)] ${t === current ? 'text-[#af0]' : 'text-[#ccd]'}`}
+                className={`block w-full px-3 py-1.5 text-left font-['Inter'] text-[12px] hover:bg-[rgba(255,255,255,0.06)] ${t === current ? 'text-[#b3e502]' : 'text-[#ccd]'}`}
               >
                 {t}
               </button>
@@ -274,10 +274,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
         // Image file: fetch via download endpoint and create a blob URL for preview
         try {
           const token = getToken();
-          const res = await fetch(
-            `${base}/download?path=${encodeURIComponent(filePath)}`,
-            { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-          );
+          const res = await fetch(`${base}/download?path=${encodeURIComponent(filePath)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
           if (!res.ok) {
             const d = await res.json().catch(() => ({}));
             setError((d as { error?: string }).error || 'Failed to load image');
@@ -555,10 +554,20 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
   if (tabs.length === 0 && !initialFilePath) {
     return (
       <div
-        className="flex h-full flex-col items-center justify-center gap-2"
+        className="flex h-full flex-col items-center justify-center gap-[12px] bg-[#0a0a0f]"
         data-testid="editor-empty"
       >
-        <p className="font-['Inter'] text-[13px] text-[#556]">Select a file to edit</p>
+        <div className="flex size-[56px] items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset] backdrop-blur-md">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M6 3h7l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"
+              stroke="#b3e502"
+              strokeWidth="1.5"
+            />
+            <path d="M13 3v5h5" stroke="#b3e502" strokeWidth="1.5" />
+          </svg>
+        </div>
+        <p className="font-['Inter'] text-[13px] text-[#7a828c]">Select a file to edit</p>
         {error && <p className="font-['Inter'] text-[12px] text-red-400">{error}</p>}
       </div>
     );
@@ -568,13 +577,13 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
     <div className="flex h-full flex-col bg-[#0a0a0f]" data-testid="code-editor">
       {/* ── Tab bar ── */}
       <div
-        className="flex items-center border-b border-[rgba(255,255,255,0.08)] bg-[#0c0c14]"
+        className="flex items-center border-b border-white/[0.07] bg-[#0c0c14]"
         data-testid="tab-bar"
       >
         {isMobile && onBack && (
           <button
             onClick={onBack}
-            className="flex min-h-[44px] shrink-0 items-center px-3 font-['Inter'] text-[12px] text-[#889] active:text-[#ccd]"
+            className="flex min-h-[44px] shrink-0 items-center px-3 font-['Inter'] text-[12px] text-[#9aa3ad] active:text-[#ccd]"
           >
             ‹ Back
           </button>
@@ -584,7 +593,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
           <button
             onClick={() => saveFile(activeTab!, activeTabIndex)}
             disabled={saving}
-            className="flex min-h-[44px] shrink-0 items-center gap-1 px-3 font-['Inter'] text-[12px] font-medium text-[#af0] active:opacity-70 disabled:opacity-40"
+            className="flex min-h-[44px] shrink-0 items-center gap-1 px-3 font-['Inter'] text-[12px] font-medium text-[#b3e502] active:opacity-70 disabled:opacity-40"
           >
             {saving ? '…' : 'Save'}
           </button>
@@ -598,7 +607,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                 <span className="ml-1.5 font-['Inter'] text-[13px] text-[#f0f0f0] truncate">
                   {activeTab.fileName}
                 </span>
-                {activeTab.modified && <span className="ml-1.5 text-[#af0] text-[10px]">●</span>}
+                {activeTab.modified && <span className="ml-1.5 text-[#b3e502] text-[10px]">●</span>}
               </>
             )}
           </div>
@@ -622,14 +631,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                   onClick={() => setActiveTabIndex(i)}
                   className={`flex min-h-[40px] items-center gap-1.5 border-r border-[rgba(255,255,255,0.06)] px-3 py-2 text-left font-['Inter'] text-[12px] transition-colors shrink-0 cursor-pointer ${
                     i === activeTabIndex
-                      ? 'border-b-2 border-b-[#af0] bg-[#0a0a0f] text-[#f0f0f0]'
-                      : 'text-[#889] hover:text-[#ccd]'
-                  } ${isDragTarget ? 'border-l-2 border-l-[#af0]' : ''}`}
+                      ? 'border-b-2 border-b-[#b3e502] bg-[#0a0a0f] text-[#f0f0f0]'
+                      : 'text-[#9aa3ad] hover:text-[#e6e8eb]'
+                  } ${isDragTarget ? 'border-l-2 border-l-[#b3e502]' : ''}`}
                   data-testid={`tab-${i}`}
                 >
                   <FileTabIcon extension={tabExt} />
                   <span className="max-w-[120px] truncate">{tab.fileName}</span>
-                  {tab.modified && <span className="text-[#af0] text-[10px]">●</span>}
+                  {tab.modified && <span className="text-[#b3e502] text-[10px]">●</span>}
                   <span
                     role="button"
                     tabIndex={-1}
@@ -649,13 +658,13 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
         )}
         {activeTab && (
           <div className="flex shrink-0 items-center gap-2 px-3">
-            {saving && <span className="font-['Inter'] text-[10px] text-[#889]">Saving…</span>}
-            {!saving && activeTab.modified && <span className="text-[#af0] text-[10px]">●</span>}
+            {saving && <span className="font-['Inter'] text-[10px] text-[#9aa3ad]">Saving…</span>}
+            {!saving && activeTab.modified && <span className="text-[#b3e502] text-[10px]">●</span>}
             {extension && <LanguageBadge extension={extension} />}
             <button
               onClick={toggleWordWrap}
               title="Toggle word wrap"
-              className={`rounded-[3px] px-1.5 py-px font-['Inter'] text-[10px] transition-colors ${wordWrap ? 'bg-[rgba(170,255,0,0.15)] text-[#af0]' : 'bg-[rgba(255,255,255,0.05)] text-[#556] hover:text-[#889]'}`}
+              className={`rounded-[3px] px-1.5 py-px font-['Inter'] text-[10px] transition-colors ${wordWrap ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502]' : 'bg-[rgba(255,255,255,0.05)] text-[#5a626c] hover:text-[#9aa3ad]'}`}
             >
               wrap
             </button>
@@ -672,11 +681,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
         >
           {/* Image meta bar */}
           <div className="shrink-0 border-b border-[rgba(255,255,255,0.06)] bg-[#0c0c14] px-3 py-1 flex items-center gap-2">
-            <span className="font-['Inter'] text-[11px] text-[#556]">{activeTab.fileName}</span>
+            <span className="font-['Inter'] text-[11px] text-[#5a626c]">{activeTab.fileName}</span>
             <a
               href={activeTab.imageUrl}
               download={activeTab.fileName}
-              className="ml-auto rounded-[3px] border border-[rgba(255,255,255,0.08)] px-2 py-0.5 font-['Inter'] text-[10px] text-[#889] hover:text-[#ccd]"
+              className="ml-auto rounded-[3px] border border-white/[0.07] px-2 py-0.5 font-['Inter'] text-[10px] text-[#9aa3ad] hover:text-[#e6e8eb]"
             >
               Download
             </a>
@@ -703,7 +712,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
               aria-hidden="true"
             >
               <div
-                className="font-['JetBrains_Mono'] leading-[1.6] text-[#445]"
+                className="font-['JetBrains_Mono'] leading-[1.6] text-[#5a626c]"
                 style={{ fontSize: isMobile ? 16 : 13 }}
               >
                 {Array.from({ length: lineCount }, (_, i) => (
@@ -784,7 +793,10 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
           data-testid="editor-error"
         >
           {error}
-          <button onClick={() => setError(null)} className="ml-2 text-[#556] hover:text-[#889]">
+          <button
+            onClick={() => setError(null)}
+            className="ml-2 text-[#5a626c] hover:text-[#9aa3ad]"
+          >
             Dismiss
           </button>
         </div>
@@ -802,7 +814,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
               height="10"
               viewBox="0 0 10 10"
               fill="none"
-              className={`shrink-0 transition-transform text-[#556] ${showTimeline ? 'rotate-90' : ''}`}
+              className={`shrink-0 transition-transform text-[#5a626c] ${showTimeline ? 'rotate-90' : ''}`}
             >
               <path
                 d="M3 1.5L7 5L3 8.5"
@@ -811,9 +823,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                 strokeLinecap="round"
               />
             </svg>
-            <span className="font-['Inter'] text-[10px] text-[#556]">Timeline</span>
+            <span className="font-['Inter'] text-[10px] text-[#5a626c]">Timeline</span>
             {historyRef.current.get(activeTab.filePath)?.length ? (
-              <span className="rounded-[3px] bg-[rgba(255,255,255,0.06)] px-1 font-['JetBrains_Mono'] text-[9px] text-[#445]">
+              <span className="rounded-[3px] bg-[rgba(255,255,255,0.06)] px-1 font-['JetBrains_Mono'] text-[9px] text-[#5a626c]">
                 {historyRef.current.get(activeTab.filePath)!.length} saves
               </span>
             ) : null}
@@ -824,7 +836,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                 const hist = [...(historyRef.current.get(activeTab.filePath) ?? [])].reverse();
                 if (hist.length === 0) {
                   return (
-                    <div className="px-3 py-2 font-['Inter'] text-[11px] text-[#445]">
+                    <div className="px-3 py-2 font-['Inter'] text-[11px] text-[#5a626c]">
                       {isMobile
                         ? 'No saves yet — tap Save to create snapshot'
                         : 'No saves yet — Ctrl+S to create a snapshot'}
@@ -834,17 +846,17 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                 return hist.map((entry, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.04)] px-3 py-1.5 hover:bg-[rgba(255,255,255,0.02)]"
+                    className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.04)] px-3 py-1.5 hover:bg-white/[0.02]"
                   >
-                    <span className="font-['JetBrains_Mono'] text-[10px] text-[#445]">
+                    <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
                       {entry.savedAt.toLocaleTimeString()}
                     </span>
-                    <span className="flex-1 font-['Inter'] text-[10px] text-[#556]">
+                    <span className="flex-1 font-['Inter'] text-[10px] text-[#5a626c]">
                       v{hist.length - i} · {entry.content.split('\n').length} lines
                     </span>
                     <button
                       onClick={() => restoreSnapshot(entry.content)}
-                      className="rounded-[3px] border border-[rgba(255,255,255,0.08)] px-2 py-0.5 font-['Inter'] text-[10px] text-[#889] hover:border-[rgba(170,255,0,0.3)] hover:text-[#af0]"
+                      className="rounded-[3px] border border-white/[0.07] px-2 py-0.5 font-['Inter'] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
                     >
                       Restore
                     </button>

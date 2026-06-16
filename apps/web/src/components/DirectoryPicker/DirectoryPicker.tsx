@@ -138,7 +138,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            className="flex-1 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.16)] disabled:opacity-50"
+            className="flex-1 rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-white/[0.14] disabled:opacity-50"
             placeholder={placeholder || '/home/user/projects/my-project'}
             autoComplete="off"
           />
@@ -146,14 +146,14 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
             type="button"
             onClick={() => setBrowseModalOpen(true)}
             disabled={disabled}
-            className="rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50 whitespace-nowrap"
           >
             Browse
           </button>
         </div>
 
         {showDropdown && (
-          <div className="absolute left-0 right-0 top-full mt-[4px] max-h-[200px] overflow-y-auto rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] z-50 shadow-lg">
+          <div className="absolute left-0 right-0 top-full mt-[4px] max-h-[200px] overflow-y-auto rounded-[8px] border border-white/[0.07] bg-[#111118] z-50 shadow-lg">
             {suggestions.map((entry, idx) => (
               <button
                 key={entry.path}
@@ -162,7 +162,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
                 onMouseEnter={() => setHighlightedIdx(idx)}
                 className={`w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left font-['JetBrains_Mono'] text-[12px] transition-colors ${
                   idx === highlightedIdx
-                    ? 'bg-[rgba(175,255,0,0.1)] text-[#af0]'
+                    ? 'bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
                     : 'text-[#ccd] hover:bg-[rgba(255,255,255,0.04)]'
                 }`}
               >
@@ -171,7 +171,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#556"
+                  stroke="#5a626c"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

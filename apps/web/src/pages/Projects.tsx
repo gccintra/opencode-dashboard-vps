@@ -104,7 +104,7 @@ function Modal({
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[400px] rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[400px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -135,27 +135,27 @@ function DeleteDialog({
       onClick={onCancel}
     >
       <div
-        className="mx-4 w-full max-w-[380px] rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">
+        <h3 className="font-['Syne'] text-[18px] font-bold text-white">
           Delete {projectName}?
         </h3>
-        <p className="mt-[8px] font-['Inter'] text-[13px] leading-[1.5] text-[#889]">
+        <p className="mt-[8px] font-['Inter'] text-[13px] leading-[1.5] text-[#9aa3ad]">
           This will terminate all active sessions.
         </p>
         <div className="mt-[20px] flex justify-end gap-[10px]">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="rounded-[8px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-50"
+            className="flex h-[34px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[16px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="rounded-[8px] bg-red-600 px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+            className="rounded-[9px] bg-red-600 px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
           >
             {loading ? 'Deleting…' : 'Delete'}
           </button>
@@ -234,9 +234,9 @@ function ProjectFormModal({
   if (!open) return null;
 
   const labelClass =
-    "mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#445]";
+    "mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
   const inputClass =
-    "w-full rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.18)]";
+    "w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]";
 
   return (
     <div
@@ -244,10 +244,10 @@ function ProjectFormModal({
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[420px] rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[420px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">{title}</h3>
+        <h3 className="font-['Syne'] text-[18px] font-bold text-white">{title}</h3>
 
         <div className="mt-[18px] space-y-[14px]">
           <div>
@@ -283,7 +283,7 @@ function ProjectFormModal({
           <div>
             <label htmlFor="project-description" className={labelClass}>
               Description{' '}
-              <span className="font-normal normal-case text-[#556]">(optional)</span>
+              <span className="font-normal normal-case text-[#5a626c]">(optional)</span>
             </label>
             <textarea
               id="project-description"
@@ -298,11 +298,11 @@ function ProjectFormModal({
           <div>
             <label htmlFor="project-harness" className={labelClass}>
               Template{' '}
-              <span className="font-normal normal-case text-[#556]">(optional)</span>
+              <span className="font-normal normal-case text-[#5a626c]">(optional)</span>
             </label>
             {harnessesLoading ? (
-              <div className="h-[38px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] flex items-center px-[12px]">
-                <span className="font-['Inter'] text-[13px] text-[#445]">Loading templates…</span>
+              <div className="h-[38px] rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] flex items-center px-[12px]">
+                <span className="font-['Inter'] text-[13px] text-[#5a626c]">Loading templates…</span>
               </div>
             ) : (
               <select
@@ -333,14 +333,14 @@ function ProjectFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="rounded-[8px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-50"
+            className="flex h-[34px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[16px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="rounded-[8px] bg-[#af0] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors disabled:opacity-50"
+            className="kb-sheen relative flex h-[34px] items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[16px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
           >
             {loading ? 'Saving…' : 'Save'}
           </button>
@@ -350,71 +350,45 @@ function ProjectFormModal({
   );
 }
 
-/* ── Session status dot cluster ── */
+/* ── Live sessions indicator ── */
 
-function StatusCluster({
-  active,
-  waiting,
-  finished,
-}: {
-  active: number;
-  waiting: number;
-  finished: number;
-}) {
+function LiveBadge({ live }: { live: number }) {
+  if (live > 0) {
+    return (
+      <div className="flex items-center gap-[8px] rounded-[12px] border border-[#b3e502]/25 bg-[rgba(179,229,2,0.08)] px-[14px] py-[11px]">
+        <span className="relative flex size-[6px] shrink-0">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#b3e502] opacity-60" />
+          <span className="relative inline-flex size-[6px] rounded-full bg-[#b3e502]" />
+        </span>
+        <span className="font-['Inter'] text-[13px] font-semibold text-[#b3e502]">
+          {live} active session{live !== 1 ? 's' : ''}
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center gap-[16px]">
-      <div className="flex flex-col items-start gap-[2px]">
-        <div className="flex items-center gap-[5px]">
-          <span
-            className="size-[7px] shrink-0 rounded-full bg-[#22dd88] animate-pulse"
-            style={{ boxShadow: active > 0 ? '0 0 6px rgba(34,221,136,0.5)' : 'none', opacity: active > 0 ? 1 : 0.3 }}
-          />
-          <span
-            className="font-['Inter'] text-[14px] font-bold leading-none"
-            style={{ color: active > 0 ? '#22dd88' : '#445' }}
-          >
-            {active}
-          </span>
-        </div>
-        <span className="font-['Inter'] text-[10.5px] font-medium uppercase tracking-[0.4px] text-[#445]">
-          Active
-        </span>
-      </div>
-
-      <div className="h-[28px] w-px shrink-0 bg-[rgba(255,255,255,0.06)]" />
-
-      <div className="flex flex-col items-start gap-[2px]">
-        <div className="flex items-center gap-[5px]">
-          <span
-            className="size-[7px] shrink-0 rounded-full bg-[#ffaa00]"
-            style={{ opacity: waiting > 0 ? 1 : 0.3 }}
-          />
-          <span
-            className="font-['Inter'] text-[14px] font-bold leading-none"
-            style={{ color: waiting > 0 ? '#ffaa00' : '#445' }}
-          >
-            {waiting}
-          </span>
-        </div>
-        <span className="font-['Inter'] text-[10.5px] font-medium uppercase tracking-[0.4px] text-[#445]">
-          Waiting
-        </span>
-      </div>
-
-      <div className="h-[28px] w-px shrink-0 bg-[rgba(255,255,255,0.06)]" />
-
-      <div className="flex flex-col items-start gap-[2px]">
-        <div className="flex items-center gap-[5px]">
-          <span className="size-[7px] shrink-0 rounded-full bg-[#445]" style={{ opacity: 0.5 }} />
-          <span className="font-['Inter'] text-[14px] font-bold leading-none text-[#445]">
-            {finished}
-          </span>
-        </div>
-        <span className="font-['Inter'] text-[10.5px] font-medium uppercase tracking-[0.4px] text-[#445]">
-          Done
-        </span>
-      </div>
+    <div className="flex items-center gap-[8px] rounded-[12px] border border-white/[0.06] bg-white/[0.02] px-[14px] py-[11px]">
+      <span className="size-[6px] shrink-0 rounded-full bg-[#5a626c]" />
+      <span className="font-['Inter'] text-[13px] font-medium text-[#5a626c]">No active sessions</span>
     </div>
+  );
+}
+
+/* ── Small icons ── */
+
+function GitHubIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <path d="M2.5 3.5h9M5.5 3.5V2.6a.6.6 0 0 1 .6-.6h1.8a.6.6 0 0 1 .6.6v.9M3.7 3.5l.5 7.4a.8.8 0 0 0 .8.7h4a.8.8 0 0 0 .8-.7l.5-7.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -428,6 +402,7 @@ function ProjectCard({
   onDelete,
   onSync,
   syncing,
+  index = 0,
 }: {
   project: Project;
   stats: { active: number; waiting: number; finished: number };
@@ -436,105 +411,107 @@ function ProjectCard({
   onDelete: () => void;
   onSync?: (id: string) => void;
   syncing?: boolean;
+  index?: number;
 }) {
-  const hasLive = stats.active > 0 || stats.waiting > 0;
+  // Any non-finished session counts as "live" — waiting status is never
+  // persisted to session metadata, so active already captures every live one.
+  const live = stats.active + stats.waiting;
+  const repoShort = project.githubRepo?.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '');
 
   return (
     <article
-      className="group relative flex flex-col gap-[16px] rounded-[14px] border bg-[#111118] p-[20px] transition-all duration-150 hover:bg-[rgba(255,255,255,0.02)]"
       style={{
-        borderColor: stats.active > 0
-          ? 'rgba(34,221,136,0.2)'
-          : stats.waiting > 0
-            ? 'rgba(255,170,0,0.15)'
-            : 'rgba(255,255,255,0.07)',
+        animationDelay: `${Math.min(index, 8) * 45}ms`,
+        borderColor: live > 0 ? 'rgba(179,229,2,0.2)' : 'rgba(255,255,255,0.06)',
       }}
+      className="kb-rise group relative isolate flex flex-col gap-[14px] overflow-hidden rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[18px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)] focus-within:border-[#b3e502]/30"
     >
-      {/* Live indicator accent */}
-      {hasLive && (
-        <span
-          className="absolute left-0 top-[14px] h-[28px] w-[3px] rounded-r-full"
-          style={{
-            backgroundColor: stats.active > 0 ? '#22dd88' : '#ffaa00',
-            boxShadow: stats.active > 0
-              ? '0 0 8px rgba(34,221,136,0.4)'
-              : '0 0 8px rgba(255,170,0,0.3)',
-          }}
-        />
-      )}
+      {/* Live accent edge — fades in on hover, solid when live */}
+      <span
+        aria-hidden
+        className={`absolute inset-y-[14px] left-0 w-[2px] rounded-r-full bg-[#b3e502] transition-opacity duration-200 ${
+          live > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+        }`}
+        style={live > 0 ? { boxShadow: '0 0 8px rgba(179,229,2,0.4)' } : undefined}
+      />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-[12px]">
-        <button
-          onClick={onOpen}
-          className="min-w-0 flex-1 text-left"
-        >
-          <h3 className="truncate font-['Inter'] text-[15px] font-semibold tracking-[-0.15px] text-[#f0f0f0] group-hover:text-white transition-colors">
+        <button onClick={onOpen} className="min-w-0 flex-1 text-left outline-none">
+          <h3 className="truncate font-['Inter'] text-[15px] font-semibold tracking-[-0.15px] text-[#f0f0f0] transition-colors group-hover:text-white">
             {project.name}
           </h3>
-          <p className="mt-[2px] truncate font-['JetBrains_Mono'] text-[11px] text-[#445]">
-            {project.directory}
+          <p className="mt-[3px] flex items-center gap-[5px] font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="shrink-0">
+              <path d="M1.5 4.2c0-.6.4-1 1-1h2.2l1 1.3h4.8c.6 0 1 .4 1 1v4.3c0 .6-.4 1-1 1H2.5c-.6 0-1-.4-1-1V4.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+            </svg>
+            <span className="truncate">{project.directory}</span>
           </p>
-          {project.description && (
-            <p className="mt-[4px] line-clamp-1 font-['Inter'] text-[12px] text-[#667]">
-              {project.description}
-            </p>
-          )}
         </button>
         <button
           onClick={onEdit}
-          className="flex size-[30px] shrink-0 items-center justify-center rounded-[6px] border border-[rgba(255,255,255,0.08)] text-[#556] hover:border-[rgba(255,255,255,0.18)] hover:text-[#889] transition-colors"
+          className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#9aa3ad]"
           aria-label={`Edit ${project.name}`}
         >
           <GearIcon />
         </button>
       </div>
 
-      {/* Session status */}
-      <div className="rounded-[10px] border border-[rgba(255,255,255,0.06)] bg-[#0a0a0f] px-[16px] py-[12px]">
-        <StatusCluster
-          active={stats.active}
-          waiting={stats.waiting}
-          finished={stats.finished}
-        />
-      </div>
+      {/* Description */}
+      {project.description && (
+        <p className="line-clamp-2 font-['Inter'] text-[12.5px] leading-[1.5] text-[#7a828c]">
+          {project.description}
+        </p>
+      )}
+
+      {/* Live sessions */}
+      <LiveBadge live={live} />
 
       {/* Footer */}
-      <div className="flex items-center justify-between">
-        <span className="font-['JetBrains_Mono'] text-[11px] text-[#445]">
-          {relativeTime(project.updatedAt)}
-        </span>
-        <div className="flex items-center gap-[8px]">
+      <div className="flex items-center justify-between gap-[8px] pt-[2px]">
+        <div className="flex min-w-0 items-center gap-[8px]">
+          {repoShort && (
+            <span
+              className="inline-flex max-w-[150px] items-center gap-[4px] rounded-[6px] border border-white/[0.06] bg-white/[0.02] px-[7px] py-[3px] font-['Inter'] text-[11px] font-medium text-[#7a828c]"
+              title={project.githubRepo ?? undefined}
+            >
+              <span className="shrink-0 text-[#58a6ff]"><GitHubIcon /></span>
+              <span className="truncate">{repoShort}</span>
+            </span>
+          )}
+          <span className="shrink-0 font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
+            {relativeTime(project.updatedAt)}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-[6px]">
           {project.githubRepo && onSync && (
             <button
               onClick={() => onSync(project.id)}
               disabled={syncing}
-              className="font-['Inter'] text-[12px] font-medium text-[#556] hover:text-[#af0] transition-colors disabled:opacity-50"
+              className="flex size-[30px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#b3e502] disabled:opacity-50"
               title={`Sync from ${project.githubRepo}`}
+              aria-label="Sync from GitHub"
             >
-              {syncing ? 'Syncing…' : 'Sync'}
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className={syncing ? 'animate-spin' : ''}>
+                <path d="M12 7a5 5 0 1 1-1.46-3.54M12 2v2.5H9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           )}
           <button
             onClick={onDelete}
-            className="font-['Inter'] text-[12px] font-medium text-[#445] hover:text-red-400 transition-colors"
+            className="flex size-[30px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
             aria-label={`Delete ${project.name}`}
           >
-            Delete
+            <TrashIcon />
           </button>
           <button
             onClick={onOpen}
-            className="flex h-[28px] items-center gap-[5px] rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[12px] font-['Inter'] text-[12.5px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#f0f0f0] transition-colors"
+            className="kb-sheen relative flex h-[30px] items-center gap-[5px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[12.5px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-6px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_20px_-6px_rgba(179,229,2,0.65)]"
           >
             Open
             <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
-              <path
-                d="M1 10L10 1M10 1H3.5M10 1v6.5"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M1 10L10 1M10 1H3.5M10 1v6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -547,7 +524,7 @@ function ProjectCard({
 
 function SkeletonCard() {
   return (
-    <article className="flex flex-col gap-[16px] rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[#111118] p-[20px] animate-pulse">
+    <article className="flex flex-col gap-[16px] rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[20px] animate-pulse">
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-[5px]">
           <div className="h-[17px] w-[140px] rounded-[4px] bg-[rgba(255,255,255,0.06)]" />
@@ -568,26 +545,24 @@ function SkeletonCard() {
 
 function StatsStrip({
   projects,
-  active,
-  waiting,
-  completed,
+  activeSessions,
+  liveProjects,
 }: {
   projects: number;
-  active: number;
-  waiting: number;
-  completed: number;
+  activeSessions: number;
+  liveProjects: number;
 }) {
   return (
-    <div className="mb-[28px] grid grid-cols-2 gap-[10px] sm:grid-cols-4">
+    <div className="mb-[28px] grid grid-cols-3 gap-[10px]">
       {[
-        { label: 'Projects', value: projects, dot: null },
-        { label: 'Active', value: active, dot: '#22dd88', glow: 'rgba(34,221,136,0.5)', pulse: true },
-        { label: 'Waiting', value: waiting, dot: '#ffaa00', glow: 'rgba(255,170,0,0.4)', pulse: false },
-        { label: 'Completed', value: completed, dot: null },
-      ].map(({ label, value, dot, glow, pulse }) => (
+        { label: 'Projects', value: projects, dot: null as string | null, glow: undefined as string | undefined, pulse: false },
+        { label: 'Active Sessions', value: activeSessions, dot: '#b3e502', glow: 'rgba(179,229,2,0.5)', pulse: true },
+        { label: 'Live Projects', value: liveProjects, dot: activeSessions > 0 ? '#b3e502' : null, glow: 'rgba(179,229,2,0.4)', pulse: false },
+      ].map(({ label, value, dot, glow, pulse }, i) => (
         <div
           key={label}
-          className="flex flex-col gap-[8px] rounded-[12px] border border-[rgba(255,255,255,0.07)] bg-[#111118] px-[18px] py-[16px]"
+          style={{ animationDelay: `${i * 45}ms` }}
+          className="kb-rise flex flex-col gap-[8px] rounded-[14px] border border-white/[0.06] bg-white/[0.03] px-[18px] py-[16px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)]"
         >
           <div className="flex items-center gap-[6px]">
             {dot && (
@@ -596,7 +571,7 @@ function StatsStrip({
                 style={{ backgroundColor: dot, boxShadow: glow ? `0 0 6px ${glow}` : undefined }}
               />
             )}
-            <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#445]">
+            <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
               {label}
             </span>
           </div>
@@ -681,6 +656,31 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
+
+  /* ── Silent stats poll ── keeps live-session counts fresh without
+     flashing skeletons. Also refreshes when the tab regains focus
+     (e.g. coming back from a project where a session was spawned). */
+  useEffect(() => {
+    let cancelled = false;
+    const refreshStats = async () => {
+      try {
+        const stats = await apiFetch<
+          Record<string, { active: number; waiting: number; finished: number }>
+        >('/api/projects/stats');
+        if (!cancelled) setProjectStats(stats);
+      } catch {
+        /* non-fatal — keep last known counts */
+      }
+    };
+    const interval = setInterval(refreshStats, 10_000);
+    const onFocus = () => refreshStats();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   /* ── Filtered & sorted ── */
   const filtered = useMemo(() => {
@@ -768,26 +768,32 @@ export default function ProjectsPage() {
     [syncingProject],
   );
 
-  /* ── Global stats ── */
-  const totalActive = Object.values(projectStats).reduce((s, p) => s + p.active, 0);
-  const totalWaiting = Object.values(projectStats).reduce((s, p) => s + p.waiting, 0);
-  const totalFinished = Object.values(projectStats).reduce((s, p) => s + p.finished, 0);
+  /* ── Global stats — only live sessions are meaningful here ── */
+  const totalActiveSessions = Object.values(projectStats).reduce((s, p) => s + p.active + p.waiting, 0);
+  const liveProjects = Object.values(projectStats).filter((p) => p.active + p.waiting > 0).length;
 
   /* ── Render ── */
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-[#0a0a0f]">
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
+      {/* Atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="kb-aurora" style={{ top: '-180px', left: '-120px', width: 620, height: 620, opacity: 0.5, background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-220px', left: '38%', width: 680, height: 680, opacity: 0.4, animationDelay: '-7s', background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.38, animationDelay: '-13s', background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)' }} />
+        <div className="kb-grid" />
+      </div>
       {/* Header */}
-      <header className="sticky top-0 z-10 shrink-0 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]/95 backdrop-blur-sm">
+      <header className="relative z-10 sticky top-0 shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">
         <div className="flex items-center justify-between gap-[10px] pl-[52px] pr-[20px] py-[14px] sm:px-[28px] lg:px-[28px]">
-          <h1 className="font-['Inter'] text-[17px] font-semibold tracking-[-0.2px] text-[#f0f0f0]">
+          <h1 className="font-['Syne'] text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
             Projects
           </h1>
 
           <div className="flex items-center gap-[8px]">
             {/* Search toggle (mobile) / always visible (sm+) */}
             <div className={`relative ${showSearch || search ? 'flex' : 'hidden sm:flex'}`}>
-              <div className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#445]">
+              <div className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#5a626c]">
                 <SearchIcon />
               </div>
               <input
@@ -797,7 +803,7 @@ export default function ProjectsPage() {
                 placeholder="Search…"
                 autoFocus={showSearch}
                 onBlur={() => { if (!search) setShowSearch(false); }}
-                className="h-[32px] w-[160px] sm:w-[200px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] pl-[30px] pr-[10px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.18)]"
+                className="h-[36px] w-[160px] sm:w-[200px] rounded-[10px] border border-white/[0.07] bg-white/[0.03] pl-[30px] pr-[10px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
               />
             </div>
 
@@ -805,7 +811,7 @@ export default function ProjectsPage() {
             {!showSearch && !search && (
               <button
                 onClick={() => setShowSearch(true)}
-                className="flex size-[32px] items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#556] hover:text-[#889] transition-colors sm:hidden"
+                className="flex size-[32px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#9aa3ad] sm:hidden"
                 aria-label="Search"
               >
                 <SearchIcon />
@@ -814,7 +820,7 @@ export default function ProjectsPage() {
 
             <button
               onClick={handleOpenCreate}
-              className="flex h-[32px] shrink-0 items-center gap-[6px] rounded-[8px] bg-[#af0] px-[14px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors"
+              className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
             >
               <PlusIcon />
               <span className="hidden sm:inline">New Project</span>
@@ -825,7 +831,7 @@ export default function ProjectsPage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[22px] sm:px-[28px] sm:pt-[28px]">
+      <div className="relative z-10 flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[22px] sm:px-[28px] sm:pt-[28px]">
         {/* Error */}
         {error && (
           <div className="mb-[20px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400">
@@ -840,9 +846,8 @@ export default function ProjectsPage() {
         {!loading && !error && (
           <StatsStrip
             projects={projects.length}
-            active={totalActive}
-            waiting={totalWaiting}
-            completed={totalFinished}
+            activeSessions={totalActiveSessions}
+            liveProjects={liveProjects}
           />
         )}
 
@@ -850,16 +855,16 @@ export default function ProjectsPage() {
         {!loading && !error && (
           <div className="mb-[18px] flex items-center justify-between">
             <div className="flex items-center gap-[8px]">
-              <h2 className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.9px] text-[#445]">
+              <h2 className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.9px] text-[#5a626c]">
                 All Projects
               </h2>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#445]">
+              <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
                 {filtered.length}
               </span>
             </div>
             <button
               onClick={() => setSort(sort === 'newest' ? 'alpha' : 'newest')}
-              className="flex items-center gap-[4px] rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+              className="flex items-center gap-[4px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] transition-all"
             >
               {sort === 'newest' ? 'Newest' : 'A–Z'}
               <ChevronIcon />
@@ -879,24 +884,24 @@ export default function ProjectsPage() {
 
         {/* Empty state */}
         {!loading && !error && projects.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-[80px] text-center">
-            <div className="mb-[16px] flex size-[60px] items-center justify-center rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#111118]">
+          <div className="kb-rise flex flex-col items-center justify-center py-[80px] text-center">
+            <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#445" strokeWidth="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#445" strokeWidth="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#445" strokeWidth="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#445" strokeWidth="1.5" />
+                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
               </svg>
             </div>
-            <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">
+            <h3 className="font-['Syne'] text-[20px] font-bold text-white mb-[6px]">
               No projects yet
             </h3>
-            <p className="mt-[6px] max-w-[300px] font-['Inter'] text-[13px] leading-relaxed text-[#889]">
+            <p className="max-w-[300px] font-['Inter'] text-[13px] leading-relaxed text-[#5a626c]">
               Create your first project to start managing opencode sessions.
             </p>
             <button
               onClick={handleOpenCreate}
-              className="mt-[20px] rounded-[8px] bg-[#af0] px-[20px] py-[10px] font-['Inter'] text-[14px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors"
+              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
             >
               Create your first project
             </button>
@@ -906,12 +911,12 @@ export default function ProjectsPage() {
         {/* No search results */}
         {!loading && !error && projects.length > 0 && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-[64px] text-center">
-            <p className="font-['Inter'] text-[15px] text-[#889]">
+            <p className="font-['Inter'] text-[15px] text-[#5a626c]">
               No projects match &ldquo;{search}&rdquo;
             </p>
             <button
               onClick={() => setSearch('')}
-              className="mt-[10px] font-['Inter'] text-[13px] text-[#af0] hover:underline"
+              className="mt-[10px] font-['Inter'] text-[13px] font-semibold text-[#b3e502] hover:underline"
             >
               Clear search
             </button>
@@ -921,9 +926,10 @@ export default function ProjectsPage() {
         {/* Project grid */}
         {!loading && !error && filtered.length > 0 && (
           <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((project) => (
+            {filtered.map((project, i) => (
               <ProjectCard
                 key={project.id}
+                index={i}
                 project={project}
                 stats={projectStats[project.id] || { active: 0, waiting: 0, finished: 0 }}
                 onOpen={() => navigate(`/projects/${project.id}`)}

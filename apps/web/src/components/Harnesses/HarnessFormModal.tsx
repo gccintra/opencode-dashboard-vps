@@ -57,17 +57,17 @@ export function HarnessFormModal({
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-[420px] rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-[24px]"
+        className="mx-4 w-full max-w-[420px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">{title}</h3>
+        <h3 className="font-['Syne'] text-[18px] font-bold text-white">{title}</h3>
 
         <div className="mt-[18px] space-y-[14px]">
           {/* Name */}
           <div>
             <label
               htmlFor="harness-name"
-              className="mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#445]"
+              className="mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]"
             >
               Name
             </label>
@@ -81,7 +81,7 @@ export function HarnessFormModal({
                 }
                 setNameError('');
               }}
-              className="w-full rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.16)]"
+              className="w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
               placeholder="Template name"
               maxLength={NAME_MAX_LENGTH}
               autoFocus
@@ -92,7 +92,7 @@ export function HarnessFormModal({
               ) : (
                 <span />
               )}
-              <span className="font-['Inter'] text-[11px] text-[#445]">
+              <span className="font-['Inter'] text-[11px] text-[#5a626c]">
                 {name.length}/{NAME_MAX_LENGTH}
               </span>
             </div>
@@ -102,17 +102,16 @@ export function HarnessFormModal({
           <div>
             <label
               htmlFor="harness-description"
-              className="mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#445]"
+              className="mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]"
             >
-              Description{' '}
-              <span className="font-normal normal-case text-[#556]">(optional)</span>
+              Description <span className="font-normal normal-case text-[#5a626c]">(optional)</span>
             </label>
             <textarea
               id="harness-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#445] outline-none focus:border-[rgba(255,255,255,0.16)]"
+              className="w-full resize-none rounded-[8px] border border-white/[0.07] bg-white/[0.02] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.04]"
               placeholder="Optional description"
             />
           </div>
@@ -128,14 +127,14 @@ export function HarnessFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-50"
+            className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="rounded-[6px] bg-[#af0] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors disabled:opacity-50"
+            className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
           >
             {loading ? 'Saving...' : submitLabel}
           </button>

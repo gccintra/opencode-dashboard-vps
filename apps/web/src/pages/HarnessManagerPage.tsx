@@ -22,7 +22,13 @@ type MobileView = 'tree' | 'editor';
 function ArrowLeftIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M9 3L4 7l5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 3L4 7l5 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -44,37 +50,49 @@ export default function HarnessManagerPage() {
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    try { return Number(localStorage.getItem('harness-mgr-sidebar-w') || 240); } catch { return 240; }
+    try {
+      return Number(localStorage.getItem('harness-mgr-sidebar-w') || 240);
+    } catch {
+      return 240;
+    }
   });
   const isDraggingSidebar = useRef(false);
   const dragStartX = useRef(0);
   const dragStartW = useRef(0);
 
-  const handleSidebarDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    isDraggingSidebar.current = true;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    dragStartX.current = clientX;
-    dragStartW.current = sidebarWidth;
+  const handleSidebarDragStart = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      isDraggingSidebar.current = true;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      dragStartX.current = clientX;
+      dragStartW.current = sidebarWidth;
 
-    const onMove = (ev: MouseEvent | TouchEvent) => {
-      if (!isDraggingSidebar.current) return;
-      const cx = 'touches' in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
-      const newW = Math.max(160, Math.min(520, dragStartW.current + (cx - dragStartX.current)));
-      setSidebarWidth(newW);
-      try { localStorage.setItem('harness-mgr-sidebar-w', String(newW)); } catch { /* ignore */ }
-    };
-    const onUp = () => {
-      isDraggingSidebar.current = false;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('touchend', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchend', onUp);
-  }, [sidebarWidth]);
+      const onMove = (ev: MouseEvent | TouchEvent) => {
+        if (!isDraggingSidebar.current) return;
+        const cx =
+          'touches' in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
+        const newW = Math.max(160, Math.min(520, dragStartW.current + (cx - dragStartX.current)));
+        setSidebarWidth(newW);
+        try {
+          localStorage.setItem('harness-mgr-sidebar-w', String(newW));
+        } catch {
+          /* ignore */
+        }
+      };
+      const onUp = () => {
+        isDraggingSidebar.current = false;
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('touchend', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchend', onUp);
+    },
+    [sidebarWidth],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -82,7 +100,10 @@ export default function HarnessManagerPage() {
     apiFetch<HarnessEntry[]>('/api/harnesses')
       .then((list) => {
         const found = list.find((h) => h.id === id);
-        if (!found) { setError('Template not found'); return; }
+        if (!found) {
+          setError('Template not found');
+          return;
+        }
         setHarness(found);
       })
       .catch((err) => setError((err as ApiError).message || 'Failed to load template'))
@@ -102,18 +123,20 @@ export default function HarnessManagerPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[#0a0a0f]">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#af0] border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-[#0a0a0f]">
-        <p className="font-['Inter'] text-[13px] text-red-400">{error}</p>
+      <div className="flex h-full flex-col items-center justify-center gap-[14px] bg-[#0a0a0f]">
+        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+          {error}
+        </p>
         <button
           onClick={() => navigate('/templates')}
-          className="rounded-[6px] bg-[#af0] px-4 py-2 font-['Inter'] text-[13px] font-medium text-[#0a0a0f]"
+          className="kb-sheen relative overflow-hidden rounded-[10px] bg-[#b3e502] px-[20px] py-[10px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
         >
           Back to Templates
         </button>
@@ -122,23 +145,23 @@ export default function HarnessManagerPage() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#0a0a0f]" data-testid="harness-manager-page">
+    <div className="flex h-full min-h-0 flex-col bg-[#0a0a0f]" data-testid="harness-manager-page">
       {/* Header */}
-      <div className="shrink-0 border-b border-[rgba(255,255,255,0.08)] bg-[#0d0d14] px-4 py-2.5">
+      <div className="shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 px-4 py-2.5 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/templates')}
-            className="flex items-center gap-1.5 rounded-[5px] px-2 py-1 font-['Inter'] text-[12px] text-[#889] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#ccd] transition-colors"
+            className="flex items-center gap-1.5 rounded-[5px] px-2 py-1 font-['Inter'] text-[12px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e6e8eb] transition-colors"
           >
             <ArrowLeftIcon />
             <span className="hidden sm:inline">Templates</span>
           </button>
-          <span className="text-[#445]">/</span>
+          <span className="text-[#5a626c]">/</span>
           <span className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0]">
             {harness?.name ?? id}
           </span>
           {harness?.description && (
-            <span className="hidden sm:block truncate font-['Inter'] text-[12px] text-[#556]">
+            <span className="hidden sm:block truncate font-['Inter'] text-[12px] text-[#5a626c]">
               — {harness.description}
             </span>
           )}
@@ -181,7 +204,10 @@ export default function HarnessManagerPage() {
       {/* ════ DESKTOP ════ */}
       <div className="hidden min-h-0 flex-1 sm:flex">
         {/* FileTree sidebar */}
-        <div className="shrink-0 overflow-hidden border-r border-[rgba(255,255,255,0.06)]" style={{ width: sidebarWidth }}>
+        <div
+          className="shrink-0 overflow-hidden border-r border-[rgba(255,255,255,0.06)]"
+          style={{ width: sidebarWidth }}
+        >
           <FileTree
             ref={fileTreeRef}
             projectId={id}
@@ -191,18 +217,14 @@ export default function HarnessManagerPage() {
         </div>
         {/* Drag handle */}
         <div
-          className="w-[4px] shrink-0 cursor-col-resize bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(170,255,0,0.3)] transition-colors active:bg-[rgba(170,255,0,0.5)]"
+          className="w-[4px] shrink-0 cursor-col-resize bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(179,229,2,0.3)] transition-colors active:bg-[rgba(179,229,2,0.5)]"
           onMouseDown={handleSidebarDragStart}
           onTouchStart={handleSidebarDragStart}
           title="Drag to resize"
         />
         {/* CodeEditor */}
         <div className="min-w-0 flex-1 overflow-hidden">
-          <CodeEditor
-            ref={desktopEditorRef}
-            projectId={id}
-            filesApiBase={filesApiBase}
-          />
+          <CodeEditor ref={desktopEditorRef} projectId={id} filesApiBase={filesApiBase} />
         </div>
       </div>
     </div>
