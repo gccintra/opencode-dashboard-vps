@@ -105,6 +105,148 @@ export function initDb(dbPath?: string): Database {
   db.exec('PRAGMA foreign_keys = ON');
 
   runSchema(db);
+
+  // Idempotent column migrations for existing databases.
+  // schema.sql handles new databases; ALTER TABLE handles databases created
+  // before a column was added (SQLite does not support IF NOT EXISTS for columns).
+  const taskCols = db.query('PRAGMA table_info(tasks)').all() as Array<{ name: string }>;
+  if (!taskCols.some((c) => c.name === 'agent_type')) {
+    db.run("ALTER TABLE tasks ADD COLUMN agent_type TEXT CHECK(agent_type IN ('opencode', 'claude'))");
+    console.log('[db] migrated: added tasks.agent_type column');
+  }
+  // agent_name / agent_source / model: chosen agent + LLM for the implement flow.
+  if (!taskCols.some((c) => c.name === 'agent_name')) {
+    db.run('ALTER TABLE tasks ADD COLUMN agent_name TEXT');
+    console.log('[db] migrated: added tasks.agent_name column');
+  }
+  if (!taskCols.some((c) => c.name === 'agent_source')) {
+    db.run("ALTER TABLE tasks ADD COLUMN agent_source TEXT CHECK(agent_source IN ('agents', 'commands'))");
+    console.log('[db] migrated: added tasks.agent_source column');
+  }
+  if (!taskCols.some((c) => c.name === 'model')) {
+    db.run('ALTER TABLE tasks ADD COLUMN model TEXT');
+    console.log('[db] migrated: added tasks.model column');
+  }
+  // effort: provider-specific reasoning effort (claude --effort / opencode --variant).
+  if (!taskCols.some((c) => c.name === 'effort')) {
+    db.run('ALTER TABLE tasks ADD COLUMN effort TEXT');
+    console.log('[db] migrated: added tasks.effort column');
+  }
+  if (!taskCols.some((c) => c.name === 'issue_number')) {
+    db.run('ALTER TABLE tasks ADD COLUMN issue_number INTEGER NOT NULL DEFAULT 0');
+    // Backfill: assign sequential numbers per project based on creation order.
+    db.exec(`
+      UPDATE tasks SET issue_number = (
+        SELECT COUNT(*) FROM tasks t2
+        WHERE t2.project_id = tasks.project_id
+          AND (t2.created_at < tasks.created_at OR (t2.created_at = tasks.created_at AND t2.id <= tasks.id))
+      )
+    `);
+    console.log('[db] migrated: added tasks.issue_number column with backfill');
+  }
+
+  // Migration: remove CHECK constraint on tasks.column so custom kanban column IDs are allowed.
+  // SQLite can't alter CHECK constraints — we recreate the table if the old constraint is present.
+  const tasksTableDef = (
+    db.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get() as
+      | { sql: string }
+      | null
+  )?.sql ?? '';
+  if (tasksTableDef.includes("'backlog', 'in_progress', 'done'")) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE tasks_new (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        source TEXT NOT NULL DEFAULT 'local' CHECK(source IN ('local', 'github')),
+        "column" TEXT NOT NULL DEFAULT 'backlog',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        issue_number INTEGER NOT NULL DEFAULT 0,
+        github_issue_url TEXT,
+        github_labels TEXT,
+        github_issue_number INTEGER,
+        session_id TEXT,
+        agent_type TEXT CHECK(agent_type IN ('opencode', 'claude')),
+        agent_name TEXT,
+        agent_source TEXT CHECK(agent_source IN ('agents', 'commands')),
+        model TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      ) STRICT;
+      INSERT INTO tasks_new SELECT * FROM tasks;
+      DROP TABLE tasks;
+      ALTER TABLE tasks_new RENAME TO tasks;
+      PRAGMA foreign_keys = ON;
+    `);
+    console.log('[db] migrated: removed CHECK constraint from tasks.column');
+  }
+
+  // Migration: add tasks.priority (low/medium/high, default medium).
+  // Placed after the table-recreate block so the recreate path never has to
+  // account for it — existing rows get the default via the column DEFAULT.
+  const taskColsAfter = db.query('PRAGMA table_info(tasks)').all() as Array<{ name: string }>;
+  if (!taskColsAfter.some((c) => c.name === 'priority')) {
+    db.run(
+      "ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high'))",
+    );
+    console.log('[db] migrated: added tasks.priority column');
+  }
+
+  // Seed default kanban_columns if table is empty.
+  // IDs match legacy tasks.column values so existing data is immediately valid.
+  const kanbanColCount = (
+    db.query('SELECT COUNT(*) as count FROM kanban_columns').get() as { count: number }
+  ).count;
+  if (kanbanColCount === 0) {
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT INTO kanban_columns (id, name, category, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['backlog', 'Backlog', 'backlog', '#6b7280', 0, now],
+    );
+    db.run(
+      `INSERT INTO kanban_columns (id, name, category, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['todo', 'Todo', 'unstarted', '#3b82f6', 0, now],
+    );
+    db.run(
+      `INSERT INTO kanban_columns (id, name, category, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['in_progress', 'In Progress', 'started', '#f59e0b', 0, now],
+    );
+    db.run(
+      `INSERT INTO kanban_columns (id, name, category, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['done', 'Done', 'completed', '#22c55e', 0, now],
+    );
+    db.run(
+      `INSERT INTO kanban_columns (id, name, category, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['canceled', 'Canceled', 'canceled', '#ef4444', 0, now],
+    );
+    console.log('[db] seeded: default kanban_columns');
+  }
+
+  // Migrate labels table: drop project_id (make labels global).
+  // SQLite can't DROP COLUMN before v3.35; recreate the table instead.
+  const labelCols = db.query('PRAGMA table_info(labels)').all() as Array<{ name: string }>;
+  if (labelCols.some((c) => c.name === 'project_id')) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE labels_global (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      ) STRICT;
+      INSERT OR IGNORE INTO labels_global (id, name, color, created_at)
+        SELECT id, name, color, created_at FROM labels;
+      DROP TABLE labels;
+      ALTER TABLE labels_global RENAME TO labels;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_name ON labels(name COLLATE NOCASE);
+      PRAGMA foreign_keys = ON;
+    `);
+    console.log('[db] migrated: labels table made global (project_id removed)');
+  }
+
   currentDbPath = path;
 
   console.log(`[db] connected to ${path}`);
