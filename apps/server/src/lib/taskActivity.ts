@@ -21,6 +21,7 @@ export type ActivityType =
   | 'title_changed'
   | 'description_changed'
   | 'priority_changed'
+  | 'project_changed'
   | 'label_added'
   | 'label_removed'
   | 'linked'

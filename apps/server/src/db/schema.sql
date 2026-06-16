@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS task_activity (
   task_id TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN (
     'created', 'moved', 'title_changed', 'description_changed',
-    'priority_changed', 'label_added', 'label_removed',
+    'priority_changed', 'project_changed', 'label_added', 'label_removed',
     'linked', 'unlinked', 'comment'
   )),
   body TEXT,
