@@ -155,6 +155,7 @@ export function initDb(dbPath?: string): Database {
   if (tasksTableDef.includes("'backlog', 'in_progress', 'done'")) {
     db.exec(`
       PRAGMA foreign_keys = OFF;
+      DROP TABLE IF EXISTS tasks_new;
       CREATE TABLE tasks_new (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -172,6 +173,7 @@ export function initDb(dbPath?: string): Database {
         agent_name TEXT,
         agent_source TEXT CHECK(agent_source IN ('agents', 'commands')),
         model TEXT,
+        effort TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
