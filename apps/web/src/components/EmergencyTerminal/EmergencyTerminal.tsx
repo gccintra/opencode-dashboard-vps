@@ -125,7 +125,7 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
 
           {/* Modal */}
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[340px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[12px] border border-[rgba(255,85,68,0.3)] bg-[#0d0d14] p-[24px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-50 w-[340px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[12px] border border-[rgba(255,85,68,0.3)] bg-[#0a0a0f] p-[24px] shadow-2xl"
             data-testid="emergency-modal"
           >
             {/* Warning header */}
@@ -136,7 +136,7 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
               </h2>
             </div>
 
-            <p className="mb-[20px] font-['Inter'] text-[13px] leading-[1.5] text-[#889]">
+            <p className="mb-[20px] font-['Inter'] text-[13px] leading-[1.5] text-[#9aa3ad]">
               Esta ação abre um terminal com acesso <strong className="text-[#f54]">root</strong> ao
               sistema no diretório <code className="text-[#f0f0f0]">/root</code>. Use com cuidado.
             </p>
@@ -153,7 +153,7 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
             <div className="flex items-center gap-[10px]">
               <button
                 onClick={handleCancel}
-                className="flex-1 rounded-[8px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[10px] font-['Inter'] text-[13px] font-medium text-[#889] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                className="flex-1 rounded-[8px] border border-white/[0.07] px-[16px] py-[10px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
                 data-testid="emergency-modal-cancel"
               >
                 Cancelar

@@ -77,15 +77,15 @@ function FileIcon({ extension }: { extension: string }) {
         js: '#f0db4f',
         jsx: '#f0db4f',
         json: '#f0db4f',
-        md: '#af0',
+        md: '#b3e502',
         css: '#42a5f5',
         html: '#e65100',
         svg: '#ff9800',
         yml: '#7c4dff',
         yaml: '#7c4dff',
-        gitignore: '#889',
+        gitignore: '#9aa3ad',
       } as Record<string, string>
-    )[extension] || '#889';
+    )[extension] || '#9aa3ad';
 
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
@@ -123,7 +123,7 @@ function ChevronRightIcon({ open = false }: { open?: boolean }) {
 
 function Spinner() {
   return (
-    <div className="h-3 w-3 animate-spin rounded-full border border-[#af0] border-t-transparent" />
+    <div className="h-3 w-3 animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
   );
 }
 
@@ -217,7 +217,7 @@ function ContextMenu({
 
   return (
     <div
-      className="fixed z-50 min-w-[164px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#14141e] py-1 shadow-xl"
+      className="fixed z-50 min-w-[164px] rounded-[8px] border border-white/[0.08] bg-[#111118] py-1 shadow-xl backdrop-blur-md"
       style={{ left: Math.max(4, clampedX), top: Math.max(4, clampedY) }}
       data-testid="context-menu"
     >
@@ -267,15 +267,15 @@ function CreateModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onCancel}
       data-testid="create-modal"
     >
       <div
-        className="w-[280px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-4"
+        className="w-[280px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-3 font-['Inter'] text-[13px] font-medium text-[#f0f0f0]">
+        <h3 className="mb-[14px] font-['Syne'] text-[17px] font-bold text-white">
           New {type === 'directory' ? 'Folder' : 'File'}
         </h3>
         <input
@@ -288,20 +288,20 @@ function CreateModal({
             if (e.key === 'Enter') handleSubmit();
             if (e.key === 'Escape') onCancel();
           }}
-          className="mb-3 w-full rounded-[4px] border border-[rgba(255,255,255,0.1)] bg-[#0a0a0f] px-3 py-1.5 font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] outline-none"
+          className="mb-[14px] w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-3 py-[8px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
           data-testid="create-input"
         />
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[4px] px-3 py-1 font-['Inter'] text-[12px] text-[#889] hover:text-[#ccd]"
+            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || value.trim().includes('/')}
-            className="rounded-[4px] bg-[#af0] px-3 py-1 font-['Inter'] text-[12px] font-medium text-[#0a0a0f] disabled:opacity-40"
+            className="kb-sheen relative overflow-hidden rounded-[8px] bg-[#b3e502] px-[14px] py-[6px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:opacity-40"
           >
             Create
           </button>
@@ -326,31 +326,29 @@ function DeleteModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onCancel}
       data-testid="delete-modal"
     >
       <div
-        className="w-[300px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-4"
+        className="w-[300px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-2 font-['Inter'] text-[13px] font-medium text-[#f0f0f0]">
-          Confirm Delete
-        </h3>
-        <p className="mb-4 font-['Inter'] text-[13px] text-[#889]">
+        <h3 className="mb-[8px] font-['Syne'] text-[17px] font-bold text-white">Confirm Delete</h3>
+        <p className="mb-[16px] font-['Inter'] text-[13px] text-[#9aa3ad]">
           Delete {isDir ? 'folder' : 'file'}{' '}
           <span className="text-[#f0f0f0] font-mono">{name}</span>?
         </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[4px] px-3 py-1 font-['Inter'] text-[12px] text-[#889] hover:text-[#ccd]"
+            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-[4px] bg-red-500/20 border border-red-500/30 px-3 py-1 font-['Inter'] text-[12px] font-medium text-red-400 hover:bg-red-500/30"
+            className="rounded-[8px] bg-red-500/20 border border-red-500/30 px-[14px] py-[6px] font-['Inter'] text-[12px] font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
           >
             Delete
           </button>
@@ -375,30 +373,30 @@ function LargeFileWarning({
   const sizeMB = (size / (1024 * 1024)).toFixed(1);
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
-        className="w-[320px] rounded-[8px] border border-yellow-500/30 bg-[#111118] p-4"
+        className="w-[320px] rounded-[14px] border border-[#fa0]/30 bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-2 font-['Inter'] text-[13px] font-medium text-yellow-400">
+        <h3 className="mb-[8px] font-['Syne'] text-[17px] font-bold text-[#fa0]">
           Large File Warning
         </h3>
-        <p className="mb-4 font-['Inter'] text-[13px] text-[#889]">
+        <p className="mb-[16px] font-['Inter'] text-[13px] text-[#9aa3ad]">
           This file is {sizeKB > 1024 ? `${sizeMB} MB` : `${sizeKB} KB`}. It may be slow to edit.
           Open anyway?
         </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[4px] px-3 py-1 font-['Inter'] text-[12px] text-[#889] hover:text-[#ccd]"
+            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={onContinue}
-            className="rounded-[4px] bg-yellow-500/20 border border-yellow-500/30 px-3 py-1 font-['Inter'] text-[12px] font-medium text-yellow-400"
+            className="rounded-[8px] bg-[#fa0]/15 border border-[#fa0]/30 px-[14px] py-[6px] font-['Inter'] text-[12px] font-semibold text-[#fa0] hover:bg-[#fa0]/25 transition-colors"
           >
             Open
           </button>
@@ -427,7 +425,10 @@ async function collectEntriesFlat(
   await new Promise<void>((res) => {
     const readBatch = () =>
       reader.readEntries((batch) => {
-        if (batch.length === 0) { res(); return; }
+        if (batch.length === 0) {
+          res();
+          return;
+        }
         allEntries.push(...batch);
         readBatch();
       });
@@ -595,9 +596,9 @@ function TreeNodeItem({
       <div
         className={`flex min-h-[32px] items-center gap-1 cursor-pointer select-none py-0.5 pr-2 font-['Inter'] text-[13px] transition-colors ${
           isSelected
-            ? 'bg-[rgba(170,255,0,0.08)] text-[#f0f0f0]'
+            ? 'bg-[rgba(179,229,2,0.08)] text-[#f0f0f0]'
             : isDragOver
-              ? 'bg-[rgba(170,255,0,0.12)]'
+              ? 'bg-[rgba(179,229,2,0.12)]'
               : 'hover:bg-[rgba(255,255,255,0.04)] active:bg-[rgba(255,255,255,0.06)]'
         } ${draggingPath === fullPath ? 'opacity-40' : ''}`}
         style={{ paddingLeft }}
@@ -642,7 +643,7 @@ function TreeNodeItem({
               if (e.key === 'Escape') onRenameConfirm(fullPath, node.entry.name);
             }}
             onBlur={() => onRenameConfirm(fullPath, renameValue)}
-            className="flex-1 rounded-[3px] border border-[rgba(255,255,255,0.15)] bg-[#0a0a0f] px-1 py-px font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+            className="flex-1 rounded-[3px] border border-white/[0.12] bg-[#0a0a0f] px-1 py-px font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
             data-testid="rename-input"
             autoFocus
             onClick={(e) => e.stopPropagation()}
@@ -651,7 +652,7 @@ function TreeNodeItem({
           <span className="truncate text-[#ccd]">{node.entry.name}</span>
         )}
         {!isDir && !isRenaming && node.entry.size > 0 && (
-          <span className="ml-auto shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#556]">
+          <span className="ml-auto shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
             {node.entry.size < 1024
               ? `${node.entry.size}B`
               : node.entry.size < 1048576
@@ -664,7 +665,7 @@ function TreeNodeItem({
         <div>
           {node.children.length === 0 && (
             <div
-              className="py-1 font-['Inter'] text-[11px] text-[#556]"
+              className="py-1 font-['Inter'] text-[11px] text-[#5a626c]"
               style={{ paddingLeft: paddingLeft + 32 }}
             >
               Empty
@@ -721,7 +722,7 @@ function Breadcrumb({
     >
       <button
         onClick={() => onNavigate('')}
-        className={`shrink-0 hover:text-[#f0f0f0] transition-colors ${currentPath === '' ? 'text-[#af0]' : 'text-[#889]'}`}
+        className={`shrink-0 hover:text-[#f0f0f0] transition-colors ${currentPath === '' ? 'text-[#b3e502]' : 'text-[#9aa3ad]'}`}
       >
         root
       </button>
@@ -730,7 +731,7 @@ function Breadcrumb({
           <BreadcrumbIcon />
           <button
             onClick={() => onNavigate(parts.slice(0, i + 1).join('/'))}
-            className={`hover:text-[#f0f0f0] transition-colors ${i === parts.length - 1 ? 'text-[#af0]' : 'text-[#889]'}`}
+            className={`hover:text-[#f0f0f0] transition-colors ${i === parts.length - 1 ? 'text-[#b3e502]' : 'text-[#9aa3ad]'}`}
           >
             {part}
           </button>
@@ -772,12 +773,12 @@ function SearchBar({
           if (e.key === 'Escape') onClose();
         }}
         placeholder="Search files... (Ctrl+P)"
-        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.1)] bg-[#0a0a0f] px-3 py-1.5 font-['Inter'] text-[13px] text-[#f0f0f0] outline-none focus:border-[rgba(255,255,255,0.2)]"
+        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.1)] bg-[#0a0a0f] px-3 py-1.5 font-['Inter'] text-[13px] text-[#f0f0f0] outline-none focus:border-white/[0.14]"
         data-testid="search-input"
       />
       {results.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[200px] overflow-y-auto rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[#14141e] py-1 shadow-xl"
+          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[200px] overflow-y-auto rounded-[8px] border border-white/[0.08] bg-[#111118] py-1 shadow-xl backdrop-blur-md"
           data-testid="search-results"
         >
           {results.map((r) => (
@@ -794,7 +795,7 @@ function SearchBar({
                 />
               )}
               <span className="font-['Inter'] text-[12px] text-[#ccd]">{r.name}</span>
-              <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#556] truncate">
+              <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#5a626c] truncate">
                 {r.path}
               </span>
             </button>
@@ -811,16 +812,16 @@ function UploadProgress({ progress, label }: { progress: number; label: string }
   if (progress >= 100 || progress <= 0) return null;
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-[220px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] p-3"
+      className="fixed bottom-4 right-4 z-50 w-[220px] rounded-[6px] border border-white/[0.07] bg-[#111118] p-3"
       data-testid="upload-progress"
     >
-      <div className="mb-1 flex items-center justify-between font-['Inter'] text-[11px] text-[#889]">
+      <div className="mb-1 flex items-center justify-between font-['Inter'] text-[11px] text-[#9aa3ad]">
         <span>Uploading{label ? '...' : '...'}</span>
-        {label && <span className="text-[#af0]">{label}</span>}
+        {label && <span className="text-[#b3e502]">{label}</span>}
       </div>
       <div className="h-1 rounded-full bg-[rgba(255,255,255,0.08)] overflow-hidden">
         <div
-          className="h-full rounded-full bg-[#af0] transition-all"
+          className="h-full rounded-full bg-[#b3e502] transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -887,16 +888,20 @@ export interface FileTreeProps {
 }
 
 const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { projectId, filesApiBase, onFileOpen, isMobile = false, onBack, onCopy: _onCopy, onPaste: _onPaste, clipboard: _clipboard },
+  {
+    projectId,
+    filesApiBase,
+    onFileOpen,
+    isMobile = false,
+    onBack,
+    onCopy: _onCopy,
+    onPaste: _onPaste,
+    clipboard: _clipboard,
+  },
   ref,
 ) {
   const base = filesApiBase ?? `/api/projects/${projectId}/files`;
-  const {
-    clipboard: globalClipboard,
-    setCopy,
-    setCut,
-    paste: globalPaste,
-  } = useGlobalClipboard();
+  const { clipboard: globalClipboard, setCopy, setCut, paste: globalPaste } = useGlobalClipboard();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -944,9 +949,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   /* ── Fetch directory ── */
   const fetchDir = useCallback(
     async (dirPath: string): Promise<TreeNode[]> => {
-      const entries = await apiFetch<FileEntry[]>(
-        `${base}?path=${encodeURIComponent(dirPath)}`,
-      );
+      const entries = await apiFetch<FileEntry[]>(`${base}?path=${encodeURIComponent(dirPath)}`);
       return entries.map((e) => ({
         entry: e,
         children: e.type === 'directory' ? null : null,
@@ -1162,10 +1165,9 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       } else {
         // Directory: hard-delete immediately
         try {
-          await apiFetch(
-            `${base}?path=${encodeURIComponent(path)}&force=true`,
-            { method: 'DELETE' },
-          );
+          await apiFetch(`${base}?path=${encodeURIComponent(path)}&force=true`, {
+            method: 'DELETE',
+          });
         } catch (err) {
           setError((err as ApiError).message || 'Failed to delete');
           return;
@@ -1194,10 +1196,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           });
         } else {
           // Text: write stored content back to original path
-          await apiFetch(
-            `${base}/write?path=${encodeURIComponent(item.originalPath)}`,
-            { method: 'PUT', body: JSON.stringify({ content: item.content ?? '' }) },
-          );
+          await apiFetch(`${base}/write?path=${encodeURIComponent(item.originalPath)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ content: item.content ?? '' }),
+          });
         }
         setTrashItems((prev) => prev.filter((t) => t.originalPath !== item.originalPath));
         await loadRoot();
@@ -1238,9 +1240,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       setUploadProgress(5);
       setUploadLabel(`0 / ${total}`);
       for (const { file, subPath } of tasks) {
-        const targetDir = subPath
-          ? baseDir ? `${baseDir}/${subPath}` : subPath
-          : baseDir;
+        const targetDir = subPath ? (baseDir ? `${baseDir}/${subPath}` : subPath) : baseDir;
         const formData = new FormData();
         formData.append('file', file);
         try {
@@ -1262,7 +1262,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         setUploadProgress(Math.round((done / total) * 90) + 5);
       }
       setUploadProgress(100);
-      setTimeout(() => { setUploadProgress(0); setUploadLabel(''); }, 1000);
+      setTimeout(() => {
+        setUploadProgress(0);
+        setUploadLabel('');
+      }, 1000);
       await loadRoot();
     },
     [base, loadRoot],
@@ -1278,12 +1281,9 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     async (filePath: string) => {
       const token = getToken();
       try {
-        const response = await fetch(
-          `${base}/download?path=${encodeURIComponent(filePath)}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
+        const response = await fetch(`${base}/download?path=${encodeURIComponent(filePath)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!response.ok) {
           const data = await response.json().catch(() => ({ error: 'Download failed' }));
           setError((data as { error?: string }).error || 'Download failed');
@@ -1364,7 +1364,6 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     [draggingPath, handleDropEntries, handleMoveFile],
   );
 
-
   /* ── Inline search: filter visible loaded nodes ── */
   const visibleTree = useMemo(() => {
     const q = searchValue.trim().toLowerCase();
@@ -1413,7 +1412,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8" data-testid="filetree-loading">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#af0] border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
       </div>
     );
   }
@@ -1424,7 +1423,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         <p className="font-['Inter'] text-[13px] text-red-400">{error}</p>
         <button
           onClick={loadRoot}
-          className="rounded-[4px] border border-[rgba(255,255,255,0.1)] px-3 py-1 font-['Inter'] text-[12px] text-[#ccd] hover:border-[rgba(255,255,255,0.2)]"
+          className="rounded-[4px] border border-[rgba(255,255,255,0.1)] px-3 py-1 font-['Inter'] text-[12px] text-[#ccd] hover:border-white/[0.14]"
         >
           Retry
         </button>
@@ -1438,22 +1437,22 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     <div ref={containerRef} className="flex h-full flex-col" data-testid="filetree-container">
       {/* Clipboard indicator */}
       {globalClipboard && (
-        <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(170,255,0,0.06)] px-3 py-1.5">
-          <span className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#af0]">
+        <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(179,229,2,0.06)] px-3 py-1.5">
+          <span className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#b3e502]">
             {globalClipboard.fileName} {globalClipboard.action}
           </span>
-          <span className="shrink-0 font-['Inter'] text-[10px] text-[#556]">
+          <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">
             {isMobile ? 'hold to paste' : 'right-click dir to paste'}
           </span>
         </div>
       )}
 
       {/* Header with search toggle & upload */}
-      <div className="flex min-h-[40px] items-center gap-2 border-b border-[rgba(255,255,255,0.08)] px-3 py-1.5">
+      <div className="flex min-h-[40px] items-center gap-2 border-b border-white/[0.07] px-3 py-1.5">
         {isMobile && onBack && (
           <button
             onClick={onBack}
-            className="mr-1 font-['Inter'] text-[12px] text-[#889] active:text-[#ccd]"
+            className="mr-1 font-['Inter'] text-[12px] text-[#9aa3ad] active:text-[#ccd]"
           >
             Back
           </button>
@@ -1464,13 +1463,13 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           placeholder="Filter files..."
-          className="min-h-[30px] flex-1 rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-transparent px-2 py-1 font-['Inter'] text-[12px] text-[#ccd] placeholder-[#445] outline-none focus:border-[rgba(255,255,255,0.2)]"
+          className="min-h-[30px] flex-1 rounded-[4px] border border-white/[0.07] bg-transparent px-2 py-1 font-['Inter'] text-[12px] text-[#ccd] placeholder-[#445] outline-none focus:border-white/[0.14]"
           data-testid="search-input"
         />
         {searchValue && (
           <button
             onClick={() => setSearchValue('')}
-            className="shrink-0 px-1 font-['Inter'] text-[12px] text-[#556] hover:text-[#889]"
+            className="shrink-0 px-1 font-['Inter'] text-[12px] text-[#5a626c] hover:text-[#9aa3ad]"
           >
             ×
           </button>
@@ -1488,7 +1487,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 : currentPath,
             })
           }
-          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#af0]"
+          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#b3e502]"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
@@ -1512,7 +1511,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 : currentPath,
             })
           }
-          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#af0]"
+          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#b3e502]"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
@@ -1567,8 +1566,8 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
             }}
             className={`flex min-h-[30px] items-center gap-[5px] rounded-[4px] border px-[8px] font-['Inter'] text-[12px] font-medium transition-colors ${
               uploadMenuOpen
-                ? 'border-[rgba(170,255,0,0.4)] bg-[rgba(170,255,0,0.08)] text-[#af0]'
-                : 'border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.2)] hover:text-[#ccd]'
+                ? 'border-[rgba(179,229,2,0.4)] bg-[rgba(179,229,2,0.08)] text-[#b3e502]'
+                : 'border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb]'
             }`}
           >
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -1591,25 +1590,51 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
 
           {/* Desktop dropdown */}
           {uploadMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%+4px)] z-50 hidden w-[168px] rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#141420] py-1 shadow-xl sm:block">
+            <div className="absolute right-0 top-[calc(100%+4px)] z-50 hidden w-[168px] rounded-[8px] border border-white/[0.08] bg-[#111118] py-1 shadow-xl backdrop-blur-md sm:block">
               <button
                 className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-                onClick={() => { fileInputRef.current?.click(); setUploadMenuOpen(false); }}
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  setUploadMenuOpen(false);
+                }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 2h5l3 3v7a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" />
+                  <path
+                    d="M3 2h5l3 3v7a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
                   <path d="M8 2v3h3" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M7 6v4M5.5 8l1.5-2 1.5 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M7 6v4M5.5 8l1.5-2 1.5 2"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Files
               </button>
               <button
                 className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-                onClick={() => { folderInputRef.current?.click(); setUploadMenuOpen(false); }}
+                onClick={() => {
+                  folderInputRef.current?.click();
+                  setUploadMenuOpen(false);
+                }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M1.5 4A1.5 1.5 0 013 2.5h3.172a1 1 0 01.707.293L8 4H12a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5.5A1.5 1.5 0 011.5 4z" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M7 6.5v3M5.5 8L7 6.5 8.5 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M1.5 4A1.5 1.5 0 013 2.5h3.172a1 1 0 01.707.293L8 4H12a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5.5A1.5 1.5 0 011.5 4z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                  <path
+                    d="M7 6.5v3M5.5 8L7 6.5 8.5 8"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Folder
               </button>
@@ -1625,8 +1650,11 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
 
       {/* Tree — also an external drop zone for files/folders */}
       <div
-        className={`flex-1 overflow-y-auto py-1 ${draggingPath ? 'outline-dashed outline-1 outline-[rgba(170,255,0,0.15)]' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = draggingPath ? 'move' : 'copy'; }}
+        className={`flex-1 overflow-y-auto py-1 ${draggingPath ? 'outline-dashed outline-1 outline-[rgba(179,229,2,0.15)]' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = draggingPath ? 'move' : 'copy';
+        }}
         onDragEnter={(e) => e.preventDefault()}
         onDrop={(e) => handleDrop(e, currentPath)}
         onContextMenu={(e) => {
@@ -1638,7 +1666,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       >
         {visibleTree.length === 0 && (
           <div
-            className="px-3 py-4 text-center font-['Inter'] text-[13px] text-[#556]"
+            className="px-3 py-4 text-center font-['Inter'] text-[13px] text-[#5a626c]"
             data-testid="filetree-empty"
           >
             {searchValue ? 'No matches' : 'Empty project'}
@@ -1734,48 +1762,80 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           onClick={() => setUploadMenuOpen(false)}
         >
           <div
-            className="rounded-t-[18px] border-t border-[rgba(255,255,255,0.08)] bg-[#111118] px-4 pb-8 pt-4"
+            className="rounded-t-[18px] border-t border-white/[0.07] bg-[#111118] px-4 pb-8 pt-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle bar */}
             <div className="mx-auto mb-4 h-[4px] w-[36px] rounded-full bg-[rgba(255,255,255,0.12)]" />
-            <p className="mb-3 text-center font-['Inter'] text-[12px] text-[#556]">Upload para</p>
-            <p className="mb-4 text-center font-['Inter'] text-[13px] font-medium text-[#889] truncate">
+            <p className="mb-3 text-center font-['Inter'] text-[12px] text-[#5a626c]">
+              Upload para
+            </p>
+            <p className="mb-4 text-center font-['Inter'] text-[13px] font-medium text-[#9aa3ad] truncate">
               /{uploadTargetDir || 'root'}
             </p>
             <button
               className="mb-2 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
-              onClick={() => { fileInputRef.current?.click(); setUploadMenuOpen(false); }}
+              onClick={() => {
+                fileInputRef.current?.click();
+                setUploadMenuOpen(false);
+              }}
             >
-              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(170,255,0,0.1)]">
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(179,229,2,0.1)]">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M4 3h7l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#af0" strokeWidth="1.4" />
-                  <path d="M11 3v4h4" stroke="#af0" strokeWidth="1.4" />
-                  <path d="M9 8.5v5M6.5 11l2.5-2.5 2.5 2.5" stroke="#af0" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M4 3h7l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"
+                    stroke="#b3e502"
+                    strokeWidth="1.4"
+                  />
+                  <path d="M11 3v4h4" stroke="#b3e502" strokeWidth="1.4" />
+                  <path
+                    d="M9 8.5v5M6.5 11l2.5-2.5 2.5 2.5"
+                    stroke="#b3e502"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
               <div className="text-left">
                 <div className="font-semibold">Upload arquivos</div>
-                <div className="mt-0.5 text-[12px] font-normal text-[#556]">Selecione um ou mais arquivos</div>
+                <div className="mt-0.5 text-[12px] font-normal text-[#5a626c]">
+                  Selecione um ou mais arquivos
+                </div>
               </div>
             </button>
             <button
               className="mb-3 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
-              onClick={() => { folderInputRef.current?.click(); setUploadMenuOpen(false); }}
+              onClick={() => {
+                folderInputRef.current?.click();
+                setUploadMenuOpen(false);
+              }}
             >
-              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(170,255,0,0.1)]">
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(179,229,2,0.1)]">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M2 5.5A2 2 0 014 3.5h4.172a1 1 0 01.707.293L10.5 5.5H15a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V5.5z" stroke="#af0" strokeWidth="1.4" />
-                  <path d="M9 8v5M6.5 10.5L9 8l2.5 2.5" stroke="#af0" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M2 5.5A2 2 0 014 3.5h4.172a1 1 0 01.707.293L10.5 5.5H15a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V5.5z"
+                    stroke="#b3e502"
+                    strokeWidth="1.4"
+                  />
+                  <path
+                    d="M9 8v5M6.5 10.5L9 8l2.5 2.5"
+                    stroke="#b3e502"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
               <div className="text-left">
                 <div className="font-semibold">Upload pasta</div>
-                <div className="mt-0.5 text-[12px] font-normal text-[#556]">Mantém a estrutura de diretórios</div>
+                <div className="mt-0.5 text-[12px] font-normal text-[#5a626c]">
+                  Mantém a estrutura de diretórios
+                </div>
               </div>
             </button>
             <button
-              className="w-full rounded-[12px] py-3 font-['Inter'] text-[14px] text-[#556] active:text-[#889] transition-colors"
+              className="w-full rounded-[12px] py-3 font-['Inter'] text-[14px] text-[#5a626c] active:text-[#9aa3ad] transition-colors"
               onClick={() => setUploadMenuOpen(false)}
             >
               Cancelar
@@ -1791,14 +1851,14 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         <div className="shrink-0 border-t border-[rgba(255,255,255,0.06)]">
           <button
             onClick={() => setShowTrash((v) => !v)}
-            className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[rgba(255,255,255,0.02)]"
+            className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/[0.02]"
           >
             <svg
               width="10"
               height="10"
               viewBox="0 0 10 10"
               fill="none"
-              className={`shrink-0 text-[#556] transition-transform ${showTrash ? 'rotate-90' : ''}`}
+              className={`shrink-0 text-[#5a626c] transition-transform ${showTrash ? 'rotate-90' : ''}`}
             >
               <path
                 d="M3 1.5L7 5L3 8.5"
@@ -1812,7 +1872,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               height="11"
               viewBox="0 0 11 11"
               fill="none"
-              className="shrink-0 text-[#556]"
+              className="shrink-0 text-[#5a626c]"
             >
               <path
                 d="M2 3h7M3.5 3V2a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1M4.5 5v3.5M6.5 5v3.5M2.5 3l.5 5.5a1 1 0 001 1h3a1 1 0 001-1L9 3"
@@ -1820,7 +1880,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 strokeWidth="1"
               />
             </svg>
-            <span className="font-['Inter'] text-[10px] text-[#556]">
+            <span className="font-['Inter'] text-[10px] text-[#5a626c]">
               Trash ({trashItems.length})
             </span>
           </button>
@@ -1829,20 +1889,20 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               {trashItems.map((item) => (
                 <div
                   key={item.originalPath}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-[rgba(255,255,255,0.02)]"
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.02]"
                 >
                   <span
-                    className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#889]"
+                    className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#9aa3ad]"
                     title={item.originalPath}
                   >
                     {item.name}
                   </span>
-                  <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-[#445]">
+                  <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-[#5a626c]">
                     {item.deletedAt.toLocaleTimeString()}
                   </span>
                   <button
                     onClick={() => handleRestore(item)}
-                    className="shrink-0 rounded-[3px] border border-[rgba(255,255,255,0.08)] px-1.5 py-0.5 font-['Inter'] text-[10px] text-[#889] hover:border-[rgba(170,255,0,0.3)] hover:text-[#af0]"
+                    className="shrink-0 rounded-[3px] border border-white/[0.07] px-1.5 py-0.5 font-['Inter'] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
                   >
                     Restore
                   </button>
@@ -1852,7 +1912,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                         prev.filter((t) => t.originalPath !== item.originalPath),
                       )
                     }
-                    className="shrink-0 font-['Inter'] text-[10px] text-[#445] hover:text-red-400"
+                    className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c] hover:text-red-400"
                   >
                     ×
                   </button>
@@ -1870,7 +1930,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           data-testid="filetree-error-banner"
         >
           {error}
-          <button onClick={() => setError(null)} className="ml-2 text-[#889] hover:text-[#ccd]">
+          <button
+            onClick={() => setError(null)}
+            className="ml-2 text-[#9aa3ad] hover:text-[#e6e8eb]"
+          >
             Dismiss
           </button>
         </div>

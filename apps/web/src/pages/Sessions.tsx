@@ -97,7 +97,7 @@ function getStatusStyle(status: string): StatusStyle {
     dotGlow: 'none',
     badgeBg: 'rgba(68,85,102,0.1)',
     badgeBorder: 'rgba(68,85,102,0.2)',
-    badgeText: '#889',
+    badgeText: '#9aa3ad',
     label: status,
     pulse: false,
   };
@@ -125,11 +125,13 @@ function SessionCard({
   projectName,
   onClick,
   onRename,
+  index = 0,
 }: {
   session: SessionItem & { projectId: string; projectName: string };
   projectName: string;
   onClick: () => void;
   onRename: (sessionId: string, name: string) => void;
+  index?: number;
 }) {
   const s = getStatusStyle(session.status);
   const [renaming, setRenaming] = useState(false);
@@ -173,10 +175,19 @@ function SessionCard({
   );
 
   return (
-    <div className="group relative rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[#111118] p-[18px] hover:border-[rgba(255,255,255,0.14)] hover:bg-[rgba(255,255,255,0.02)] transition-all duration-150">
+    <div
+      onClick={() => !renaming && onClick()}
+      style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+      className="kb-rise group relative isolate cursor-pointer overflow-hidden rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[18px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)]"
+    >
+      {/* Live accent edge — fades in on hover */}
+      <span
+        aria-hidden
+        className="absolute inset-y-[14px] left-0 w-[2px] rounded-r-full bg-[#b3e502] opacity-0 transition-opacity duration-200 group-hover:opacity-70"
+      />
       {/* Top: project label + status badge */}
       <div className="mb-[10px] flex items-center justify-between gap-[8px]">
-        <span className="truncate font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#556] group-hover:text-[#778] transition-colors">
+        <span className="truncate font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#5a626c] group-hover:text-[#778] transition-colors">
           {projectName}
         </span>
         <span
@@ -204,7 +215,7 @@ function SessionCard({
           onKeyDown={handleKeyDown}
           onBlur={commitRename}
           onClick={(e) => e.stopPropagation()}
-          className="w-full rounded-[6px] border border-[rgba(170,255,0,0.3)] bg-[#0a0a0f] px-[8px] py-[4px] font-['Inter'] text-[15px] font-semibold text-[#f0f0f0] outline-none"
+          className="w-full rounded-[6px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[8px] py-[4px] font-['Inter'] text-[15px] font-semibold text-[#f0f0f0] outline-none"
         />
       ) : (
         <div className="flex items-center gap-[6px]">
@@ -214,7 +225,7 @@ function SessionCard({
           {/* Pencil: always visible on mobile (touch), hover on desktop */}
           <button
             onClick={startRename}
-            className="flex size-[22px] shrink-0 items-center justify-center rounded-[4px] text-[#445] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.08)] hover:text-[#889] transition-all"
+            className="flex size-[22px] shrink-0 items-center justify-center rounded-[4px] text-[#5a626c] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.08)] hover:text-[#9aa3ad] transition-all"
             title="Renomear sessão"
           >
             <PencilIcon />
@@ -224,16 +235,22 @@ function SessionCard({
 
       {/* Bottom: time + open */}
       <div className="mt-[12px] flex items-center justify-between">
-        <span className="font-['JetBrains_Mono'] text-[11px] text-[#445]">
+        <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
           {formatTime(session.createdAt)}
         </span>
         {!renaming && (
-          <button
-            onClick={onClick}
-            className="font-['Inter'] text-[12px] font-medium text-[#445] hover:text-[#af0] transition-colors"
-          >
-            Open →
-          </button>
+          <span className="flex h-[26px] items-center gap-[5px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[10px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all group-hover:border-[#b3e502]/30 group-hover:text-[#b3e502]">
+            Open
+            <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
+              <path
+                d="M1 10L10 1M10 1H3.5M10 1v6.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
         )}
       </div>
     </div>
@@ -244,7 +261,7 @@ function SessionCard({
 
 function SkeletonCard() {
   return (
-    <div className="h-[116px] animate-pulse rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-[#111118]" />
+    <div className="h-[116px] animate-pulse rounded-[14px] border border-white/[0.06] bg-white/[0.03]" />
   );
 }
 
@@ -268,8 +285,8 @@ function ProjectPill({
       onClick={onClick}
       className={`flex shrink-0 items-center gap-[5px] rounded-full px-[14px] py-[7px] font-['Inter'] text-[13px] font-medium transition-all duration-150 ${
         isSelected
-          ? 'bg-[#af0] text-[#0a0a0f]'
-          : 'border border-[rgba(255,255,255,0.1)] bg-[#111118] text-[#889] hover:border-[rgba(255,255,255,0.18)] hover:text-[#ccd]'
+          ? 'bg-[#b3e502] text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)]'
+          : 'border border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:text-[#e6e8eb]'
       }`}
     >
       {label}
@@ -329,24 +346,32 @@ function PlusIcon() {
 function EmptyState() {
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col items-center justify-center py-[80px] text-center">
-      <div className="mb-[16px] flex size-[60px] items-center justify-center rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#111118]">
+    <div className="kb-rise flex flex-col items-center justify-center py-[80px] text-center">
+      <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
         <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
-          <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="#445" strokeWidth="1.25" />
-          <path d="M5 13.5h6" stroke="#445" strokeWidth="1.25" strokeLinecap="round" />
-          <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="#445" strokeWidth="1.25" />
+          <rect
+            x="1.5"
+            y="2.5"
+            width="13"
+            height="9"
+            rx="1.5"
+            stroke="#b3e502"
+            strokeWidth="1.25"
+          />
+          <path d="M5 13.5h6" stroke="#b3e502" strokeWidth="1.25" strokeLinecap="round" />
+          <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="#b3e502" strokeWidth="1.25" />
         </svg>
       </div>
-      <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">
+      <h3 className="font-['Syne'] text-[20px] font-bold text-white mb-[6px]">
         Nothing running yet
       </h3>
-      <p className="mt-[6px] max-w-[260px] font-['Inter'] text-[13px] leading-relaxed text-[#889]">
+      <p className="max-w-[260px] font-['Inter'] text-[13px] leading-relaxed text-[#5a626c]">
         Open a project and start a session. Run multiple sessions across projects to parallelize
         your work.
       </p>
       <button
         onClick={() => navigate('/projects')}
-        className="mt-[20px] rounded-[8px] bg-[#af0] px-[20px] py-[10px] font-['Inter'] text-[14px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors"
+        className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
       >
         Go to Projects
       </button>
@@ -438,7 +463,7 @@ export default function SessionsPage() {
         );
         window.dispatchEvent(new Event('sessions-changed'));
         const projectName = groups.find((g) => g.project.id === projectId)?.project.name ?? '';
-        navigate(`/session/${projectId}/${session.sessionId}`, {
+        navigate(`/sessions/${projectId}/${session.sessionId}`, {
           state: { projectName },
         });
       } catch {
@@ -515,12 +540,51 @@ export default function SessionsPage() {
   /* ── Render ── */
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0f]">
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f] lg:flex-row">
+      {/* Atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-180px',
+            left: '-120px',
+            width: 620,
+            height: 620,
+            opacity: 0.5,
+            background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
+          }}
+        />
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-220px',
+            left: '38%',
+            width: 680,
+            height: 680,
+            opacity: 0.4,
+            animationDelay: '-7s',
+            background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
+          }}
+        />
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-160px',
+            right: '-160px',
+            width: 560,
+            height: 560,
+            opacity: 0.38,
+            animationDelay: '-13s',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
+          }}
+        />
+        <div className="kb-grid" />
+      </div>
       {/* ══════ Desktop left panel ══════ */}
-      <aside className="hidden lg:flex w-[220px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.08)] bg-[#0d0d14]">
+      <aside className="relative z-10 hidden lg:flex w-[220px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0a0f]">
         {/* Panel header: global counts */}
-        <div className="px-[16px] py-[18px] border-b border-[rgba(255,255,255,0.08)]">
-          <h2 className="font-['Inter'] text-[10.5px] font-semibold uppercase tracking-[0.9px] text-[#445]">
+        <div className="px-[16px] py-[18px] border-b border-white/[0.06]">
+          <h2 className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
             Projects
           </h2>
           <div className="mt-[10px] flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
@@ -538,7 +602,7 @@ export default function SessionsPage() {
               </span>
             )}
             {globalActive === 0 && globalWaiting === 0 && (
-              <span className="font-['Inter'] text-[12px] text-[#445]">none running</span>
+              <span className="font-['Inter'] text-[12px] text-[#5a626c]">none running</span>
             )}
           </div>
         </div>
@@ -548,14 +612,14 @@ export default function SessionsPage() {
           onClick={() => setSelectedProject(null)}
           className={`flex items-center justify-between px-[14px] py-[10px] font-['Inter'] text-[13px] font-medium transition-colors ${
             selectedProject === null
-              ? 'border-l-2 border-[#af0] bg-[rgba(170,255,0,0.07)] text-[#f0f0f0]'
-              : 'text-[#889] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#ccd]'
+              ? 'border-l-2 border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
+              : 'text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#e6e8eb]'
           }`}
         >
           <span>All Sessions</span>
           <span
             className={`font-['JetBrains_Mono'] text-[11px] ${
-              selectedProject === null ? 'text-[#af0]' : 'text-[#445]'
+              selectedProject === null ? 'text-[#b3e502]' : 'text-[#5a626c]'
             }`}
           >
             {allActiveSessions.length}
@@ -588,8 +652,8 @@ export default function SessionsPage() {
                     onClick={() => setSelectedProject(isSelected ? null : project.id)}
                     className={`flex flex-1 items-center justify-between px-[14px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
                       isSelected
-                        ? 'border-l-2 border-[#af0] bg-[rgba(170,255,0,0.07)] text-[#f0f0f0]'
-                        : 'text-[#889] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#ccd]'
+                        ? 'border-l-2 border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
+                        : 'text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#e6e8eb]'
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate text-left">{project.name}</span>
@@ -615,11 +679,11 @@ export default function SessionsPage() {
                   <button
                     onClick={() => handleCreate(project.id)}
                     disabled={creating === project.id}
-                    className="flex w-[32px] shrink-0 items-center justify-center text-[#445] hover:bg-[rgba(170,255,0,0.08)] hover:text-[#af0] transition-all disabled:opacity-40"
+                    className="flex w-[32px] shrink-0 items-center justify-center text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all disabled:opacity-40"
                     title={`New session in ${project.name}`}
                   >
                     {creating === project.id ? (
-                      <div className="size-[10px] animate-spin rounded-full border border-[#af0] border-t-transparent" />
+                      <div className="size-[10px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
                     ) : (
                       <PlusIcon />
                     )}
@@ -632,13 +696,13 @@ export default function SessionsPage() {
       </aside>
 
       {/* ══════ Main content ══════ */}
-      <div className="flex flex-1 min-w-0 flex-col">
+      <div className="relative z-10 flex flex-1 min-w-0 flex-col">
         {/* Sticky header */}
-        <header className="sticky top-0 z-10 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]/95 backdrop-blur-sm px-[16px] py-[13px] sm:px-[24px]">
+        <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md px-[16px] py-[13px] sm:px-[24px]">
           <div className="flex items-center justify-between gap-[12px]">
             {/* Title + live counts */}
             <div className="flex items-center gap-[10px] min-w-0">
-              <h1 className="shrink-0 font-['Inter'] text-[16px] font-semibold tracking-[-0.16px] text-[#f0f0f0]">
+              <h1 className="shrink-0 font-['Syne'] text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
                 {selectedProjectName ?? 'Sessions'}
               </h1>
               {!loading && (
@@ -675,7 +739,7 @@ export default function SessionsPage() {
               {/* Canvas — navigates in the same tab */}
               <button
                 onClick={() => navigate('/canvas')}
-                className="flex items-center gap-[5px] rounded-[7px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+                className="flex items-center gap-[5px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] transition-all"
                 title="Abrir canvas"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -722,7 +786,7 @@ export default function SessionsPage() {
               <button
                 onClick={() => fetchAll(true)}
                 disabled={refreshing}
-                className="flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-40"
+                className="flex size-[32px] shrink-0 items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:text-[#e6e8eb] transition-all disabled:opacity-40"
                 aria-label="Refresh"
               >
                 <RefreshIcon spinning={refreshing} />
@@ -795,7 +859,7 @@ export default function SessionsPage() {
                 <EmptyState />
               ) : filteredSessions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-[64px] text-center">
-                  <p className="font-['Inter'] text-[14px] text-[#889]">
+                  <p className="font-['Inter'] text-[14px] text-[#9aa3ad]">
                     No active sessions in this project
                   </p>
                   <div className="mt-[14px] flex flex-wrap justify-center gap-[10px]">
@@ -803,14 +867,14 @@ export default function SessionsPage() {
                       <button
                         onClick={() => handleCreate(selectedProject)}
                         disabled={!!creating}
-                        className="rounded-[8px] bg-[#af0] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors disabled:opacity-50"
+                        className="rounded-[8px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-50"
                       >
                         {creating ? 'Starting…' : '+ New Session'}
                       </button>
                     )}
                     <button
                       onClick={() => setSelectedProject(null)}
-                      className="rounded-[8px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors"
+                      className="rounded-[8px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors"
                     >
                       Show all
                     </button>
@@ -818,13 +882,14 @@ export default function SessionsPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredSessions.map((s) => (
+                  {filteredSessions.map((s, i) => (
                     <SessionCard
                       key={s.sessionId}
+                      index={i}
                       session={s}
                       projectName={s.projectName}
                       onClick={() =>
-                        navigate(`/session/${s.projectId}/${s.sessionId}`, {
+                        navigate(`/sessions/${s.projectId}/${s.sessionId}`, {
                           state: { sessionName: s.name, projectName: s.projectName },
                         })
                       }
@@ -843,7 +908,7 @@ export default function SessionsPage() {
             <button
               onClick={() => handleCreate(selectedProject)}
               disabled={!!creating}
-              className="flex items-center gap-[8px] rounded-full bg-[#af0] px-[18px] py-[12px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-lg shadow-[rgba(170,255,0,0.2)] hover:bg-[#9e0] active:scale-[0.97] transition-all disabled:opacity-50"
+              className="flex items-center gap-[8px] rounded-full bg-[#b3e502] px-[18px] py-[12px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] hover:bg-[#c2f516] active:scale-[0.97] transition-all disabled:opacity-50"
             >
               {creating ? (
                 <div className="size-[14px] animate-spin rounded-full border-2 border-[#0a0a0f] border-t-transparent" />

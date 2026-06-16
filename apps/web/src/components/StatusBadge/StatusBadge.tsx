@@ -32,7 +32,7 @@ export interface StatusBadgeProps {
 const STATUS_COLORS: Record<BadgeStatus, string> = {
   active: '#2d8',
   waiting: '#fa0',
-  finished: '#445',
+  finished: '#5a626c',
   emergency: '#f54',
 };
 
@@ -78,7 +78,7 @@ export default function StatusBadge({
 
     const originalTitle = document.title;
     if (resolvedStatus === 'waiting' && !isVisible) {
-      document.title = '⏳ Aguardando — OpenCode Dashboard';
+      document.title = '⏳ Aguardando — ALF code';
     } else {
       document.title = originalTitle;
     }

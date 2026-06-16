@@ -39,6 +39,16 @@ function SessionsIcon() {
   );
 }
 
+function TasksIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="6.5" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="11.5" y="2" width="3" height="12" rx="1" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
 function FilesIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -123,6 +133,37 @@ function HamburgerIcon() {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+/* ── ALF brand mark — Alien Life Form on a lime glass tile ── */
+
+export function AlfLogo({ size = 30 }: { size?: number }) {
+  const glyph = Math.round(size * 0.66);
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-[9px] bg-[#b3e502] shadow-[0_4px_14px_-4px_rgba(179,229,2,0.6)]"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        role="img"
+        aria-label="ALF code logo"
+        width={glyph}
+        height={glyph}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* friendly alien head — pointed chin, the Alien Life Form */}
+        <path
+          d="M12 2.5c4.2 0 6.8 3 6.8 6.9 0 3-1.6 5-3.2 6.5-1.1 1-1.7 1.9-1.7 3.2 0 1.5-.8 2.4-1.9 2.4s-1.9-.9-1.9-2.4c0-1.3-.6-2.2-1.7-3.2C6.8 14.4 5.2 12.4 5.2 9.4 5.2 5.5 7.8 2.5 12 2.5Z"
+          fill="#0a0a0f"
+        />
+        {/* big almond eyes, lime cut-outs */}
+        <ellipse cx="9.4" cy="9.6" rx="1.7" ry="2.6" transform="rotate(18 9.4 9.6)" fill="#b3e502" />
+        <ellipse cx="14.6" cy="9.6" rx="1.7" ry="2.6" transform="rotate(-18 14.6 9.6)" fill="#b3e502" />
+      </svg>
+    </span>
   );
 }
 
@@ -260,16 +301,15 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       {/* ══════ Banner ══════ */}
-      <div className="flex h-[68px] shrink-0 items-center gap-[10px] border-b border-[rgba(255,255,255,0.08)] px-[16px] pb-[17px] pt-[20px]">
-        <span className="font-['JetBrains_Mono'] text-[18px] font-medium leading-[18px] tracking-[-0.5px] text-[#af0]">
-          {'> _'}
-        </span>
-        <div className="flex flex-col">
-          <span className="font-['Inter'] text-[14px] font-semibold tracking-[0.14px] text-[#f0f0f0]">
-            OpenCode
+      <div className="flex h-[68px] shrink-0 items-center gap-[11px] border-b border-white/[0.07] px-[16px] pb-[17px] pt-[20px]">
+        <AlfLogo />
+        <div className="flex flex-col leading-none">
+          <span className="flex items-baseline gap-[4px] font-['Syne'] text-[17px] font-extrabold leading-[18px] tracking-[-0.5px]">
+            <span className="text-[#f2f3f5]">ALF</span>
+            <span className="text-[#b3e502]">code</span>
           </span>
-          <span className="font-['JetBrains_Mono'] text-[10px] font-normal uppercase tracking-[0.6px] text-[#445]">
-            Dashboard
+          <span className="mt-[4px] font-['JetBrains_Mono'] text-[10px] font-normal uppercase tracking-[0.6px] text-[#5a626c]">
+            Agent Dashboard
           </span>
         </div>
       </div>
@@ -283,8 +323,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `${navLinkBase} ${
               isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
             }`
           }
           onClick={() => setMobileOpen(false)}
@@ -292,7 +332,7 @@ export default function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
               )}
               <span className="flex size-[16px] shrink-0 items-center justify-center">
                 <ProjectsIcon />
@@ -309,8 +349,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `${navLinkBase} ${
               isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
             }`
           }
           onClick={() => setMobileOpen(false)}
@@ -318,7 +358,7 @@ export default function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
               )}
               <span className="flex size-[16px] shrink-0 items-center justify-center">
                 <SessionsIcon />
@@ -333,15 +373,15 @@ export default function Sidebar() {
           )}
         </NavLink>
 
-        {/* Files */}
+        {/* Tasks */}
         <NavLink
-          to="/files"
+          to="/tasks"
           end
           className={({ isActive }) =>
             `${navLinkBase} ${
               isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
             }`
           }
           onClick={() => setMobileOpen(false)}
@@ -349,7 +389,33 @@ export default function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
+              )}
+              <span className="flex size-[16px] shrink-0 items-center justify-center">
+                <TasksIcon />
+              </span>
+              <span>Tasks</span>
+            </>
+          )}
+        </NavLink>
+
+        {/* Files */}
+        <NavLink
+          to="/files"
+          end
+          className={({ isActive }) =>
+            `${navLinkBase} ${
+              isActive
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
+            }`
+          }
+          onClick={() => setMobileOpen(false)}
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
               )}
               <span className="flex size-[16px] shrink-0 items-center justify-center">
                 <FilesIcon />
@@ -365,8 +431,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `${navLinkBase} ${
               isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
             }`
           }
           onClick={() => setMobileOpen(false)}
@@ -374,7 +440,7 @@ export default function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
               )}
               <span className="flex size-[16px] shrink-0 items-center justify-center">
                 <CanvasIcon />
@@ -391,8 +457,8 @@ export default function Sidebar() {
           className={({ isActive }) =>
             `${navLinkBase} ${
               isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(170,255,0,0.12)] text-[#f0f0f0]'
-                : 'text-[#889]'
+                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
+                : 'text-[#9aa3ad]'
             }`
           }
           onClick={() => setMobileOpen(false)}
@@ -400,7 +466,7 @@ export default function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#af0]" />
+                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
               )}
               <span className="flex size-[16px] shrink-0 items-center justify-center">
                 <TemplatesIcon />
@@ -412,13 +478,13 @@ export default function Sidebar() {
       </nav>
 
       {/* ══════ Dynamic Session List (commented — not needed for now) ══════ */}
-      {/* <div className="flex-1 overflow-y-auto border-t border-[rgba(255,255,255,0.08)]">
+      {/* <div className="flex-1 overflow-y-auto border-t border-white/[0.07]">
         {loading ? (
-          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#556]">
+          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#7a828c]">
             Loading sessions…
           </div>
         ) : groups.length === 0 ? (
-          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#556]">
+          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#7a828c]">
             No projects yet
           </div>
         ) : (
@@ -453,27 +519,27 @@ export default function Sidebar() {
       <div className="flex-1" />
 
       {/* ══════ User Profile ══════ */}
-      <div className="border-t border-[rgba(255,255,255,0.08)] px-[8px] pt-[11px]">
-        <div className="flex items-center gap-[10px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[11px] py-[9px]">
-          <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[14px] bg-[#af0] font-['Inter'] text-[11px] font-bold text-black">
+      <div className="border-t border-white/[0.07] px-[8px] pt-[11px]">
+        <div className="flex items-center gap-[10px] rounded-[8px] border border-white/[0.07] bg-[#111118] px-[11px] py-[9px]">
+          <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[14px] bg-[#b3e502] font-['Inter'] text-[11px] font-bold text-black">
             U
           </div>
           <div className="flex flex-col leading-none">
             <span className="font-['JetBrains_Mono'] text-[11.5px] font-medium text-[#f0f0f0]">
               user@vps
             </span>
-            <span className="text-[10.5px] text-[#445]">Single user</span>
+            <span className="text-[10.5px] text-[#5a626c]">Single user</span>
           </div>
         </div>
       </div>
 
       {/* ══════ System Status ══════ */}
-      <div className="flex h-[28px] shrink-0 items-center gap-[6px] border-t border-[rgba(255,255,255,0.08)] px-[18px] pb-[7px] pt-[8px]">
+      <div className="flex h-[28px] shrink-0 items-center gap-[6px] border-t border-white/[0.07] px-[18px] pb-[7px] pt-[8px]">
         <span
-          className="size-[6px] shrink-0 rounded-[3px] bg-[#2d8] opacity-90"
-          style={{ boxShadow: '0px 0px 6px 0px rgba(34,221,136,0.6)' }}
+          className="size-[6px] shrink-0 rounded-full bg-[#2dd] opacity-90"
+          style={{ boxShadow: '0px 0px 6px 0px rgba(34,221,221,0.6)' }}
         />
-        <span className="font-['JetBrains_Mono'] text-[10px] font-normal tracking-[0.4px] text-[#445]">
+        <span className="font-['JetBrains_Mono'] text-[10px] font-normal tracking-[0.4px] text-[#5a626c]">
           daemon online
         </span>
       </div>
@@ -493,7 +559,7 @@ export default function Sidebar() {
 
       {/* ══════ Sidebar panel ══════ */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.08)] bg-[#0d0d14] transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0a0f] transition-transform duration-200 lg:static lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         data-testid="sidebar"
@@ -551,8 +617,8 @@ function ProjectSection({
     <div className="border-b border-[rgba(255,255,255,0.06)]">
       {/* ══ Project header ══ */}
       <div
-        className={`flex cursor-pointer items-center gap-[8px] px-[16px] py-[10px] font-['Inter'] text-[12px] font-medium text-[#889] hover:text-[#ccd] transition-colors ${
-          isActive ? 'bg-[rgba(170,255,0,0.06)] text-[#af0]' : ''
+        className={`flex cursor-pointer items-center gap-[8px] px-[16px] py-[10px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors ${
+          isActive ? 'bg-[rgba(179,229,2,0.06)] text-[#b3e502]' : ''
         }`}
         onClick={onToggle}
         data-testid={`project-section-${group.project.id}`}
@@ -560,7 +626,7 @@ function ProjectSection({
         <ChevronRightIcon open={expanded} />
         <span className="flex-1 truncate">{group.project.name}</span>
         <button
-          className="flex size-[20px] shrink-0 items-center justify-center rounded-[4px] text-[#556] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#af0] transition-colors"
+          className="flex size-[20px] shrink-0 items-center justify-center rounded-[4px] text-[#7a828c] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#b3e502] transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onCreate();
@@ -577,7 +643,7 @@ function ProjectSection({
       {expanded && (
         <div className="pb-[4px]">
           {group.sessions.length === 0 ? (
-            <div className="px-[24px] py-[4px] font-['Inter'] text-[11px] text-[#556]">
+            <div className="px-[24px] py-[4px] font-['Inter'] text-[11px] text-[#7a828c]">
               No sessions
             </div>
           ) : (
@@ -651,13 +717,13 @@ function SessionRow({
 
   return (
     <div
-      className={`relative group flex cursor-pointer items-center gap-[8px] pl-[36px] pr-[16px] py-[5px] font-['Inter'] text-[12px] text-[#889] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f0f0f0] transition-colors ${
-        isRenaming ? 'bg-[rgba(170,255,0,0.06)]' : ''
-      } ${isActive ? 'bg-[rgba(170,255,0,0.06)] text-[#af0]' : ''}`}
+      className={`relative group flex cursor-pointer items-center gap-[8px] pl-[36px] pr-[16px] py-[5px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f0f0f0] transition-colors ${
+        isRenaming ? 'bg-[rgba(179,229,2,0.06)]' : ''
+      } ${isActive ? 'bg-[rgba(179,229,2,0.06)] text-[#b3e502]' : ''}`}
       onClick={onNavigate}
       data-testid={`session-row-${session.sessionId}`}
     >
-      {isActive && <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#af0]" />}
+      {isActive && <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#b3e502]" />}
 
       {/* Status badge */}
       <StatusBadge status={badgeStatus} size="sm" />
@@ -666,7 +732,7 @@ function SessionRow({
       {isRenaming ? (
         <input
           ref={renameInputRef as React.RefObject<HTMLInputElement>}
-          className="flex-1 rounded-[4px] border border-[rgba(170,255,0,0.3)] bg-[#111118] px-[6px] py-[2px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
+          className="flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#111118] px-[6px] py-[2px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
           value={renameValue}
           onChange={(e) => onRenameValueChange(e.target.value)}
           onKeyDown={onRenameKeyDown}
@@ -690,7 +756,7 @@ function SessionRow({
       {/* Close button */}
       {!isRenaming && (
         <button
-          className="flex size-[16px] shrink-0 items-center justify-center rounded-[3px] text-[#445] opacity-0 group-hover:opacity-100 hover:bg-[rgba(255,50,50,0.15)] hover:text-[#f54] transition-all"
+          className="flex size-[16px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-0 group-hover:opacity-100 hover:bg-[rgba(255,50,50,0.15)] hover:text-[#f54] transition-all"
           onClick={(e) => {
             e.stopPropagation();
             onRequestClose();
@@ -705,11 +771,11 @@ function SessionRow({
       {/* Confirmation dialog */}
       {isConfirming && (
         <div
-          className="absolute right-[8px] top-full z-50 mt-[4px] flex items-center gap-[6px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#16161f] px-[10px] py-[8px] shadow-lg"
+          className="absolute right-[8px] top-full z-50 mt-[4px] flex items-center gap-[6px] rounded-[8px] border border-white/[0.07] bg-[#16161f] px-[10px] py-[8px] shadow-lg"
           onClick={(e) => e.stopPropagation()}
           data-testid={`confirm-close-${session.sessionId}`}
         >
-          <span className="font-['Inter'] text-[11px] text-[#889]">Close?</span>
+          <span className="font-['Inter'] text-[11px] text-[#9aa3ad]">Close?</span>
           <button
             className="rounded-[4px] bg-[#f54] px-[8px] py-[2px] font-['Inter'] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
             onClick={onConfirmClose}
@@ -718,7 +784,7 @@ function SessionRow({
             Yes
           </button>
           <button
-            className="rounded-[4px] bg-[rgba(255,255,255,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#889] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+            className="rounded-[4px] bg-[rgba(255,255,255,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
             onClick={onCancelClose}
             data-testid={`confirm-close-no-${session.sessionId}`}
           >

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const mockApiFetch = vi.fn();
@@ -10,6 +10,16 @@ vi.mock('../../lib/api', () => ({
   getToken: () => null,
   saveToken: () => {},
   clearToken: () => {},
+  // Rich-task additions: the board now loads project labels for the filter bar.
+  fetchLabels: () => Promise.resolve([]),
+  fetchProjectSessions: () => Promise.resolve([]),
+  fetchTaskAttachments: () => Promise.resolve([]),
+  fetchKanbanColumns: () =>
+    Promise.resolve([
+      { id: 'backlog', name: 'Backlog', category: 'backlog', color: '#6b7280', sortOrder: 0, createdAt: '' },
+      { id: 'in_progress', name: 'In Progress', category: 'started', color: '#f59e0b', sortOrder: 0, createdAt: '' },
+      { id: 'done', name: 'Done', category: 'completed', color: '#22c55e', sortOrder: 0, createdAt: '' },
+    ]),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,9 +145,6 @@ describe('KanbanBoard', () => {
     renderBoard();
     await waitForBoard();
 
-    // Task badge for local tasks; may appear multiple times (mobile + desktop)
-    const taskBadges = screen.getAllByText('Task');
-    expect(taskBadges.length).toBeGreaterThan(0);
     // GitHub issue badge shows #42
     const issueBadges = screen.getAllByText('#42');
     expect(issueBadges.length).toBeGreaterThan(0);
@@ -167,7 +174,7 @@ describe('KanbanBoard', () => {
     renderBoard();
     await waitForBoard();
 
-    const badges = screen.getAllByText('SSH');
+    const badges = screen.getAllByText('live');
     expect(badges.length).toBeGreaterThan(0);
   });
 
@@ -178,7 +185,7 @@ describe('KanbanBoard', () => {
 
     // Column headers appear in both mobile tabs and desktop view
     expect(screen.getAllByText('Backlog').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Progress').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('In Progress').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Done').length).toBeGreaterThan(0);
   });
 
@@ -203,10 +210,10 @@ describe('KanbanBoard', () => {
     const maxAttempts = 20;
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 100));
-      if (screen.queryByText('No cards match your filters')) break;
+      if (screen.queryByText('No tasks match your filters')) break;
     }
 
-    expect(screen.getByText('No cards match your filters')).toBeInTheDocument();
+    expect(screen.getByText('No tasks match your filters')).toBeInTheDocument();
   });
 
   it('shows filter type toggle', async () => {
@@ -247,4 +254,85 @@ describe('KanbanBoard', () => {
       { timeout: 3000 },
     );
   });
+
+  it('filters to local tasks only when the Tasks segment is selected', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Tasks' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('GitHub Issue')).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByText('My Local Task').length).toBeGreaterThan(0);
+  });
+
+  it('filters to GitHub issues only when the Issues segment is selected', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('My Local Task')).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByText('GitHub Issue').length).toBeGreaterThan(0);
+  });
+
+  it('restores all tasks after clearing filters', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
+    await waitFor(() => {
+      expect(screen.queryByText('My Local Task')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    await waitFor(() => {
+      expect(screen.getAllByText('My Local Task').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('opens the create modal pre-targeted to a column via its add button', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByLabelText('Add task to Backlog'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toBeInTheDocument();
+    });
+  });
+
+  it('opens the columns manager modal', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByText('Columns'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Kanban Columns')).toBeInTheDocument();
+    });
+  });
+
+  it('opens the labels manager modal', async () => {
+    mockData();
+    renderBoard();
+    await waitForBoard();
+
+    fireEvent.click(screen.getByText('Labels'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Manage Labels')).toBeInTheDocument();
+    });
+  });
+
+  // Task deletion was intentionally removed from the UI (the DELETE route
+  // still exists server-side, but no card/modal surfaces it).
 });

@@ -40,8 +40,8 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
         title={`Tema: ${current.name}`}
         className={`flex items-center gap-[5px] rounded-[3px] px-[6px] h-[20px] font-['JetBrains_Mono'] text-[10px] transition-colors select-none ${
           open
-            ? 'bg-[rgba(170,255,0,0.15)] text-[rgba(170,255,0,0.9)]'
-            : 'text-[rgba(170,255,0,0.45)] hover:text-[rgba(170,255,0,0.8)] hover:bg-[rgba(170,255,0,0.08)]'
+            ? 'bg-[rgba(179,229,2,0.15)] text-[rgba(179,229,2,0.9)]'
+            : 'text-[rgba(179,229,2,0.45)] hover:text-[rgba(179,229,2,0.8)] hover:bg-[rgba(179,229,2,0.08)]'
         }`}
       >
         {/* Two-dot swatch */}
@@ -67,7 +67,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
           className={`absolute ${direction === 'up' ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'} right-0 z-50 min-w-[170px] overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#111118] py-[4px] shadow-2xl`}
           style={{ backdropFilter: 'blur(8px)' }}
         >
-          <p className="px-[12px] py-[6px] font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.8px] text-[#445]">
+          <p className="px-[12px] py-[6px] font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.8px] text-[#5a626c]">
             Tema do terminal
           </p>
           {TERMINAL_THEMES.map((t) => {
@@ -79,8 +79,8 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
                 onClick={() => select(t)}
                 className={`flex w-full items-center gap-[10px] px-[12px] py-[7px] text-left font-['Inter'] text-[13px] transition-colors ${
                   isActive
-                    ? 'bg-[rgba(170,255,0,0.1)] text-[#f0f0f0]'
-                    : 'text-[#889] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f0f0f0]'
+                    ? 'bg-[rgba(179,229,2,0.1)] text-[#f0f0f0]'
+                    : 'text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f0f0f0]'
                 }`}
               >
                 {/* Swatch */}

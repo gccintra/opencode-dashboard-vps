@@ -18,7 +18,7 @@ export const TERMINAL_THEMES: TerminalTheme[] = [
       foreground: '#f0f0f0',
       cursor: '#aaff00',
       cursorAccent: '#1e1e2e',
-      selectionBackground: 'rgba(170,255,0,0.25)',
+      selectionBackground: 'rgba(179,229,2,0.25)',
       selectionForeground: '#f0f0f0',
       black: '#111118',
       red: '#ff5555',

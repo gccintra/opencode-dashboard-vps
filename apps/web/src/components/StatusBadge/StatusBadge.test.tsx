@@ -93,7 +93,7 @@ describe('StatusBadge', () => {
       Object.defineProperty(document, 'hidden', { value: true, configurable: true });
 
       render(<StatusBadge status="waiting" notifyOnWaiting />);
-      expect(document.title).toBe('⏳ Aguardando — OpenCode Dashboard');
+      expect(document.title).toBe('⏳ Aguardando — ALF code');
     });
   });
 

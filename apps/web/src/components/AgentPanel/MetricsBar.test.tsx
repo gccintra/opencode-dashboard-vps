@@ -58,7 +58,7 @@ describe('MetricsBar', () => {
   it('highlights active filter', () => {
     renderBar({}, 'active');
     const activeBtn = screen.getByTestId('metric-active');
-    expect(activeBtn.className).toContain('bg-[rgba(170,255,0,0.1)]');
+    expect(activeBtn.className).toContain('bg-[rgba(179,229,2,0.1)]');
   });
 
   it('applies pulse animation when waiting > 0', () => {

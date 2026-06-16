@@ -43,6 +43,7 @@ const mockManager = vi.hoisted(() => ({
   removeSessionStatus: vi.fn(),
   getSessionBuffer: vi.fn(() => ''),
   getSessionStatus: vi.fn(() => 'active'),
+  getDetectedStatus: vi.fn(() => 'finished'),
   listSessions: vi.fn(),
   shutdown: vi.fn(),
 }));
@@ -108,6 +109,9 @@ describe('WebSocket handler', () => {
     mockManager.writeToSession.mockImplementation(() => {});
     mockManager.getSessionBuffer.mockReturnValue('');
     mockManager.getSessionStatus.mockReturnValue('active');
+    // 'finished' so handleOpen skips the connect-time status send by default;
+    // tests that care about the status message override this.
+    mockManager.getDetectedStatus.mockReturnValue('finished');
     mockManager.onSessionData.mockImplementation((id: string, cb: (chunk: string) => void) => {
       if (!dataCallbacks.has(id)) dataCallbacks.set(id, []);
       dataCallbacks.get(id)!.push(cb);
@@ -179,10 +183,8 @@ describe('WebSocket handler', () => {
       expect(sessionExists('live')).toBe(true);
     });
 
-    it('sessionExists() returns false when the manager throws', async () => {
-      mockManager.writeToSession.mockImplementationOnce(() => {
-        throw new Error('session not found: ghost');
-      });
+    it('sessionExists() returns false when the session is unknown to the manager', async () => {
+      mockManager.getSessionStatus.mockReturnValue(null);
       const { sessionExists } = await import('./handler');
       expect(sessionExists('ghost')).toBe(false);
     });
@@ -240,9 +242,7 @@ describe('WebSocket handler', () => {
     });
 
     it('closes with 4004 when the session does not exist', async () => {
-      mockManager.writeToSession.mockImplementation(() => {
-        throw new Error('session not found: ghost');
-      });
+      mockManager.getSessionStatus.mockReturnValue(null);
       const { handleOpen, hasConnection } = await import('./handler');
 
       const ws = makeMockWs('ghost');
@@ -341,18 +341,15 @@ describe('WebSocket handler', () => {
     });
 
     it('closes the socket with 1011 when the session is gone', async () => {
-      // First write (during open) succeeds; second write (during
-      // message) throws because the session has been killed.
-      mockManager.writeToSession
-        .mockImplementationOnce(() => undefined) // open: success
-        .mockImplementationOnce(() => {
-          throw new Error('session not found');
-        });
-
       const { handleOpen, handleMessage } = await import('./handler');
       const ws = makeMockWs('s-1');
+      // open succeeds (status 'active'); the session is then killed, so the
+      // write during message throws.
       handleOpen(ws);
 
+      mockManager.writeToSession.mockImplementationOnce(() => {
+        throw new Error('session not found');
+      });
       handleMessage(ws, 'ping');
 
       expect(ws.closed).toEqual({ code: 1011, reason: 'Session unavailable' });

@@ -641,4 +641,158 @@ describe('tasks routes', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  /* ── PUT /api/tasks/:id (agentType) ── */
+  describe('PUT /api/tasks/:id — agentType field', () => {
+    let taskId: string;
+
+    beforeEach(async () => {
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/tasks`, {
+          method: 'POST',
+          body: { title: 'Agent Task' },
+        }),
+      );
+      const task = (await res.json()) as { id: string };
+      taskId = task.id;
+    });
+
+    it('sets agentType to opencode', async () => {
+      const res = await app.handle(
+        authReq(token, `/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: 'opencode' },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const task = (await res.json()) as { agentType: string | null };
+      expect(task.agentType).toBe('opencode');
+    });
+
+    it('sets agentType to claude', async () => {
+      const res = await app.handle(
+        authReq(token, `/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: 'claude' },
+        }),
+      );
+      const task = (await res.json()) as { agentType: string | null };
+      expect(task.agentType).toBe('claude');
+    });
+
+    it('clears agentType with null', async () => {
+      // First set it
+      await app.handle(
+        authReq(token, `/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: 'opencode' },
+        }),
+      );
+      // Then clear it
+      const res = await app.handle(
+        authReq(token, `/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: null },
+        }),
+      );
+      const task = (await res.json()) as { agentType: string | null };
+      expect(task.agentType).toBeNull();
+    });
+
+    it('returns agentType: null for newly created tasks', async () => {
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/tasks`, {
+          method: 'POST',
+          body: { title: 'No Agent Task' },
+        }),
+      );
+      const task = (await res.json()) as { agentType: string | null };
+      expect(res.status).toBe(201);
+      expect(task.agentType).toBeNull();
+    });
+  });
+
+  /* ── GET /api/projects/:id/agent-hint ── */
+  describe('GET /api/projects/:id/agent-hint', () => {
+    it('returns hint: null when neither .opencode nor .claude exists', async () => {
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/agent-hint`),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        hint: string | null;
+        hasOpencode: boolean;
+        hasClaude: boolean;
+      };
+      expect(body.hint).toBeNull();
+      expect(body.hasOpencode).toBe(false);
+      expect(body.hasClaude).toBe(false);
+    });
+
+    it('returns hint: opencode when .opencode dir exists', async () => {
+      const { mkdirSync } = await import('node:fs');
+      mkdirSync(join(testDir, '.opencode'), { recursive: true });
+
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/agent-hint`),
+      );
+      const body = (await res.json()) as {
+        hint: string | null;
+        hasOpencode: boolean;
+        hasClaude: boolean;
+      };
+      expect(body.hint).toBe('opencode');
+      expect(body.hasOpencode).toBe(true);
+      expect(body.hasClaude).toBe(false);
+    });
+
+    it('returns hint: claude when .claude dir exists', async () => {
+      const { mkdirSync } = await import('node:fs');
+      mkdirSync(join(testDir, '.claude'), { recursive: true });
+
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/agent-hint`),
+      );
+      const body = (await res.json()) as {
+        hint: string | null;
+        hasOpencode: boolean;
+        hasClaude: boolean;
+      };
+      expect(body.hint).toBe('claude');
+      expect(body.hasOpencode).toBe(false);
+      expect(body.hasClaude).toBe(true);
+    });
+
+    it('returns hint: both when both .opencode and .claude exist', async () => {
+      const { mkdirSync } = await import('node:fs');
+      mkdirSync(join(testDir, '.opencode'), { recursive: true });
+      mkdirSync(join(testDir, '.claude'), { recursive: true });
+
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/agent-hint`),
+      );
+      const body = (await res.json()) as {
+        hint: string | null;
+        hasOpencode: boolean;
+        hasClaude: boolean;
+      };
+      expect(body.hint).toBe('both');
+      expect(body.hasOpencode).toBe(true);
+      expect(body.hasClaude).toBe(true);
+    });
+
+    it('returns 404 for non-existent project', async () => {
+      const res = await app.handle(
+        authReq(token, '/api/projects/nonexistent/agent-hint'),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 401 without auth token', async () => {
+      const res = await app.handle(
+        new Request(`http://localhost/api/projects/${projectId}/agent-hint`),
+      );
+      expect(res.status).toBe(401);
+    });
+  });
 });

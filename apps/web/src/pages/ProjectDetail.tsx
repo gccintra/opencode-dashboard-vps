@@ -22,12 +22,13 @@
  * sidebar is NOT rendered for this route. See App.tsx.
  */
 
-import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, lazy } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { apiFetch, fetchHarnesses, previewHarnessOnProject, applyHarnessToProject, type ApiError, type FileEntry } from '../lib/api';
+import { apiFetch, type ApiError } from '../lib/api';
 import {
   XTermTerminal,
-  ThemePicker,
+  MobileKeyboard,
+  TerminalStatusBar,
   type XTermTerminalHandle,
   type ConnectionStatus,
 } from '../components/Terminal';
@@ -36,13 +37,10 @@ import FileTree from '../components/FileManager/FileTree';
 import CodeEditor from '../components/FileManager/CodeEditor';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
-import { MobileKeyboard } from '../components/Terminal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import type { CanvasLayout } from '../hooks/useCanvasState';
-import { VpsStatsWidget } from '../components/VpsStatsWidget';
 
 const ResourceConfig = lazy(() => import('../components/ResourceConfig/ResourceConfig'));
-const HarnessPreviewModal = lazy(() => import('../components/Harnesses/HarnessPreviewModal'));
 
 /* ── Types ── */
 
@@ -109,16 +107,6 @@ function formatRelativeTime(ts: number): string {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
-function formatUptime(startMs: number): string {
-  const sec = Math.floor((Date.now() - startMs) / 1000);
-  if (sec < 60) return `${sec}s`;
-  const min = Math.floor(sec / 60);
-  const rem = sec % 60;
-  if (min < 60) return `${min}m ${rem}s`;
-  const hr = Math.floor(min / 60);
-  return `${hr}h ${min % 60}m`;
-}
-
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -166,71 +154,6 @@ function useDebouncedResize(sessionId: string | null) {
       }, 300);
     },
     [sessionId],
-  );
-}
-
-/* ── Status badge pill (session list) ── */
-
-interface PillConfig {
-  bg: string;
-  dot: string;
-  dotGlow?: string;
-  text: string;
-  label: string;
-  pulse?: boolean;
-}
-
-const STATUS_PILL: Record<string, PillConfig> = {
-  active: {
-    bg: 'bg-[rgba(34,221,136,0.1)]',
-    dot: 'bg-[#2d8]',
-    dotGlow: '0 0 5px rgba(34,221,136,0.7)',
-    text: 'text-[#2d8]',
-    label: 'Rodando',
-    pulse: true,
-  },
-  waiting: {
-    bg: 'bg-[rgba(255,170,0,0.1)]',
-    dot: 'bg-[#fa0]',
-    text: 'text-[#fa0]',
-    label: 'Aguardando',
-  },
-  finished: {
-    bg: 'bg-[rgba(68,68,85,0.15)]',
-    dot: 'bg-[#445]',
-    text: 'text-[#556]',
-    label: 'Finalizada',
-  },
-  exited: {
-    bg: 'bg-[rgba(68,68,85,0.15)]',
-    dot: 'bg-[#445]',
-    text: 'text-[#556]',
-    label: 'Finalizada',
-  },
-  killed: {
-    bg: 'bg-[rgba(255,85,68,0.1)]',
-    dot: 'bg-[#f54]',
-    text: 'text-[#f54]',
-    label: 'Encerrada',
-  },
-};
-
-function SessionStatusPill({ status }: { status: string }) {
-  const cfg: PillConfig = STATUS_PILL[status] ?? {
-    bg: 'bg-[rgba(68,68,85,0.15)]',
-    dot: 'bg-[#445]',
-    text: 'text-[#556]',
-    label: status,
-  };
-
-  return (
-    <span className={`inline-flex items-center gap-[4px] rounded-full px-[8px] py-[2px] ${cfg.bg}`}>
-      <span
-        className={`size-[6px] shrink-0 rounded-[3px] ${cfg.dot} ${cfg.pulse ? 'animate-pulse' : ''}`}
-        style={cfg.dotGlow ? { boxShadow: cfg.dotGlow } : undefined}
-      />
-      <span className={`font-['Inter'] text-[11px] font-medium ${cfg.text}`}>{cfg.label}</span>
-    </span>
   );
 }
 
@@ -304,12 +227,12 @@ function SessionsSidebar({
   );
 
   return (
-    <aside className="flex flex-1 min-h-0 w-[220px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.08)] bg-[#111118]">
+    <aside className="flex flex-1 min-h-0 w-[220px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0a0f]">
       {/* Header: back + project name */}
-      <div className="flex shrink-0 flex-col border-b border-[rgba(255,255,255,0.08)] px-[16px] pt-[19px] pb-[12px] gap-[6px]">
+      <div className="flex shrink-0 flex-col border-b border-white/[0.07] px-[16px] pt-[19px] pb-[12px] gap-[6px]">
         <button
           onClick={onBack}
-          className="flex items-center gap-[4px] w-fit font-['Inter'] text-[11px] text-[#556] hover:text-[#889] transition-colors"
+          className="flex items-center gap-[4px] w-fit font-['Inter'] text-[11px] text-[#5a626c] hover:text-[#9aa3ad] transition-colors"
           data-testid="back-button"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -329,7 +252,7 @@ function SessionsSidebar({
         >
           {projectName || '…'}
         </p>
-        <p className="font-['Inter'] text-[11px] text-[#556]">
+        <p className="font-['Inter'] text-[11px] text-[#5a626c]">
           {sessions.length} sessão{sessions.length !== 1 ? 'ões' : ''}
           {liveCount > 0 ? ` · ${liveCount} ativa${liveCount !== 1 ? 's' : ''}` : ''}
         </p>
@@ -340,7 +263,7 @@ function SessionsSidebar({
         <button
           onClick={onCreateSession}
           disabled={creating}
-          className="flex w-full items-center justify-center gap-[6px] rounded-[5px] bg-[#af0] py-[8px] font-['Inter'] text-[13px] font-semibold text-black hover:bg-[#9e0] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          className="kb-sheen relative flex w-full items-center justify-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] py-[8px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {creating ? (
             <svg className="animate-spin" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -367,10 +290,16 @@ function SessionsSidebar({
         {deadCount > 0 && (
           <button
             onClick={onClearFinished}
-            className="flex w-full items-center justify-center gap-[5px] rounded-[5px] border border-[rgba(255,255,255,0.07)] py-[6px] font-['Inter'] text-[12px] font-medium text-[#556] hover:border-[rgba(255,85,85,0.25)] hover:text-[#f54] transition-colors"
+            className="flex w-full items-center justify-center gap-[5px] rounded-[5px] border border-white/[0.06] py-[6px] font-['Inter'] text-[12px] font-medium text-[#5a626c] hover:border-[rgba(255,85,85,0.25)] hover:text-[#f54] transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M2 2.5h7M4.5 2.5V2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v.5M3 2.5l.5 6h4l.5-6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M2 2.5h7M4.5 2.5V2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v.5M3 2.5l.5 6h4l.5-6"
+                stroke="currentColor"
+                strokeWidth="1.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Limpar {deadCount} finalizada{deadCount !== 1 ? 's' : ''}
           </button>
@@ -378,84 +307,83 @@ function SessionsSidebar({
       </div>
 
       {/* Session list */}
-      <div className="flex-1 overflow-y-auto px-[8px] pb-[8px]">
+      <div className="flex-1 overflow-y-auto pb-[8px]">
         {sessions.length === 0 ? (
-          <p className="px-[8px] py-[12px] font-['Inter'] text-[11px] text-[#445]">
+          <p className="px-[14px] py-[12px] font-['Inter'] text-[11px] text-[#5a626c]">
             Nenhuma sessão ainda
           </p>
         ) : (
-          <div className="flex flex-col gap-[2px]">
-            {sessions.map((session, idx) => {
+          <div className="flex flex-col">
+            {sessions.map((session) => {
               const isActive = session.sessionId === activeSessionId && !showCanvas;
               const isDead = DEAD_STATUSES.has(session.status);
               const isRenaming = renaming === session.sessionId;
+              const dotColor = isDead
+                ? '#445566'
+                : session.status === 'active'
+                  ? '#22dd88'
+                  : session.status === 'waiting'
+                    ? '#ffaa00'
+                    : '#445566';
+              const dotPulse = session.status === 'active' && !isDead;
 
               return (
                 <div
                   key={session.sessionId}
-                  className={`group relative flex flex-col gap-[4px] rounded-[5px] border px-[13px] py-[9px] transition-colors ${
+                  onClick={() => !isRenaming && onSelectSession(session.sessionId)}
+                  className={`group relative flex cursor-pointer items-center gap-[8px] border-l-2 px-[14px] py-[8px] transition-colors ${
                     isActive
-                      ? 'border-[rgba(170,255,0,0.2)] bg-[rgba(170,255,0,0.12)]'
-                      : 'border-transparent hover:bg-[rgba(255,255,255,0.04)]'
+                      ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)]'
+                      : 'border-transparent hover:bg-white/[0.03]'
                   } ${isDead ? 'opacity-60' : ''}`}
                   data-testid={`session-item-${session.sessionId}`}
                 >
-                  {/* Row 1: index + name / rename input + time + pencil */}
-                  <div
-                    className="flex items-center justify-between w-full cursor-pointer"
-                    onClick={() => !isRenaming && onSelectSession(session.sessionId)}
-                  >
-                    {isRenaming ? (
-                      <input
-                        ref={renameInputRef}
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => handleRenameKeyDown(e, session.sessionId)}
-                        onBlur={() => commitRename(session.sessionId)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 min-w-0 rounded-[4px] border border-[rgba(170,255,0,0.3)] bg-[#1a1a23] px-[6px] py-[1px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
-                        data-testid={`rename-input-${session.sessionId}`}
-                      />
-                    ) : (
-                      <>
-                        <span
-                          className={`font-['JetBrains_Mono'] text-[11px] truncate max-w-[95px] ${isActive ? 'text-[#af0]' : 'text-[#889]'}`}
-                          onDoubleClick={(e) => startRename(session, e)}
-                          title="Duplo clique para renomear"
-                        >
-                          #{idx + 1} · {session.name}
-                        </span>
-                        <div className="flex items-center gap-[4px] ml-[4px] shrink-0">
-                          <span className="font-['Inter'] text-[11px] text-[#556]">
-                            {formatRelativeTime(session.createdAt)}
-                          </span>
-                          <button
-                            className="hidden group-hover:flex items-center justify-center size-[14px] rounded-[3px] text-[#445] hover:text-[#889] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-                            onClick={(e) => startRename(session, e)}
-                            title="Renomear sessão"
-                            data-testid={`rename-btn-${session.sessionId}`}
-                          >
-                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                              <path
-                                d="M7 1.5l1.5 1.5L3 8.5H1.5V7L7 1.5z"
-                                stroke="currentColor"
-                                strokeWidth="1.1"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Row 2: status pill */}
-                  <div
-                    className="cursor-pointer"
-                    onClick={() => !isRenaming && onSelectSession(session.sessionId)}
-                  >
-                    <SessionStatusPill status={session.status} />
-                  </div>
+                  <span
+                    className={`size-[6px] shrink-0 rounded-full ${dotPulse ? 'animate-pulse' : ''}`}
+                    style={{ backgroundColor: dotColor }}
+                  />
+                  {isRenaming ? (
+                    <input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => handleRenameKeyDown(e, session.sessionId)}
+                      onBlur={() => commitRename(session.sessionId)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="min-w-0 flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+                      data-testid={`rename-input-${session.sessionId}`}
+                    />
+                  ) : (
+                    <>
+                      <span
+                        className={`min-w-0 flex-1 truncate font-['Inter'] text-[13px] transition-colors ${
+                          isActive ? 'text-[#f0f0f0]' : 'text-[#9aa3ad] group-hover:text-[#e6e8eb]'
+                        }`}
+                        onDoubleClick={(e) => startRename(session, e)}
+                        title="Duplo clique para renomear"
+                      >
+                        {session.name}
+                      </span>
+                      <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">
+                        {formatRelativeTime(session.createdAt)}
+                      </span>
+                      <button
+                        className="hidden size-[16px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] group-hover:flex"
+                        onClick={(e) => startRename(session, e)}
+                        title="Renomear sessão"
+                        data-testid={`rename-btn-${session.sessionId}`}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path
+                            d="M7 1.5l1.5 1.5L3 8.5H1.5V7L7 1.5z"
+                            stroke="currentColor"
+                            strokeWidth="1.1"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -464,13 +392,13 @@ function SessionsSidebar({
       </div>
 
       {/* Canvas nav item — below session list */}
-      <div className="shrink-0 border-t border-[rgba(255,255,255,0.08)] p-[8px]">
+      <div className="shrink-0 border-t border-white/[0.06] py-[6px]">
         <button
           onClick={onSelectCanvas}
-          className={`flex w-full items-center gap-[8px] rounded-[5px] px-[12px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
+          className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
             showCanvas
-              ? 'border border-[rgba(170,255,0,0.2)] bg-[rgba(170,255,0,0.12)] text-[#af0]'
-              : 'border border-transparent text-[#889] hover:bg-[rgba(255,255,255,0.04)] hover:text-[#ccd]'
+              ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
+              : 'border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
           }`}
           data-testid="canvas-nav-item"
         >
@@ -505,7 +433,6 @@ function TerminalHeader({
   killing,
   sidebarOpen,
   onToggleSidebar,
-  onApplyTemplate,
 }: {
   projectName: string;
   sessionName: string | null;
@@ -522,13 +449,12 @@ function TerminalHeader({
   killing: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  onApplyTemplate?: () => void;
 }) {
   const isConnected = connectionStatus === 'connected';
 
   return (
     <header
-      className="flex shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px] py-[10px]"
+      className="flex shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111118] px-[20px] py-[10px]"
       data-testid="page-header"
     >
       {/* Breadcrumb + connection status */}
@@ -536,33 +462,45 @@ function TerminalHeader({
         {/* Hamburger — visible only below md breakpoint */}
         <button
           onClick={onToggleSidebar}
-          className="md:hidden flex items-center justify-center size-[32px] shrink-0 rounded-[5px] text-[#889] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+          className="md:hidden flex items-center justify-center size-[32px] shrink-0 rounded-[5px] text-[#9aa3ad] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
           aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
           data-testid="sidebar-toggle"
         >
           {sidebarOpen ? (
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M5 5l10 10M15 5l-10 10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
           ) : (
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M4 6h12M4 10h12M4 14h12"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
           )}
         </button>
 
-        <span className="font-['Inter'] text-[13px] text-[#889] shrink-0 truncate">{projectName}</span>
+        <span className="font-['Inter'] text-[13px] text-[#9aa3ad] shrink-0 truncate">
+          {projectName}
+        </span>
 
         {showCanvas ? (
           <>
-            <span className="font-['Inter'] text-[13px] text-[#556]">/</span>
+            <span className="font-['Inter'] text-[13px] text-[#5a626c]">/</span>
             <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">Canvas</span>
           </>
         ) : (
           <>
             {sessionName && (
               <>
-                <span className="font-['Inter'] text-[13px] text-[#556]">/</span>
+                <span className="font-['Inter'] text-[13px] text-[#5a626c]">/</span>
                 <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] truncate">
                   {sessionName}
                 </span>
@@ -599,13 +537,18 @@ function TerminalHeader({
             onClick={onToggleCanvasFiles}
             className={`flex items-center gap-[5px] rounded-[5px] px-[8px] py-[4px] font-['Inter'] text-[11px] font-medium transition-colors ${
               canvasShowFiles
-                ? 'bg-[rgba(170,255,0,0.12)] border border-[rgba(170,255,0,0.25)] text-[#af0]'
-                : 'border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.15)] hover:text-[#ccd]'
+                ? 'bg-[rgba(179,229,2,0.12)] border border-[rgba(179,229,2,0.25)] text-[#b3e502]'
+                : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
             }`}
             title={canvasShowFiles ? 'Fechar arquivos' : 'Abrir arquivos'}
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M1.5 2h4l1 1.5H9.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V2.5a.5.5 0 0 1 .5-.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+              <path
+                d="M1.5 2h4l1 1.5H9.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V2.5a.5.5 0 0 1 .5-.5z"
+                stroke="currentColor"
+                strokeWidth="1.1"
+                strokeLinejoin="round"
+              />
             </svg>
             Files
           </button>
@@ -613,7 +556,7 @@ function TerminalHeader({
           <div className="h-[14px] w-px bg-[rgba(255,255,255,0.08)]" />
 
           {/* Layout picker */}
-          <span className="font-['Inter'] text-[11px] text-[#556]">Layout:</span>
+          <span className="font-['Inter'] text-[11px] text-[#5a626c]">Layout:</span>
           <div className="flex items-center gap-[4px]" role="group" aria-label="Layout do canvas">
             {CANVAS_LAYOUTS.map((opt) => {
               const isActive = canvasLayout.cols === opt.cols && canvasLayout.rows === opt.rows;
@@ -624,8 +567,8 @@ function TerminalHeader({
                   aria-pressed={isActive}
                   className={`rounded-[5px] px-[8px] py-[4px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                     isActive
-                      ? 'bg-[rgba(170,255,0,0.15)] text-[#af0] border border-[rgba(170,255,0,0.3)]'
-                      : 'border border-[rgba(255,255,255,0.08)] text-[#889] hover:border-[rgba(255,255,255,0.15)] hover:text-[#ccd]'
+                      ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                      : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
                   }`}
                   data-testid={`layout-btn-${opt.label}`}
                 >
@@ -667,8 +610,21 @@ function TerminalHeader({
                 className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <rect
+                    x="1.5"
+                    y="1.5"
+                    width="9"
+                    height="9"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                  />
+                  <path
+                    d="M4 6h4M6 4v4"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <span className="hidden sm:inline">Fit</span>
               </button>
@@ -680,25 +636,16 @@ function TerminalHeader({
                 data-testid="close-session-button"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  <path
+                    d="M2 2l8 8M10 2l-8 8"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <span className="hidden sm:inline">{killing ? 'Killing…' : 'Kill'}</span>
               </button>
-              <div className="h-[14px] w-px bg-[rgba(255,255,255,0.08)]" />
             </>
-          )}
-          {onApplyTemplate && (
-            <button
-              onClick={onApplyTemplate}
-              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(170,255,0,0.2)] bg-[rgba(170,255,0,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#af0] hover:bg-[rgba(170,255,0,0.14)] transition-colors"
-              title="Apply template to project"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-              <span className="hidden sm:inline">Template</span>
-            </button>
           )}
         </div>
       )}
@@ -723,7 +670,7 @@ function TabBar({
   const tabs: PageTab[] = ['terminal', 'files'];
   return (
     <div
-      className="flex shrink-0 items-center gap-[24px] border-b border-[rgba(255,255,255,0.08)] bg-[#111118] px-[20px]"
+      className="flex shrink-0 items-center gap-[24px] border-b border-white/[0.07] bg-[#111118] px-[20px]"
       role="tablist"
       data-testid="tab-bar"
     >
@@ -736,7 +683,7 @@ function TabBar({
           className={`relative py-[12px] font-['Inter'] text-[13px] font-medium capitalize transition-colors ${
             activeTab === tab
               ? 'text-[#2d8] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#2d8] after:rounded-t-[1px]'
-              : 'text-[#889] hover:text-[#ccd]'
+              : 'text-[#9aa3ad] hover:text-[#e6e8eb]'
           }`}
           data-testid={`tab-${tab}`}
         >
@@ -754,167 +701,64 @@ const FONT_SIZE_MAX = 24;
 const FONT_SIZE_DEFAULT = 13;
 const FONT_SIZE_DEFAULT_MOBILE = 12;
 
-function TerminalStatusBar({
-  connectionStatus,
-  sessionCreatedAt,
-  fontSize,
-  defaultFontSize,
-  themeId,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
-  onThemeChange,
-  mobileKeyboard,
-}: {
-  connectionStatus: ConnectionStatus;
-  sessionCreatedAt: number | null;
-  fontSize: number;
-  defaultFontSize: number;
-  themeId: string;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onZoomReset: () => void;
-  onThemeChange: (id: string) => void;
-  mobileKeyboard?: React.ReactNode;
-}) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!sessionCreatedAt) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [sessionCreatedAt]);
-
-  const isConnected = connectionStatus === 'connected';
-
-  const startMs = sessionCreatedAt
-    ? sessionCreatedAt > 1e12
-      ? sessionCreatedAt
-      : sessionCreatedAt * 1000
-    : null;
-
-  const isDefault = fontSize === defaultFontSize;
-
-  return (
-    <div className="flex shrink-0 items-center justify-between border-t border-[rgba(170,255,0,0.1)] bg-[rgba(170,255,0,0.06)] px-[20px] py-[5px]">
-      <div className="flex items-center gap-[10px]">
-        {sessionCreatedAt && (
-          <span className="flex items-center gap-[6px]">
-            <span
-              className={`size-[6px] rounded-[3px] ${isConnected ? 'bg-[#2d8]' : 'bg-[#445]'}`}
-              style={isConnected ? { boxShadow: '0 0 4px rgba(34,221,136,0.5)' } : undefined}
-            />
-            <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.6)]">
-              {isConnected ? 'Connected' : connectionStatus}
-            </span>
-          </span>
-        )}
-        <div className="hidden sm:flex items-center gap-[8px]">
-          <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
-          <VpsStatsWidget />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-[8px]">
-        {startMs && (
-          <span className="hidden sm:block font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)]" key={tick}>
-            uptime {formatUptime(startMs)}
-          </span>
-        )}
-
-        <ThemePicker themeId={themeId} onChange={onThemeChange} />
-
-        <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
-
-        {/* Zoom controls */}
-        <div className="flex items-center gap-[2px]">
-          <button
-            onClick={onZoomOut}
-            disabled={fontSize <= FONT_SIZE_MIN}
-            title="Diminuir fonte (Ctrl+-)"
-            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
-          >
-            A<span className="text-[8px] leading-none relative top-[1px]">-</span>
-          </button>
-
-          <button
-            onClick={onZoomReset}
-            title={`Fonte: ${fontSize}px — clique para resetar (Ctrl+0)`}
-            className={`flex items-center justify-center h-[20px] min-w-[28px] px-[4px] rounded-[3px] font-['JetBrains_Mono'] text-[10px] transition-colors select-none ${
-              isDefault
-                ? 'text-[rgba(170,255,0,0.3)] hover:text-[rgba(170,255,0,0.6)] hover:bg-[rgba(170,255,0,0.06)]'
-                : 'text-[rgba(170,255,0,0.8)] hover:text-[rgba(170,255,0,1)] bg-[rgba(170,255,0,0.08)] hover:bg-[rgba(170,255,0,0.14)]'
-            }`}
-          >
-            {fontSize}px
-          </button>
-
-          <button
-            onClick={onZoomIn}
-            disabled={fontSize >= FONT_SIZE_MAX}
-            title="Aumentar fonte (Ctrl++)"
-            className="flex items-center justify-center h-[20px] w-[20px] rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed select-none"
-          >
-            A<span className="text-[8px] leading-none relative top-[1px]">+</span>
-          </button>
-        </div>
-
-        {mobileKeyboard && (
-          <>
-            <div className="h-[14px] w-px bg-[rgba(170,255,0,0.12)]" />
-            {mobileKeyboard}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Empty state ── */
 
 function EmptyTerminalState({ creating, onCreate }: { creating: boolean; onCreate: () => void }) {
   return (
     <div
-      className="flex flex-1 flex-col items-center justify-center gap-[20px] p-8"
+      className="kb-rise flex flex-1 flex-col items-center justify-center gap-[20px] p-8"
       data-testid="empty-state"
     >
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-[#445]">
-        <rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M13 19L18 24L13 29"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <line
-          x1="21"
-          y1="30"
-          x2="33"
-          y2="30"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
+      <div className="flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
+        <svg width="30" height="30" viewBox="0 0 48 48" fill="none" className="text-[#b3e502]">
+          <rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M13 19L18 24L13 29"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <line
+            x1="21"
+            y1="30"
+            x2="33"
+            y2="30"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
       <div className="text-center">
-        <h2 className="font-['Inter'] text-[18px] font-semibold text-[#f0f0f0]">
-          No active session
-        </h2>
-        <p className="mt-[6px] font-['Inter'] text-[14px] text-[#889]">
+        <h2 className="font-['Syne'] text-[20px] font-bold text-white">No active session</h2>
+        <p className="mt-[6px] font-['Inter'] text-[14px] text-[#9aa3ad]">
           Create a session to open a terminal for this project
         </p>
       </div>
       <button
         onClick={onCreate}
         disabled={creating}
-        className="flex items-center gap-[8px] rounded-[6px] bg-[#af0] px-[20px] py-[10px] font-['Inter'] text-[14px] font-semibold text-[#0a0a0f] hover:bg-[#9e0] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="kb-sheen relative flex items-center gap-[8px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516] hover:shadow-[0_8px_28px_-6px_rgba(179,229,2,0.7)] disabled:opacity-60 disabled:cursor-not-allowed"
         data-testid="new-session-button"
       >
         {creating ? (
           <>
             <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.25" />
-              <path d="M12.5 7a5.5 5.5 0 00-5.5-5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle
+                cx="7"
+                cy="7"
+                r="5.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeOpacity="0.25"
+              />
+              <path
+                d="M12.5 7a5.5 5.5 0 00-5.5-5.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             Creating…
           </>
@@ -949,73 +793,6 @@ export default function ProjectDetailPage() {
 
   const urlSessionId = searchParams.get('session');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-  // ── Template / Harness preview modal ──
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
-  const [harnesses, setHarnesses] = useState<Array<{ id: string; name: string; description: string }>>([]);
-  const [harnessesLoading, setHarnessesLoading] = useState(false);
-  const [selectedHarnessId, setSelectedHarnessId] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ files: FileEntry[]; conflicts: string[] } | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [applyError, setApplyError] = useState<string | null>(null);
-
-  const handleOpenTemplateModal = useCallback(async () => {
-    setTemplateModalOpen(true);
-    setHarnessesLoading(true);
-    setSelectedHarnessId(null);
-    setPreview(null);
-    setApplyError(null);
-    try {
-      const data = await fetchHarnesses();
-      setHarnesses(data);
-    } catch {
-      setHarnesses([]);
-    } finally {
-      setHarnessesLoading(false);
-    }
-  }, []);
-
-  const handleHarnessChange = useCallback(
-    async (harnessId: string | null) => {
-      setSelectedHarnessId(harnessId);
-      setApplyError(null);
-      if (!harnessId || !projectId) {
-        setPreview(null);
-        return;
-      }
-      setPreviewLoading(true);
-      try {
-        const data = await previewHarnessOnProject(projectId, harnessId);
-        setPreview(data);
-      } catch (err) {
-        const apiErr = err as ApiError;
-        setApplyError(apiErr.message || 'Failed to load preview');
-        setPreview(null);
-      } finally {
-        setPreviewLoading(false);
-      }
-    },
-    [projectId],
-  );
-
-  const handleApplyTemplate = useCallback(
-    async (overwrite: boolean) => {
-      if (!selectedHarnessId || !projectId) return;
-      setApplying(true);
-      setApplyError(null);
-      try {
-        await applyHarnessToProject(projectId, selectedHarnessId, overwrite);
-        setTemplateModalOpen(false);
-      } catch (err) {
-        const apiErr = err as ApiError;
-        setApplyError(apiErr.message || 'Failed to apply template');
-      } finally {
-        setApplying(false);
-      }
-    },
-    [selectedHarnessId, projectId],
-  );
 
   const searchParamsRef = useRef(searchParams);
   useEffect(() => {
@@ -1093,11 +870,12 @@ export default function ProjectDetailPage() {
         const urlSession = urlId && list.find((s) => s.sessionId === urlId);
         const live = list.filter((s) => !DEAD_STATUSES.has(s.status));
 
-        const resolvedId = urlSession && !DEAD_STATUSES.has(urlSession.status)
-          ? urlSession.sessionId
-          : live.length > 0
-            ? live[live.length - 1].sessionId
-            : null;
+        const resolvedId =
+          urlSession && !DEAD_STATUSES.has(urlSession.status)
+            ? urlSession.sessionId
+            : live.length > 0
+              ? live[live.length - 1].sessionId
+              : null;
 
         if (resolvedId) {
           const isMob = window.innerWidth < 640;
@@ -1124,7 +902,9 @@ export default function ProjectDetailPage() {
         setSessionsError(apiErr.message || 'Failed to load sessions');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -1135,7 +915,9 @@ export default function ProjectDetailPage() {
   }, [fetchSessions]);
 
   useEffect(() => {
-    const handler = () => { fetchSessions(); };
+    const handler = () => {
+      fetchSessions();
+    };
     window.addEventListener('sessions-changed', handler);
     return () => window.removeEventListener('sessions-changed', handler);
   }, [fetchSessions]);
@@ -1247,10 +1029,12 @@ export default function ProjectDetailPage() {
   }, []);
 
   /* ── Canvas state ── */
-  const { layout: canvasLayout, setCanvasLayout, assignSlot, clearSlot } = useCanvasState(
-    projectId ?? '',
-    sessions,
-  );
+  const {
+    layout: canvasLayout,
+    setCanvasLayout,
+    assignSlot,
+    clearSlot,
+  } = useCanvasState(projectId ?? '', sessions);
 
   const handleCanvasCreateSession = useCallback(async (): Promise<string | null> => {
     if (!projectId) return null;
@@ -1297,11 +1081,14 @@ export default function ProjectDetailPage() {
     return () => clearTimeout(t);
   }, [activeSessionId]);
 
-  const handleSessionStatusChange = useCallback((status: string) => {
-    if (status === 'exited' || status === 'killed' || status === 'finished') {
-      fetchSessions();
-    }
-  }, [fetchSessions]);
+  const handleSessionStatusChange = useCallback(
+    (status: string) => {
+      if (status === 'exited' || status === 'killed' || status === 'finished') {
+        fetchSessions();
+      }
+    },
+    [fetchSessions],
+  );
 
   /* ── Derived ── */
   const activeSession = sessions.find((s) => s.sessionId === activeSessionId) ?? null;
@@ -1323,7 +1110,9 @@ export default function ProjectDetailPage() {
   });
 
   const fontSizeRef = useRef(fontSize);
-  useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
+  useEffect(() => {
+    fontSizeRef.current = fontSize;
+  }, [fontSize]);
 
   useEffect(() => {
     localStorage.setItem('terminalFontSize', String(fontSize));
@@ -1381,7 +1170,49 @@ export default function ProjectDetailPage() {
   }, [handleSelectCanvas]);
 
   return (
-    <div className="flex overflow-hidden bg-[#0a0a0f]" style={{ height: `${viewportHeight}px` }}>
+    <div
+      className="relative flex overflow-hidden bg-[#0a0a0f]"
+      style={{ height: `${viewportHeight}px` }}
+    >
+      {/* Atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-180px',
+            left: '-120px',
+            width: 620,
+            height: 620,
+            opacity: 0.5,
+            background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
+          }}
+        />
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-220px',
+            left: '38%',
+            width: 680,
+            height: 680,
+            opacity: 0.4,
+            animationDelay: '-7s',
+            background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
+          }}
+        />
+        <div
+          className="kb-aurora"
+          style={{
+            top: '-160px',
+            right: '-160px',
+            width: 560,
+            height: 560,
+            opacity: 0.38,
+            animationDelay: '-13s',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
+          }}
+        />
+        <div className="kb-grid" />
+      </div>
 
       {/* ── Backdrop (mobile only) ── */}
       <div
@@ -1396,9 +1227,9 @@ export default function ProjectDetailPage() {
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 flex w-[220px] shrink-0 flex-col
-          border-r border-[rgba(255,255,255,0.08)] bg-[#111118]
+          border-r border-white/[0.06] bg-[#0a0a0f]
           transition-transform duration-200 ease-out
-          md:relative md:inset-auto md:z-auto md:translate-x-0
+          md:relative md:inset-auto md:z-10 md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
         aria-label="Sessions"
@@ -1438,7 +1269,6 @@ export default function ProjectDetailPage() {
             killing={killing}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onApplyTemplate={handleOpenTemplateModal}
           />
         )}
 
@@ -1457,7 +1287,6 @@ export default function ProjectDetailPage() {
                 projectName={projectName}
                 sidebarOpen={sidebarOpen}
                 onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-                hideKeyboardFAB
                 externalSlots={Array.from(
                   { length: canvasLayout.cols * canvasLayout.rows },
                   (_, i) => canvasLayout.slots[i] ?? null,
@@ -1469,7 +1298,10 @@ export default function ProjectDetailPage() {
               <>
                 {/* File navigation panel (desktop, collapsible) */}
                 {canvasShowFiles && (
-                  <div className="flex shrink-0 border-r border-[rgba(255,255,255,0.08)]" style={{ width: '460px' }}>
+                  <div
+                    className="flex shrink-0 border-r border-white/[0.07]"
+                    style={{ width: '460px' }}
+                  >
                     {!canvasFilesOpenPath ? (
                       <div className="flex flex-1 flex-col overflow-hidden">
                         <FileTree
@@ -1479,17 +1311,14 @@ export default function ProjectDetailPage() {
                       </div>
                     ) : (
                       <div className="flex flex-1 overflow-hidden">
-                        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-[rgba(255,255,255,0.08)]">
+                        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-white/[0.07]">
                           <FileTree
                             projectId={projectId}
                             onFileOpen={(_pid, filePath) => setCanvasFilesOpenPath(filePath)}
                           />
                         </div>
                         <div className="flex-1 overflow-hidden">
-                          <CodeEditor
-                            projectId={projectId}
-                            initialFilePath={canvasFilesOpenPath}
-                          />
+                          <CodeEditor projectId={projectId} initialFilePath={canvasFilesOpenPath} />
                         </div>
                       </div>
                     )}
@@ -1526,10 +1355,7 @@ export default function ProjectDetailPage() {
                 className="flex flex-1 flex-col items-center justify-center gap-[16px] p-8"
                 data-testid="error-state"
               >
-                <p
-                  className="font-['Inter'] text-[15px] text-red-400"
-                  data-testid="error-message"
-                >
+                <p className="font-['Inter'] text-[15px] text-red-400" data-testid="error-message">
                   {sessionsError}
                 </p>
                 <button
@@ -1537,7 +1363,7 @@ export default function ProjectDetailPage() {
                     setSessionsError(null);
                     fetchSessions();
                   }}
-                  className="rounded-[6px] border border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] font-['Inter'] text-[13px] text-[#889] hover:text-[#ccd] transition-colors"
+                  className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors"
                   data-testid="retry-button"
                 >
                   Try Again
@@ -1556,9 +1382,25 @@ export default function ProjectDetailPage() {
                     className="flex flex-1 items-center justify-center"
                     data-testid="loading-state"
                   >
-                    <svg className="animate-spin size-[28px] text-[#556]" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
-                      <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <svg
+                      className="animate-spin size-[28px] text-[#5a626c]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeOpacity="0.25"
+                      />
+                      <path
+                        d="M21 12a9 9 0 00-9-9"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
                     </svg>
                   </div>
                 ) : activeSessionId ? (
@@ -1579,7 +1421,7 @@ export default function ProjectDetailPage() {
                     )}
                     <div className="relative flex flex-1 min-h-0 overflow-hidden p-1 sm:p-2">
                       <div
-                        className="relative h-full min-h-0 w-full overflow-hidden rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0f]"
+                        className="relative h-full min-h-0 w-full overflow-hidden rounded-[6px] border border-white/[0.07] bg-[#0a0a0f]"
                         data-testid="terminal-container"
                       >
                         <XTermTerminal
@@ -1591,7 +1433,6 @@ export default function ProjectDetailPage() {
                           onCreateNewSession={handleCreateSession}
                           fontSize={fontSize}
                           theme={getThemeById(themeId).xterm}
-                          hideMobileFAB={isMobile}
                         />
                       </div>
                     </div>
@@ -1606,14 +1447,17 @@ export default function ProjectDetailPage() {
             {activeTab === 'files' && projectId && (
               <div className="flex flex-1 overflow-hidden" data-testid="files-panel">
                 <div className="hidden md:flex w-full">
-                  <div className="w-[260px] shrink-0 overflow-y-auto border-r border-[rgba(255,255,255,0.08)]">
+                  <div className="w-[260px] shrink-0 overflow-y-auto border-r border-white/[0.07]">
                     <FileTree
                       projectId={projectId}
                       onFileOpen={(_pid, filePath) => setFilesOpenPath(filePath)}
                     />
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <CodeEditor projectId={projectId} initialFilePath={filesOpenPath || undefined} />
+                    <CodeEditor
+                      projectId={projectId}
+                      initialFilePath={filesOpenPath || undefined}
+                    />
                   </div>
                 </div>
                 <div className="flex md:hidden w-full">
@@ -1648,52 +1492,38 @@ export default function ProjectDetailPage() {
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           onThemeChange={handleThemeChange}
-          mobileKeyboard={isMobile && (showCanvas || (activeTab === 'terminal' && !!activeSessionId)) ? (
-            <MobileKeyboard
-              inline
-              onKey={(seq) => {
-                if (showCanvas) canvasMobileRef.current?.sendKey(seq);
-                else terminalRef.current?.sendKey(seq);
-              }}
-              onSelectAll={() => {
-                if (showCanvas) canvasMobileRef.current?.selectAll();
-                else terminalRef.current?.selectAll();
-              }}
-              onCopy={() => {
-                const sel = showCanvas
-                  ? (canvasMobileRef.current?.getSelection() ?? '')
-                  : (terminalRef.current?.getSelection() ?? '');
-                if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-              }}
-              onPaste={() => {
-                navigator.clipboard.readText().then((text) => {
-                  if (!text) return;
-                  if (showCanvas) canvasMobileRef.current?.sendKey(text);
-                  else terminalRef.current?.sendKey(text);
-                }).catch(() => {});
-              }}
-            />
-          ) : undefined}
+          mobileKeyboard={
+            isMobile && (showCanvas || (activeTab === 'terminal' && !!activeSessionId)) ? (
+              <MobileKeyboard
+                inline
+                onKey={(seq) => {
+                  if (showCanvas) canvasMobileRef.current?.sendKey(seq);
+                  else terminalRef.current?.sendKey(seq);
+                }}
+                onSelectAll={() => {
+                  if (showCanvas) canvasMobileRef.current?.selectAll();
+                  else terminalRef.current?.selectAll();
+                }}
+                onCopy={() => {
+                  const sel = showCanvas
+                    ? (canvasMobileRef.current?.getSelection() ?? '')
+                    : (terminalRef.current?.getSelection() ?? '');
+                  if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+                }}
+                onPaste={() => {
+                  navigator.clipboard
+                    .readText()
+                    .then((text) => {
+                      if (!text) return;
+                      if (showCanvas) canvasMobileRef.current?.sendKey(text);
+                      else terminalRef.current?.sendKey(text);
+                    })
+                    .catch(() => {});
+                }}
+              />
+            ) : undefined
+          }
         />
-
-        {/* ── Template preview modal ── */}
-        {templateModalOpen && (
-          <Suspense fallback={null}>
-            <HarnessPreviewModal
-              open={templateModalOpen}
-              harnesses={harnesses}
-              harnessesLoading={harnessesLoading}
-              preview={preview}
-              previewLoading={previewLoading}
-              selectedHarnessId={selectedHarnessId}
-              onHarnessChange={handleHarnessChange}
-              onApply={handleApplyTemplate}
-              applying={applying}
-              applyError={applyError}
-              onClose={() => setTemplateModalOpen(false)}
-            />
-          </Suspense>
-        )}
       </div>
     </div>
   );

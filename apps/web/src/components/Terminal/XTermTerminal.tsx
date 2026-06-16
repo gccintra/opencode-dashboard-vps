@@ -33,7 +33,15 @@
  *      flex/grid constraints — this is the most reliable sizing strategy.
  */
 
-import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+  memo,
+} from 'react';
 import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -66,8 +74,6 @@ export interface XTermTerminalProps {
   fontSize?: number;
   /** xterm.js colour theme. Hot-swapped without recreating the terminal. */
   theme?: ITheme;
-  /** Suppress the built-in mobile keyboard FAB (e.g. when the parent provides its own). */
-  hideMobileFAB?: boolean;
 }
 
 /** Handle exposed to parent components via `forwardRef`. */
@@ -95,7 +101,7 @@ const TERMINAL_THEME: ITheme = {
   foreground: '#f0f0f0',
   cursor: '#aaff00',
   cursorAccent: '#1e1e2e',
-  selectionBackground: 'rgba(170, 255, 0, 0.25)',
+  selectionBackground: 'rgba(179,229,2, 0.25)',
   selectionForeground: '#f0f0f0',
   black: '#111118',
   red: '#ff5555',
@@ -114,9 +120,9 @@ const TERMINAL_THEME: ITheme = {
   brightCyan: '#a4ffff',
   brightWhite: '#ffffff',
   /* Scrollbar customizada com o tema escuro */
-  scrollbarSliderBackground: 'rgba(170, 255, 0, 0.15)',
-  scrollbarSliderHoverBackground: 'rgba(170, 255, 0, 0.30)',
-  scrollbarSliderActiveBackground: 'rgba(170, 255, 0, 0.45)',
+  scrollbarSliderBackground: 'rgba(179,229,2, 0.15)',
+  scrollbarSliderHoverBackground: 'rgba(179,229,2, 0.30)',
+  scrollbarSliderActiveBackground: 'rgba(179,229,2, 0.45)',
 };
 
 /* ── Transient status badge ── */
@@ -195,14 +201,14 @@ function ErrorOverlay({
     >
       <span className="size-2 rounded-full bg-[#ff5555]" />
       <h2 className="text-base font-semibold text-[#f0f0f0]">{title}</h2>
-      <p className="max-w-sm text-sm text-[#889]">{description}</p>
+      <p className="max-w-sm text-sm text-[#9aa3ad]">{description}</p>
       <div className="mt-1 flex gap-2">
         {isSessionNotFound && onCreateNewSession && (
           <button
             type="button"
             onClick={onCreateNewSession}
             data-testid="xterm-error-create-new-session"
-            className="rounded-md border border-[#af0] bg-[#af0] px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition hover:bg-[#9e0]"
+            className="rounded-md border border-[#b3e502] bg-[#b3e502] px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition hover:bg-[#c2f516]"
           >
             Create new session
           </button>
@@ -212,7 +218,7 @@ function ErrorOverlay({
             type="button"
             onClick={onReload}
             data-testid="xterm-error-reload"
-            className="rounded-md border border-white/20 bg-[#111118] px-4 py-2 text-sm font-medium text-[#f0f0f0] transition hover:bg-[#1a1a23]"
+            className="rounded-md border border-white/20 bg-[#111118] px-4 py-2 text-sm font-medium text-[#f0f0f0] transition hover:bg-[#0a0a0f]"
           >
             Reload page
           </button>
@@ -231,15 +237,10 @@ function LoadingOverlay() {
       className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#1e1e2e]"
     >
       <svg className="animate-spin size-5" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="rgba(170,255,0,0.2)" strokeWidth="2" />
-        <path
-          d="M21 12a9 9 0 00-9-9"
-          stroke="#aaff00"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
+        <circle cx="12" cy="12" r="9" stroke="rgba(179,229,2,0.2)" strokeWidth="2" />
+        <path d="M21 12a9 9 0 00-9-9" stroke="#aaff00" strokeWidth="2" strokeLinecap="round" />
       </svg>
-      <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(170,255,0,0.4)]">
+      <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.4)]">
         Connecting…
       </span>
     </div>
@@ -249,22 +250,22 @@ function LoadingOverlay() {
 /* ── Mobile keyboard FAB ── */
 
 const MOBILE_KEYS: { label: string; seq: string; wide?: boolean }[] = [
-  { label: 'ESC',    seq: '\x1b' },
-  { label: 'TAB',    seq: '\t' },
-  { label: 'Enter',  seq: '\r' },
+  { label: 'ESC', seq: '\x1b' },
+  { label: 'TAB', seq: '\t' },
+  { label: 'Enter', seq: '\r' },
   { label: 'Ctrl+C', seq: '\x03' },
-  { label: '↑',      seq: '\x1b[A' },
-  { label: '↓',      seq: '\x1b[B' },
-  { label: '←',      seq: '\x1b[D' },
-  { label: '→',      seq: '\x1b[C' },
+  { label: '↑', seq: '\x1b[A' },
+  { label: '↓', seq: '\x1b[B' },
+  { label: '←', seq: '\x1b[D' },
+  { label: '→', seq: '\x1b[C' },
   { label: 'Ctrl+Z', seq: '\x1a' },
   { label: 'Ctrl+D', seq: '\x04' },
   { label: 'Ctrl+L', seq: '\x0c' },
   { label: 'Ctrl+R', seq: '\x12' },
-  { label: 'PgUp',   seq: '\x1b[5~' },
-  { label: 'PgDn',   seq: '\x1b[6~' },
-  { label: 'Home',   seq: '\x1b[H' },
-  { label: 'End',    seq: '\x1b[F' },
+  { label: 'PgUp', seq: '\x1b[5~' },
+  { label: 'PgDn', seq: '\x1b[6~' },
+  { label: 'Home', seq: '\x1b[H' },
+  { label: 'End', seq: '\x1b[F' },
 ];
 
 export function MobileKeyboard({
@@ -302,8 +303,13 @@ export function MobileKeyboard({
     proxy.setAttribute('autocapitalize', 'none');
     proxy.setAttribute('spellcheck', 'false');
     Object.assign(proxy.style, {
-      position: 'fixed', top: '0', left: '0',
-      width: '1px', height: '1px', opacity: '0', pointerEvents: 'none',
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '1px',
+      height: '1px',
+      opacity: '0',
+      pointerEvents: 'none',
     });
     document.body.appendChild(proxy);
 
@@ -320,14 +326,23 @@ export function MobileKeyboard({
     });
 
     proxy.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter')     { onKey('\r');   e.preventDefault(); }
-      else if (e.key === 'Tab') { onKey('\t');   e.preventDefault(); }
-      else if (e.key === 'Escape') { onKey('\x1b'); }
-      else if (e.key === 'Backspace' && !proxy.value) { onKey('\x7f'); }
+      if (e.key === 'Enter') {
+        onKey('\r');
+        e.preventDefault();
+      } else if (e.key === 'Tab') {
+        onKey('\t');
+        e.preventDefault();
+      } else if (e.key === 'Escape') {
+        onKey('\x1b');
+      } else if (e.key === 'Backspace' && !proxy.value) {
+        onKey('\x7f');
+      }
     });
 
     proxy.addEventListener('blur', () => {
-      setTimeout(() => { if (proxy.parentNode) proxy.parentNode.removeChild(proxy); }, 0);
+      setTimeout(() => {
+        if (proxy.parentNode) proxy.parentNode.removeChild(proxy);
+      }, 0);
     });
 
     proxy.focus();
@@ -337,7 +352,9 @@ export function MobileKeyboard({
   if (!isMobile) return null;
 
   const panel = open && (
-    <div className={`${inline ? 'absolute bottom-full right-0 mb-[6px] min-w-[280px]' : 'absolute bottom-14 right-2 min-w-[280px]'} z-30 rounded-xl border border-white/10 bg-[#111118] p-3 shadow-2xl`}>
+    <div
+      className={`${inline ? 'absolute bottom-full right-0 mb-[6px] min-w-[280px]' : 'absolute bottom-14 right-2 min-w-[280px]'} z-30 rounded-xl border border-white/10 bg-[#111118] p-3 shadow-2xl`}
+    >
       {/* Text input — must be onClick so iOS opens the keyboard */}
       <button
         type="button"
@@ -365,9 +382,27 @@ export function MobileKeyboard({
       </label>
       {/* Copy / Paste / Select */}
       <div className="mb-3 grid grid-cols-3 gap-[6px]">
-        <button type="button" onClick={onSelectAll} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#f1fa8c] bg-[rgba(241,250,140,0.06)] border border-[rgba(241,250,140,0.2)] active:bg-[rgba(241,250,140,0.15)] transition-colors select-none">Sel. tudo</button>
-        <button type="button" onClick={onCopy} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none">Copiar</button>
-        <button type="button" onClick={onPaste} className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none">Colar</button>
+        <button
+          type="button"
+          onClick={onSelectAll}
+          className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#f1fa8c] bg-[rgba(241,250,140,0.06)] border border-[rgba(241,250,140,0.2)] active:bg-[rgba(241,250,140,0.15)] transition-colors select-none"
+        >
+          Sel. tudo
+        </button>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none"
+        >
+          Copiar
+        </button>
+        <button
+          type="button"
+          onClick={onPaste}
+          className="rounded-md px-2 py-[10px] text-sm font-semibold text-[#8be9fd] bg-[rgba(139,233,253,0.06)] border border-[rgba(139,233,253,0.2)] active:bg-[rgba(139,233,253,0.15)] transition-colors select-none"
+        >
+          Colar
+        </button>
       </div>
       {/* Special keys grid */}
       <div className="grid grid-cols-4 gap-[6px]">
@@ -375,7 +410,10 @@ export function MobileKeyboard({
           <button
             key={k.label}
             type="button"
-            onPointerDown={(e) => { e.preventDefault(); onKey(k.seq); }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onKey(k.seq);
+            }}
             className="rounded-md px-2 py-[10px] text-sm font-mono font-semibold text-[#f0f0f0] bg-[#1e1e2e] border border-white/10 active:bg-[#aaff00] active:text-[#0a0a0f] transition-colors select-none"
           >
             {k.label}
@@ -391,12 +429,15 @@ export function MobileKeyboard({
         {panel}
         <button
           type="button"
-          onPointerDown={(e) => { e.preventDefault(); setOpen((v) => !v); }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }}
           aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
           className={`flex items-center justify-center h-[20px] w-[20px] rounded-[3px] text-sm transition-colors select-none ${
             open
-              ? 'text-[#aaff00] bg-[rgba(170,255,0,0.15)]'
-              : 'text-[rgba(170,255,0,0.5)] hover:text-[rgba(170,255,0,0.9)] hover:bg-[rgba(170,255,0,0.1)]'
+              ? 'text-[#b3e502] bg-[rgba(179,229,2,0.15)]'
+              : 'text-[rgba(179,229,2,0.5)] hover:text-[rgba(179,229,2,0.9)] hover:bg-[rgba(179,229,2,0.1)]'
           }`}
         >
           ⌨
@@ -410,12 +451,15 @@ export function MobileKeyboard({
       {panel}
       <button
         type="button"
-        onPointerDown={(e) => { e.preventDefault(); setOpen((v) => !v); }}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
         aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
         className={`absolute bottom-2 right-2 z-30 flex size-11 items-center justify-center rounded-full border shadow-lg transition-colors text-lg select-none ${
           open
             ? 'border-[#aaff00] bg-[#aaff00] text-[#0a0a0f]'
-            : 'border-white/20 bg-[#111118] text-[#aaff00]'
+            : 'border-white/20 bg-[#111118] text-[#b3e502]'
         }`}
       >
         ⌨
@@ -431,8 +475,13 @@ function _execCommandCopy(text: string, onDone?: () => void): void {
   // normalize('NFC') ensures canonical Unicode form (avoids corruption on some platforms)
   el.value = String(text).normalize('NFC');
   Object.assign(el.style, {
-    position: 'fixed', left: '-9999px', top: '-9999px',
-    width: '1px', height: '1px', opacity: '0', fontSize: '12pt',
+    position: 'fixed',
+    left: '-9999px',
+    top: '-9999px',
+    width: '1px',
+    height: '1px',
+    opacity: '0',
+    fontSize: '12pt',
   });
   document.body.appendChild(el);
   // Restore focus after copy so xterm keeps receiving keystrokes.
@@ -440,7 +489,11 @@ function _execCommandCopy(text: string, onDone?: () => void): void {
   el.focus({ preventScroll: true });
   el.select();
   let ok = false;
-  try { ok = document.execCommand('copy'); } catch { /* ignore */ }
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    /* ignore */
+  }
   document.body.removeChild(el);
   if (prevActive && prevActive !== document.body) {
     prevActive.focus({ preventScroll: true });
@@ -459,9 +512,12 @@ function _execCommandCopy(text: string, onDone?: () => void): void {
 function writeClipboard(text: string, onDone?: () => void): void {
   if (!text) return;
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(onDone).catch(() => {
-      _execCommandCopy(text, onDone);
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(onDone)
+      .catch(() => {
+        _execCommandCopy(text, onDone);
+      });
     return;
   }
   _execCommandCopy(text, onDone);
@@ -469,12 +525,11 @@ function writeClipboard(text: string, onDone?: () => void): void {
 
 /* ── Context menu ── */
 
-
 /* ── Copied toast ── */
 
 function CopiedToast() {
   return (
-    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(170,255,0,0.25)] bg-[#111118] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#af0] shadow-lg">
+    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(179,229,2,0.25)] bg-[#111118] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#b3e502] shadow-lg">
       Copiado!
     </div>
   );
@@ -482,8 +537,8 @@ function CopiedToast() {
 
 /* ── Component ── */
 
-export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalProps>(
-  function XTermTerminal(
+export const XTermTerminal = memo(
+  forwardRef<XTermTerminalHandle, XTermTerminalProps>(function XTermTerminal(
     {
       sessionId,
       onResize,
@@ -493,7 +548,6 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
       className,
       fontSize = 14,
       theme,
-      hideMobileFAB = false,
     },
     ref,
   ) {
@@ -503,9 +557,12 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
     const lastSentDims = useRef<{ cols: number; rows: number } | null>(null);
     const socket = useTerminalSocket(sessionId);
 
-    const sendKey = useCallback((seq: string) => {
-      socket.send(seq);
-    }, [socket]);
+    const sendKey = useCallback(
+      (seq: string) => {
+        socket.send(seq);
+      },
+      [socket],
+    );
 
     // Brief "Copiado!" feedback toast
     const [showCopied, setShowCopied] = useState(false);
@@ -516,7 +573,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
     }, []);
 
     // Clipboard image upload feedback
-    const [imageUploadStatus, setImageUploadStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
+    const [imageUploadStatus, setImageUploadStatus] = useState<'idle' | 'uploading' | 'error'>(
+      'idle',
+    );
     const flashImageUpload = useCallback((ok: boolean) => {
       setImageUploadStatus(ok ? 'idle' : 'error');
       if (!ok) setTimeout(() => setImageUploadStatus('idle'), 2000);
@@ -580,61 +639,93 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
     // Loading overlay: shown until xterm.js is fully initialised (font loaded +
     // terminal.open() + flushBuffer() complete). Reset on every session change.
     const [terminalReady, setTerminalReady] = useState(false);
-    useEffect(() => { setTerminalReady(false); }, [sessionId]);
+    useEffect(() => {
+      setTerminalReady(false);
+    }, [sessionId]);
 
     // Expose reconnect + resize + focus to the parent.
-    useImperativeHandle(ref, () => ({
-      reconnect: () => socket.reconnect(),
-      resize: () => {
-        const container = containerRef.current;
-        const fit = fitAddonRef.current;
-        const term = terminalRef.current;
-        if (!container || !fit || !term || container.clientWidth === 0) return;
-        try { fit.fit(); } catch { return; }
-        try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
-        lastSentDims.current = { cols: term.cols, rows: term.rows };
-        onResizeRef.current?.(term.cols, term.rows);
-      },
-      focus: () => {
-        const term = terminalRef.current;
-        if (term) { term.focus(); return; }
-        const ta = containerRef.current?.querySelector<HTMLTextAreaElement>('textarea');
-        ta?.focus({ preventScroll: true });
-      },
-      openKeyboard: () => {
-        const proxy = document.createElement('input');
-        proxy.type = 'text';
-        proxy.setAttribute('autocomplete', 'off');
-        proxy.setAttribute('autocorrect', 'off');
-        proxy.setAttribute('autocapitalize', 'none');
-        proxy.setAttribute('spellcheck', 'false');
-        Object.assign(proxy.style, {
-          position: 'fixed', top: '0', left: '0',
-          width: '1px', height: '1px', opacity: '0', pointerEvents: 'none',
-        });
-        document.body.appendChild(proxy);
-        proxy.addEventListener('input', (e) => {
-          const ie = e as InputEvent;
-          if (ie.inputType === 'deleteContentBackward') sendKey('\x7f');
-          else if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') sendKey('\r');
-          else if (ie.data) sendKey(ie.data);
-          proxy.value = '';
-        });
-        proxy.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter')     { sendKey('\r');   e.preventDefault(); }
-          else if (e.key === 'Tab') { sendKey('\t');   e.preventDefault(); }
-          else if (e.key === 'Escape') { sendKey('\x1b'); }
-          else if (e.key === 'Backspace' && !proxy.value) { sendKey('\x7f'); }
-        });
-        proxy.addEventListener('blur', () => {
-          setTimeout(() => { if (proxy.parentNode) proxy.parentNode.removeChild(proxy); }, 0);
-        });
-        proxy.focus();
-      },
-      sendKey,
-      selectAll: () => terminalRef.current?.selectAll(),
-      getSelection: () => terminalRef.current?.getSelection() ?? '',
-    }), [socket, sendKey]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        reconnect: () => socket.reconnect(),
+        resize: () => {
+          const container = containerRef.current;
+          const fit = fitAddonRef.current;
+          const term = terminalRef.current;
+          if (!container || !fit || !term || container.clientWidth === 0) return;
+          try {
+            fit.fit();
+          } catch {
+            return;
+          }
+          try {
+            term.refresh(0, term.rows - 1);
+          } catch {
+            /* disposed */
+          }
+          lastSentDims.current = { cols: term.cols, rows: term.rows };
+          onResizeRef.current?.(term.cols, term.rows);
+        },
+        focus: () => {
+          const term = terminalRef.current;
+          if (term) {
+            term.focus();
+            return;
+          }
+          const ta = containerRef.current?.querySelector<HTMLTextAreaElement>('textarea');
+          ta?.focus({ preventScroll: true });
+        },
+        openKeyboard: () => {
+          const proxy = document.createElement('input');
+          proxy.type = 'text';
+          proxy.setAttribute('autocomplete', 'off');
+          proxy.setAttribute('autocorrect', 'off');
+          proxy.setAttribute('autocapitalize', 'none');
+          proxy.setAttribute('spellcheck', 'false');
+          Object.assign(proxy.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '1px',
+            height: '1px',
+            opacity: '0',
+            pointerEvents: 'none',
+          });
+          document.body.appendChild(proxy);
+          proxy.addEventListener('input', (e) => {
+            const ie = e as InputEvent;
+            if (ie.inputType === 'deleteContentBackward') sendKey('\x7f');
+            else if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph')
+              sendKey('\r');
+            else if (ie.data) sendKey(ie.data);
+            proxy.value = '';
+          });
+          proxy.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              sendKey('\r');
+              e.preventDefault();
+            } else if (e.key === 'Tab') {
+              sendKey('\t');
+              e.preventDefault();
+            } else if (e.key === 'Escape') {
+              sendKey('\x1b');
+            } else if (e.key === 'Backspace' && !proxy.value) {
+              sendKey('\x7f');
+            }
+          });
+          proxy.addEventListener('blur', () => {
+            setTimeout(() => {
+              if (proxy.parentNode) proxy.parentNode.removeChild(proxy);
+            }, 0);
+          });
+          proxy.focus();
+        },
+        sendKey,
+        selectAll: () => terminalRef.current?.selectAll(),
+        getSelection: () => terminalRef.current?.getSelection() ?? '',
+      }),
+      [socket, sendKey],
+    );
 
     // Stable callback refs — avoid re-running the mount effect on every render.
     const onResizeRef = useRef(onResize);
@@ -775,7 +866,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
               const text = new TextDecoder('utf-8').decode(bytes);
               if (text) writeClipboard(text, flashCopied);
-            } catch { /* ignore malformed base64 */ }
+            } catch {
+              /* ignore malformed base64 */
+            }
             return true; // consumed — don't let xterm process it further
           });
 
@@ -875,7 +968,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           let touchActive = false;
           const onContextMenu = (e: MouseEvent) => {
             e.preventDefault();
-            if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+            if (longPressTimer !== null) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
 
             const existing = terminal.getSelection();
             if (existing && !touchActive) {
@@ -884,7 +980,13 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             }
 
             // Haptic feedback so the user knows the long-press was recognised.
-            if (touchActive && 'vibrate' in navigator) { try { navigator.vibrate(50); } catch { /* ignore */ } }
+            if (touchActive && 'vibrate' in navigator) {
+              try {
+                navigator.vibrate(50);
+              } catch {
+                /* ignore */
+              }
+            }
 
             // selectWordAtPoint runs synchronously inside a contextmenu event
             // (user-gesture context), so writeClipboard via execCommand works.
@@ -1008,7 +1110,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             // Force a full visual re-render — xterm (especially WebGL renderer)
             // can remain visually stale after being hidden/shown even when
             // cols/rows are unchanged. refresh() repaints every row.
-            try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
+            try {
+              terminal.refresh(0, terminal.rows - 1);
+            } catch {
+              /* disposed */
+            }
             lastSentDims.current = { cols: terminal.cols, rows: terminal.rows };
             console.log(`[XTermTerminal] resize: ${terminal.cols}x${terminal.rows}`);
             onResizeRef.current?.(terminal.cols, terminal.rows);
@@ -1031,7 +1137,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             // here guarantees the content appears without waiting for the next
             // external trigger (e.g. a keypress or resize).
             if (pendingData.length > 0) {
-              try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
+              try {
+                terminal.refresh(0, terminal.rows - 1);
+              } catch {
+                /* disposed */
+              }
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
@@ -1065,7 +1175,11 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // Copying is handled via OSC 52 (TUI auto-copy), Shift+drag, Ctrl+C,
           // or the right-click context menu.
           if (socket.status === 'connected') {
-            try { terminal.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
+            try {
+              terminal.write('\x1b[?1002h\x1b[?1006h');
+            } catch {
+              /* disposed */
+            }
           }
 
           // ── Touch event support (mobile) ──
@@ -1087,11 +1201,17 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           // Converts client (pixel) coordinates to terminal cell {col, row}.
           // Used by both word selection and drag extension.
           const clientToCell = (clientX: number, clientY: number): { col: number; row: number } => {
-            let cellW = 0, cellH = 0;
+            let cellW = 0,
+              cellH = 0;
             try {
               const dims = (terminal as any)._core?._renderService?.dimensions?.css?.cell;
-              if (dims?.width > 0) { cellW = dims.width; cellH = dims.height; }
-            } catch { /* ignore */ }
+              if (dims?.width > 0) {
+                cellW = dims.width;
+                cellH = dims.height;
+              }
+            } catch {
+              /* ignore */
+            }
             if (!cellW) {
               cellW = fontSize * 0.6;
               cellH = fontSize * (terminal.options.lineHeight ?? 1.0);
@@ -1099,7 +1219,9 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             const rect = container.getBoundingClientRect();
             return {
               col: Math.max(0, Math.floor((clientX - rect.left) / cellW)),
-              row: Math.max(0, Math.floor((clientY - rect.top) / cellH)) + terminal.buffer.active.viewportY,
+              row:
+                Math.max(0, Math.floor((clientY - rect.top) / cellH)) +
+                terminal.buffer.active.viewportY,
             };
           };
 
@@ -1171,9 +1293,19 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
               touchMoved = true;
               isSelectionDrag = true;
               // Haptic feedback so the user knows the long-press was recognised.
-              if ('vibrate' in navigator) { try { navigator.vibrate(50); } catch { /* ignore */ } }
+              if ('vibrate' in navigator) {
+                try {
+                  navigator.vibrate(50);
+                } catch {
+                  /* ignore */
+                }
+              }
               const sel = selectWordAtPoint(touchStartX, touchStartY);
-              if (sel) navigator.clipboard?.writeText(sel).then(flashCopied).catch(() => {});
+              if (sel)
+                navigator.clipboard
+                  ?.writeText(sel)
+                  .then(flashCopied)
+                  .catch(() => {});
             }, 500);
           };
 
@@ -1222,7 +1354,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           };
 
           const onTouchEnd = (e: TouchEvent) => {
-            if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+            if (longPressTimer !== null) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
             touchActive = false;
             // Prevent the browser from synthesising native mousedown/mouseup/click
             // events for this touch — xterm's click handler would otherwise trigger
@@ -1283,7 +1418,10 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           };
 
           const startPollFit = () => {
-            if (pollTimerId !== null) { clearTimeout(pollTimerId); pollTimerId = null; }
+            if (pollTimerId !== null) {
+              clearTimeout(pollTimerId);
+              pollTimerId = null;
+            }
             pollAttempt = 0;
             pollTimerId = setTimeout(doPollStep, 100);
           };
@@ -1311,8 +1449,16 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
                 const fit = fitAddonRef.current;
                 const term = terminalRef.current;
                 if (!fit || !term || term.element?.clientWidth === 0) return;
-                try { fit.fit(); } catch { return; }
-                try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
+                try {
+                  fit.fit();
+                } catch {
+                  return;
+                }
+                try {
+                  term.refresh(0, term.rows - 1);
+                } catch {
+                  /* disposed */
+                }
                 if (sendSigwinch) onResizeRef.current?.(term.cols, term.rows);
               };
               // 150ms: fast refresh to cover cases where opencode has already rendered
@@ -1324,11 +1470,19 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
             // Disable mouse tracking when the PTY session ends so clicks
             // revert to normal text-selection instead of forwarding to a dead process.
             if (st === 'finished' || st === 'exited' || st === 'killed') {
-              try { terminal.write(MOUSE_RESET); } catch { /* disposed */ }
+              try {
+                terminal.write(MOUSE_RESET);
+              } catch {
+                /* disposed */
+              }
             }
           });
           const unsubscribeExit = socket.onExit(() => {
-            try { terminal.write(MOUSE_RESET); } catch { /* disposed */ }
+            try {
+              terminal.write(MOUSE_RESET);
+            } catch {
+              /* disposed */
+            }
           });
           const onDataDisposable = terminal.onData((data) => socket.send(data));
 
@@ -1498,9 +1652,21 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
           const f = fitAddonRef.current;
           const t = terminalRef.current;
           if (!f || !t) return;
-          try { f.fit(); } catch { return; }
-          try { t.refresh(0, t.rows - 1); } catch { /* disposed */ }
-          try { t.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
+          try {
+            f.fit();
+          } catch {
+            return;
+          }
+          try {
+            t.refresh(0, t.rows - 1);
+          } catch {
+            /* disposed */
+          }
+          try {
+            t.write('\x1b[?1002h\x1b[?1006h');
+          } catch {
+            /* disposed */
+          }
           lastSentDims.current = { cols: t.cols, rows: t.rows };
           console.log(`[XTermTerminal] WS connect retry sync: ${t.cols}x${t.rows}`);
           onResizeRef.current?.(t.cols, t.rows);
@@ -1514,9 +1680,17 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
         } catch {
           return; /* addon disposed */
         }
-        try { term.refresh(0, term.rows - 1); } catch { /* disposed */ }
+        try {
+          term.refresh(0, term.rows - 1);
+        } catch {
+          /* disposed */
+        }
         // Re-sync mouse tracking: button events only, no hover spam
-        try { term.write('\x1b[?1002h\x1b[?1006h'); } catch { /* disposed */ }
+        try {
+          term.write('\x1b[?1002h\x1b[?1006h');
+        } catch {
+          /* disposed */
+        }
         lastSentDims.current = { cols: term.cols, rows: term.rows };
         console.log(`[XTermTerminal] WS reconnect resize: ${term.cols}x${term.rows}`);
         onResizeRef.current?.(term.cols, term.rows);
@@ -1565,28 +1739,13 @@ export const XTermTerminal = memo(forwardRef<XTermTerminalHandle, XTermTerminalP
         {imageUploadStatus !== 'idle' && (
           <div className="pointer-events-none absolute bottom-10 left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#111118] px-3 py-1.5 font-['Inter'] text-[12px]">
             {imageUploadStatus === 'uploading' ? (
-              <span className="text-[#af0]">⬆ Uploading image…</span>
+              <span className="text-[#b3e502]">⬆ Uploading image…</span>
             ) : (
               <span className="text-red-400">✕ Image upload failed</span>
             )}
           </div>
         )}
-
-        {/* Right-click context menu */}
-        {/* Mobile-only floating keyboard button — suppressed when parent provides its own */}
-        {!hideMobileFAB && (
-          <MobileKeyboard
-            onKey={sendKey}
-            onSelectAll={() => terminalRef.current?.selectAll()}
-            onCopy={() => {
-              const sel = terminalRef.current?.getSelection() ?? '';
-              if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-            }}
-            onPaste={handleMobilePaste}
-            onUpload={uploadFileAndSend}
-          />
-        )}
       </div>
     );
-  },
-));
+  }),
+);

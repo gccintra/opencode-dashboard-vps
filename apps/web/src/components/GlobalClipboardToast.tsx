@@ -47,7 +47,7 @@ export default function GlobalClipboardToast() {
         sm:bottom-4 sm:left-4 sm:translate-x-0"
       data-testid="global-clipboard-toast"
     >
-      <span className="text-[#af0]">
+      <span className="text-[#b3e502]">
         {clipboard.action === 'cut' ? <ScissorsIcon /> : <CopyIcon />}
       </span>
       <div className="min-w-0 flex-1">
@@ -57,11 +57,11 @@ export default function GlobalClipboardToast() {
         >
           {clipboard.fileName}
         </p>
-        <p className="font-['Inter'] text-[10px] text-[#889]">Right-click a folder to paste</p>
+        <p className="font-['Inter'] text-[10px] text-[#9aa3ad]">Right-click a folder to paste</p>
       </div>
       <button
         onClick={clear}
-        className="shrink-0 rounded-[3px] p-0.5 text-[#556] transition-colors hover:text-[#889]"
+        className="shrink-0 rounded-[3px] p-0.5 text-[#5a626c] transition-colors hover:text-[#9aa3ad]"
         aria-label="Clear clipboard"
         data-testid="clipboard-toast-clear"
       >

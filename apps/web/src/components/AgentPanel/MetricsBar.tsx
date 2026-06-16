@@ -39,13 +39,13 @@ export default function MetricsBar({ metrics, activeFilter, onFilterClick }: Met
       label: 'Finalizados',
       value: metrics.finished,
       status: 'finished',
-      color: '#445',
+      color: '#5a626c',
     },
   ];
 
   return (
     <div
-      className="flex shrink-0 items-center gap-[4px] border-b border-[rgba(255,255,255,0.08)] px-[16px] py-[8px] overflow-x-auto"
+      className="flex shrink-0 items-center gap-[4px] border-b border-white/[0.07] px-[16px] py-[8px] overflow-x-auto"
       data-testid="metrics-bar"
     >
       {items.map((item) => (
@@ -53,8 +53,8 @@ export default function MetricsBar({ metrics, activeFilter, onFilterClick }: Met
           key={item.status ?? '__total'}
           className={`flex items-center gap-[6px] rounded-[6px] border px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium transition-colors shrink-0 ${
             activeFilter === item.status
-              ? 'border-[rgba(170,255,0,0.3)] bg-[rgba(170,255,0,0.1)] text-[#af0]'
-              : 'border-[rgba(255,255,255,0.06)] bg-transparent text-[#889] hover:border-[rgba(255,255,255,0.12)] hover:text-[#ccd]'
+              ? 'border-[rgba(179,229,2,0.3)] bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
+              : 'border-[rgba(255,255,255,0.06)] bg-transparent text-[#9aa3ad] hover:border-[rgba(255,255,255,0.12)] hover:text-[#e6e8eb]'
           }`}
           onClick={() => onFilterClick(item.status)}
           data-testid={`metric-${item.status ?? 'total'}`}

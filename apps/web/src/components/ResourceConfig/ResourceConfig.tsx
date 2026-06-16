@@ -250,8 +250,8 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             onClick={() => setActiveTab(type)}
             className={`px-4 py-3 font-['Inter'] text-[13px] font-medium transition-colors border-b-2 -mb-[1px] ${
               activeTab === type
-                ? 'border-[#af0] text-[#af0]'
-                : 'border-transparent text-[#889] hover:text-[#ccd]'
+                ? 'border-[#b3e502] text-[#b3e502]'
+                : 'border-transparent text-[#9aa3ad] hover:text-[#e6e8eb]'
             }`}
             data-testid={`resource-tab-${type}`}
           >
@@ -264,7 +264,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
       <div className="p-3 pb-1">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#556]">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5a626c]">
               <SearchIcon />
             </span>
             <input
@@ -272,14 +272,14 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
               placeholder="Filter resources…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-[6px] border border-white/10 bg-[#111118] py-2 pl-9 pr-3 font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#556] outline-none focus:border-white/20 transition-colors"
+              className="w-full rounded-[6px] border border-white/10 bg-[#111118] py-2 pl-9 pr-3 font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-white/20 transition-colors"
               data-testid="resource-search"
             />
           </div>
           <button
             onClick={scanResources}
             disabled={scanning}
-            className="shrink-0 rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-3 py-2 font-['Inter'] text-[12px] font-medium text-[#889] hover:border-[rgba(255,255,255,0.16)] hover:text-[#ccd] transition-colors disabled:opacity-50"
+            className="shrink-0 rounded-[6px] border border-white/[0.07] bg-[#111118] px-3 py-2 font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
             data-testid="resource-scan-button"
             title="Re-scan opencode resource directories"
           >
@@ -304,7 +304,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             data-testid="resource-no-results"
           >
             No resources match &ldquo;{search}&rdquo;.{' '}
-            <button onClick={() => setSearch('')} className="text-[#af0] hover:underline">
+            <button onClick={() => setSearch('')} className="text-[#b3e502] hover:underline">
               Clear search
             </button>
           </div>
@@ -325,7 +325,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
                 </span>
                 {!resource.available && (
                   <span
-                    className="shrink-0 text-[#889] cursor-help"
+                    className="shrink-0 text-[#9aa3ad] cursor-help"
                     title="Indisponível — this resource no longer exists on disk"
                     data-testid="resource-unavailable-icon"
                   >
@@ -346,7 +346,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
                 !resource.available
                   ? 'bg-white/5 cursor-not-allowed opacity-40'
                   : resource.active
-                    ? 'bg-[#af0]'
+                    ? 'bg-[#b3e502]'
                     : 'bg-white/10'
               }`}
               role="switch"

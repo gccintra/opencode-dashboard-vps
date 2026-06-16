@@ -71,7 +71,7 @@ export default function ConnectionStatus() {
   return (
     <div className="relative">
       <button
-        className="flex items-center gap-[6px] rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#111118] px-[8px] py-[4px] transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+        className="flex items-center gap-[6px] rounded-[6px] border border-white/[0.07] bg-[#111118] px-[8px] py-[4px] transition-colors hover:bg-[rgba(255,255,255,0.04)]"
         onClick={handleToggle}
         aria-label={`Connection status: ${DOT_LABELS[status]}`}
         data-testid="connection-status-button"
@@ -84,7 +84,7 @@ export default function ConnectionStatus() {
           }}
           data-testid="connection-dot"
         />
-        <span className="font-['Inter'] text-[11px] text-[#889]">{DOT_LABELS[status]}</span>
+        <span className="font-['Inter'] text-[11px] text-[#9aa3ad]">{DOT_LABELS[status]}</span>
       </button>
 
       {/* Tooltip */}
@@ -99,7 +99,7 @@ export default function ConnectionStatus() {
 
           {/* Tooltip panel */}
           <div
-            className="absolute right-0 top-full z-50 mt-[6px] w-[220px] rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[#16161f] p-[12px] shadow-lg"
+            className="absolute right-0 top-full z-50 mt-[6px] w-[220px] rounded-[8px] border border-white/[0.07] bg-[#16161f] p-[12px] shadow-lg"
             data-testid="connection-tooltip"
           >
             <div className="flex flex-col gap-[8px]">
@@ -118,7 +118,7 @@ export default function ConnectionStatus() {
               </div>
 
               {/* Status description */}
-              <p className="font-['Inter'] text-[11px] leading-[16px] text-[#556]">
+              <p className="font-['Inter'] text-[11px] leading-[16px] text-[#5a626c]">
                 {status === 'connected' &&
                   'All systems operational. Terminal and agent connections are healthy.'}
                 {status === 'reconnecting' &&
@@ -129,7 +129,7 @@ export default function ConnectionStatus() {
 
               {/* Browser info */}
               <div className="border-t border-[rgba(255,255,255,0.06)] pt-[8px]">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#445]">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
                   {typeof navigator !== 'undefined' && navigator.onLine
                     ? 'browser: online'
                     : 'browser: offline'}
