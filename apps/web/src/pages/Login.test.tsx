@@ -153,8 +153,9 @@ describe('LoginPage', () => {
   it('shows the banner with branding', () => {
     renderLogin();
 
-    expect(screen.getByText('OpenCode Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('> _')).toBeInTheDocument();
+    expect(screen.getByText('ALF')).toBeInTheDocument();
+    expect(screen.getByText('code')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /ALF code/i })).toBeInTheDocument();
   });
 
   it('disables button while submitting', async () => {

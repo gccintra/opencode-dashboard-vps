@@ -45,6 +45,6 @@ describe('CanvasToolbar', () => {
   it('active button has highlighted styles', () => {
     render(<CanvasToolbar layout={{ cols: 2, rows: 3 }} onLayoutChange={vi.fn()} />);
     const active = screen.getByTestId('layout-btn-2×3');
-    expect(active.className).toContain('text-[#af0]');
+    expect(active.className).toContain('text-[#b3e502]');
   });
 });

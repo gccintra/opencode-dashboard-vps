@@ -62,23 +62,20 @@ describe('Sidebar', () => {
   // ── Banner ──
 
   describe('Banner', () => {
-    it('renders the logo "> _" with correct styling', () => {
+    it('renders the ALF code logo mark', () => {
       renderSidebar();
-      const logo = screen.getByText('> _');
-      expect(logo).toBeInTheDocument();
-      expect(logo).toHaveClass('text-[#af0]');
+      expect(screen.getByRole('img', { name: /ALF code/i })).toBeInTheDocument();
     });
 
-    it('renders "OpenCode" title', () => {
+    it('renders "ALF code" title', () => {
       renderSidebar();
-      expect(screen.getByText('OpenCode')).toBeInTheDocument();
+      expect(screen.getByText('ALF')).toBeInTheDocument();
+      expect(screen.getByText('code')).toBeInTheDocument();
     });
 
-    it('renders "Dashboard" subtitle in uppercase', () => {
+    it('renders the "Agent Dashboard" subtitle', () => {
       renderSidebar();
-      // There are two "Dashboard" text elements: the banner subtitle and the nav link.
-      const dashboardEls = screen.getAllByText('Dashboard');
-      expect(dashboardEls.length).toBe(2);
+      expect(screen.getByText('Agent Dashboard')).toBeInTheDocument();
     });
   });
 
@@ -104,13 +101,13 @@ describe('Sidebar', () => {
     it('highlights Projects link as active when on /projects', () => {
       renderSidebar('/projects');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('bg-[rgba(170,255,0,0.12)]');
+      expect(projectsLink).toHaveClass('bg-[rgba(179,229,2,0.12)]');
     });
 
     it('Projects link shows inactive styling when not on /projects', () => {
       renderSidebar('/tasks');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#889]');
+      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
     });
   });
 
@@ -423,13 +420,13 @@ describe('Sidebar', () => {
     it('handles root path — Projects not active', () => {
       renderSidebar('/');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#889]');
+      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
     });
 
     it('handles nested project route — Projects not active (end prop)', () => {
       renderSidebar('/projects/123');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#889]');
+      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
     });
   });
 });

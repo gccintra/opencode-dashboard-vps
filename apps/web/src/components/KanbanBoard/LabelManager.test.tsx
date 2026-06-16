@@ -18,7 +18,6 @@ import { LabelManager } from './LabelManager';
 
 const label = (over: Partial<Label> = {}): Label => ({
   id: 'l1',
-  projectId: 'p1',
   name: 'bug',
   color: '#f55',
   createdAt: '2026-01-01T00:00:00Z',
@@ -29,39 +28,39 @@ describe('LabelManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchLabels.mockResolvedValue([label()]);
-    createLabel.mockResolvedValue(label({ id: 'l2', name: 'feature', color: '#af0' }));
+    createLabel.mockResolvedValue(label({ id: 'l2', name: 'feature', color: '#b3e502' }));
     deleteLabel.mockResolvedValue(undefined);
     updateLabel.mockResolvedValue(label({ color: '#0db' }));
   });
 
-  it('loads and lists project labels', async () => {
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+  it('loads and lists global labels', async () => {
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} />);
     expect(await screen.findByText('bug')).toBeInTheDocument();
-    expect(fetchLabels).toHaveBeenCalledWith('p1');
+    expect(fetchLabels).toHaveBeenCalledWith();
   });
 
   it('shows an empty state when there are no labels', async () => {
     fetchLabels.mockResolvedValue([]);
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} />);
     expect(await screen.findByText(/No labels yet/i)).toBeInTheDocument();
   });
 
   it('calls onToggle when a label row is clicked', async () => {
     const onToggle = vi.fn();
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={onToggle} />);
+    render(<LabelManager appliedIds={[]} onToggle={onToggle} />);
     const row = await screen.findByRole('button', { name: /Apply label bug/i });
     fireEvent.click(row);
     expect(onToggle).toHaveBeenCalledWith('l1');
   });
 
   it('reflects applied state via aria-pressed', async () => {
-    render(<LabelManager projectId="p1" appliedIds={['l1']} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={['l1']} onToggle={vi.fn()} />);
     const row = await screen.findByRole('button', { name: /Remove label bug/i });
     expect(row).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('validates that a new label name is required', async () => {
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} allowCreate={true} />);
     fireEvent.click(await screen.findByRole('button', { name: /New label/i }));
     fireEvent.click(screen.getByRole('button', { name: /Add label/i }));
     expect(await screen.findByText(/Label name is required/i)).toBeInTheDocument();
@@ -69,14 +68,14 @@ describe('LabelManager', () => {
   });
 
   it('creates a new label with a valid name and color', async () => {
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} allowCreate={true} />);
     fireEvent.click(await screen.findByRole('button', { name: /New label/i }));
     fireEvent.change(screen.getByPlaceholderText('Label name'), {
       target: { value: 'feature' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Add label/i }));
     await waitFor(() =>
-      expect(createLabel).toHaveBeenCalledWith('p1', {
+      expect(createLabel).toHaveBeenCalledWith({
         name: 'feature',
         color: expect.any(String),
       }),
@@ -84,15 +83,21 @@ describe('LabelManager', () => {
   });
 
   it('deletes a label optimistically', async () => {
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} allowCreate={true} />);
     fireEvent.click(await screen.findByRole('button', { name: /Delete label bug/i }));
     await waitFor(() => expect(deleteLabel).toHaveBeenCalledWith('l1'));
     expect(screen.queryByText('bug')).toBeNull();
   });
 
+  it('hides create form when allowCreate=false', async () => {
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} allowCreate={false} />);
+    await screen.findByText('bug');
+    expect(screen.queryByRole('button', { name: /New label/i })).not.toBeInTheDocument();
+  });
+
   it('surfaces an error when loading fails', async () => {
     fetchLabels.mockRejectedValue({ status: 500, message: 'boom' });
-    render(<LabelManager projectId="p1" appliedIds={[]} onToggle={vi.fn()} />);
+    render(<LabelManager appliedIds={[]} onToggle={vi.fn()} />);
     expect(await screen.findByText('boom')).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Elysia } from 'elysia';
-import { mkdtempSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -95,7 +95,7 @@ describe('tasks rich extensions', () => {
 
   async function createLabel(name: string): Promise<string> {
     const res = await app.handle(
-      authReq(`/api/projects/${projectId}/labels`, {
+      authReq('/api/labels', {
         method: 'POST',
         body: { name, color: '#0a0' },
       }),
@@ -140,9 +140,13 @@ describe('tasks rich extensions', () => {
     token = await getToken();
     const project = await createProject();
     projectId = project.id;
+    // Activate fake timers AFTER all async setup so module imports
+    // and promise resolution use real timers during initialization.
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     process.env = OLD_ENV;
     for (const d of [dataDir, projectDir]) {
       try {
@@ -218,33 +222,20 @@ describe('tasks rich extensions', () => {
       expect(task.labels).toHaveLength(0);
     });
 
-    it('rejects a label from a different project with 400', async () => {
+    it('allows any global label to be applied to any task', async () => {
       const taskId = await createTask();
-      // create a second project + label
-      const otherDir = mkdtempSync(join(tmpdir(), 'opencode-other-'));
-      const otherRes = await app.handle(
-        authReq('/api/projects', {
-          method: 'POST',
-          body: { name: `other-${Date.now()}`, directory: otherDir },
-        }),
-      );
-      const otherProject = (await otherRes.json()) as { id: string };
-      const otherLabelRes = await app.handle(
-        authReq(`/api/projects/${otherProject.id}/labels`, {
-          method: 'POST',
-          body: { name: 'foreign', color: '#f00' },
-        }),
-      );
-      const otherLabel = (await otherLabelRes.json()) as { id: string };
-
+      // Labels are global — create one and apply it
+      const globalLabel = await createLabel('global-tag');
       const res = await app.handle(
         authReq(`/api/tasks/${taskId}/labels`, {
           method: 'PUT',
-          body: { labelIds: [otherLabel.id] },
+          body: { labelIds: [globalLabel] },
         }),
       );
-      expect(res.status).toBe(400);
-      rmSync(otherDir, { recursive: true, force: true });
+      expect(res.status).toBe(200);
+      const task = (await res.json()) as { labels: Array<{ id: string; name: string }> };
+      expect(task.labels).toHaveLength(1);
+      expect(task.labels[0].name).toBe('global-tag');
     });
 
     it('returns 404 for unknown task', async () => {
@@ -540,10 +531,13 @@ describe('tasks rich extensions', () => {
       );
       expect(res.status).toBe(200);
       expect((await res.json()) as { started: boolean }).toEqual({ started: true });
+      // First write is the prompt text; the \r fires after the 50ms inner timer.
       expect(ptyState.writes).toHaveLength(1);
       expect(ptyState.writes[0].id).toBe('live-sess');
       expect(ptyState.writes[0].data).toContain('Rich task');
-      expect(ptyState.writes[0].data.endsWith('\n')).toBe(true);
+      vi.advanceTimersByTime(50);
+      expect(ptyState.writes).toHaveLength(2);
+      expect(ptyState.writes[1].data).toBe('\r');
     });
 
     it('includes attachment absolute paths in the prompt', async () => {
@@ -565,6 +559,116 @@ describe('tasks rich extensions', () => {
         authReq(`/api/tasks/nope/implement`, { method: 'POST' }),
       );
       expect(res.status).toBe(404);
+    });
+
+    it('prefixes a slash-command when the task uses a claude command', async () => {
+      const taskId = await createTask();
+      await app.handle(
+        authReq(`/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: 'claude', agentSource: 'commands', agentName: 'plan' },
+        }),
+      );
+      await associate(taskId);
+      ptyState.status = 'active';
+      await app.handle(authReq(`/api/tasks/${taskId}/implement`, { method: 'POST' }));
+      expect(ptyState.writes).toHaveLength(1);
+      expect(ptyState.writes[0].data.startsWith('/plan ')).toBe(true);
+    });
+
+    it('does NOT prefix a slash-command for an agent source', async () => {
+      const taskId = await createTask();
+      await app.handle(
+        authReq(`/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { agentType: 'claude', agentSource: 'agents', agentName: 'executor' },
+        }),
+      );
+      await associate(taskId);
+      ptyState.status = 'active';
+      await app.handle(authReq(`/api/tasks/${taskId}/implement`, { method: 'POST' }));
+      expect(ptyState.writes[0].data.startsWith('/')).toBe(false);
+    });
+
+    it('defers the prompt write by delayMs and reports it', async () => {
+      const taskId = await createTask();
+      await associate(taskId);
+      ptyState.status = 'active';
+      const res = await app.handle(
+        authReq(`/api/tasks/${taskId}/implement`, { method: 'POST', body: { delayMs: 120 } }),
+      );
+      expect((await res.json()) as { delayedMs?: number }).toMatchObject({
+        started: true,
+        delayedMs: 120,
+      });
+      // Not written yet — the delayMs=120 outer timer hasn't fired.
+      expect(ptyState.writes).toHaveLength(0);
+      vi.advanceTimersByTime(120); // fires outer delay → text write
+      expect(ptyState.writes).toHaveLength(1);
+      vi.advanceTimersByTime(50);  // fires inner 50ms → \r write
+      expect(ptyState.writes).toHaveLength(2);
+      expect(ptyState.writes[1].data).toBe('\r');
+    });
+  });
+
+  /* ── GET /api/projects/:id/agent-catalog ── */
+  describe('GET /api/projects/:id/agent-catalog', () => {
+    function writeAgent(rel: string, name: string, body: string) {
+      const dir = join(projectDir, rel);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, `${name}.md`), body, 'utf-8');
+    }
+
+    it('lists opencode built-ins plus project agents and claude agents/commands', async () => {
+      writeAgent('.opencode/agent', 'custom-agent', '---\nname: custom-agent\n---\nDoes custom stuff');
+      writeAgent('.claude/agents', 'executor', '# Executor\n\nImplements code');
+      writeAgent('.claude/commands', 'deploy', '---\n---\nDeploy the work');
+
+      const res = await app.handle(authReq(`/api/projects/${projectId}/agent-catalog`));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        opencode: { agents: Array<{ name: string; description: string }> };
+        claude: {
+          agents: Array<{ name: string }>;
+          commands: Array<{ name: string }>;
+        };
+      };
+      // Always has build + plan built-ins
+      const names = body.opencode.agents.map((a) => a.name);
+      expect(names).toContain('build');
+      expect(names).toContain('plan');
+      expect(names).toContain('custom-agent');
+      expect(body.claude.agents.map((a) => a.name)).toContain('executor');
+      expect(body.claude.commands.map((a) => a.name)).toContain('deploy');
+    });
+
+    it('returns built-in opencode agents even when project has no agent dirs', async () => {
+      const res = await app.handle(authReq(`/api/projects/${projectId}/agent-catalog`));
+      const body = (await res.json()) as {
+        opencode: { agents: Array<{ name: string }> };
+        claude: { agents: unknown[]; commands: unknown[] };
+      };
+      const names = body.opencode.agents.map((a) => a.name);
+      expect(names).toContain('build');
+      expect(names).toContain('plan');
+      expect(body.claude.agents).toEqual([]);
+      expect(body.claude.commands).toEqual([]);
+    });
+
+    it('returns 404 for an unknown project', async () => {
+      const res = await app.handle(authReq('/api/projects/nope/agent-catalog'));
+      expect(res.status).toBe(404);
+    });
+  });
+
+  /* ── GET /api/agent-models ── */
+  describe('GET /api/agent-models', () => {
+    it('returns the static claude model aliases', async () => {
+      const res = await app.handle(authReq('/api/agent-models?runtime=claude'));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { models: Array<{ id: string }> };
+      expect(body.models.map((m) => m.id)).toContain('opus');
+      expect(body.models.map((m) => m.id)).toContain('sonnet');
     });
   });
 });

@@ -10,7 +10,6 @@ describe('labels routes', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let app: any;
   let testDir: string;
-  let projectId: string;
   let token: string;
 
   async function getToken(): Promise<string> {
@@ -42,16 +41,6 @@ describe('labels routes', () => {
     });
   }
 
-  async function createProject() {
-    const res = await app.handle(
-      authReq(token, '/api/projects', {
-        method: 'POST',
-        body: { name: `test-project-${Date.now()}-${Math.random()}`, directory: testDir },
-      }),
-    );
-    return (await res.json()) as { id: string; name: string };
-  }
-
   beforeEach(async () => {
     vi.resetModules();
 
@@ -68,13 +57,10 @@ describe('labels routes', () => {
     testDir = mkdtempSync(join(tmpdir(), 'opencode-test-labels-'));
 
     const { authRoutes } = await import('../auth/index');
-    const { projectsRoutes } = await import('./projects');
     const { labelsRoutes } = await import('./labels');
-    app = new Elysia().use(authRoutes).use(projectsRoutes).use(labelsRoutes);
+    app = new Elysia().use(authRoutes).use(labelsRoutes);
 
     token = await getToken();
-    const project = await createProject();
-    projectId = project.id;
   });
 
   afterEach(() => {
@@ -89,15 +75,13 @@ describe('labels routes', () => {
   /* ── Auth protection ── */
   describe('auth protection', () => {
     it('returns 401 without token on list', async () => {
-      const res = await app.handle(
-        new Request(`http://localhost/api/projects/${projectId}/labels`),
-      );
+      const res = await app.handle(new Request('http://localhost/api/labels'));
       expect(res.status).toBe(401);
     });
 
     it('returns 401 without token on create', async () => {
       const res = await app.handle(
-        new Request(`http://localhost/api/projects/${projectId}/labels`, {
+        new Request('http://localhost/api/labels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: 'bug', color: '#f00' }),
@@ -115,10 +99,10 @@ describe('labels routes', () => {
   });
 
   /* ── POST create ── */
-  describe('POST /api/projects/:id/labels', () => {
+  describe('POST /api/labels', () => {
     it('creates a label and returns 201', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'bug', color: '#ff0000' },
         }),
@@ -126,19 +110,17 @@ describe('labels routes', () => {
       expect(res.status).toBe(201);
       const label = (await res.json()) as {
         id: string;
-        projectId: string;
         name: string;
         color: string;
       };
       expect(label.name).toBe('bug');
       expect(label.color).toBe('#ff0000');
-      expect(label.projectId).toBe(projectId);
       expect(label.id).toBeTruthy();
     });
 
     it('accepts 3-digit hex color', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'feature', color: '#0f0' },
         }),
@@ -148,7 +130,7 @@ describe('labels routes', () => {
 
     it('trims whitespace from name', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: '  spaced  ', color: '#abc' },
         }),
@@ -159,7 +141,7 @@ describe('labels routes', () => {
 
     it('rejects empty name with 400', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: '   ', color: '#abc' },
         }),
@@ -169,7 +151,7 @@ describe('labels routes', () => {
 
     it('rejects invalid color with 400', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'bad', color: 'red' },
         }),
@@ -179,7 +161,7 @@ describe('labels routes', () => {
 
     it('rejects color without # prefix', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'bad2', color: 'ff0000' },
         }),
@@ -189,7 +171,7 @@ describe('labels routes', () => {
 
     it('rejects color with invalid length', async () => {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'bad3', color: '#ff00' },
         }),
@@ -197,62 +179,51 @@ describe('labels routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('returns 409 on duplicate name (case-insensitive)', async () => {
+    it('returns 409 on duplicate name (case-insensitive, globally)', async () => {
       await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'Bug', color: '#f00' },
         }),
       );
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'bug', color: '#0f0' },
         }),
       );
       expect(res.status).toBe(409);
     });
-
-    it('returns 404 for unknown project', async () => {
-      const res = await app.handle(
-        authReq(token, `/api/projects/nonexistent/labels`, {
-          method: 'POST',
-          body: { name: 'x', color: '#000' },
-        }),
-      );
-      expect(res.status).toBe(404);
-    });
   });
 
   /* ── GET list ── */
-  describe('GET /api/projects/:id/labels', () => {
-    it('lists labels for the project', async () => {
+  describe('GET /api/labels', () => {
+    it('lists all global labels sorted by name', async () => {
       await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'b-second', color: '#111' },
         }),
       );
       await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'a-first', color: '#222' },
         }),
       );
-      const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`),
-      );
+      const res = await app.handle(authReq(token, '/api/labels'));
       expect(res.status).toBe(200);
       const labels = (await res.json()) as Array<{ name: string }>;
       expect(labels).toHaveLength(2);
-      // ordered by name COLLATE NOCASE
       expect(labels[0].name).toBe('a-first');
       expect(labels[1].name).toBe('b-second');
     });
 
-    it('returns 404 for unknown project', async () => {
-      const res = await app.handle(authReq(token, `/api/projects/nope/labels`));
-      expect(res.status).toBe(404);
+    it('returns empty array when no labels', async () => {
+      const res = await app.handle(authReq(token, '/api/labels'));
+      expect(res.status).toBe(200);
+      const labels = (await res.json()) as unknown[];
+      expect(labels).toHaveLength(0);
     });
   });
 
@@ -260,7 +231,7 @@ describe('labels routes', () => {
   describe('PUT /api/labels/:id', () => {
     async function createLabel(name: string, color: string) {
       const res = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name, color },
         }),
@@ -318,7 +289,7 @@ describe('labels routes', () => {
 
     it('returns 404 for unknown label', async () => {
       const res = await app.handle(
-        authReq(token, `/api/labels/nope`, {
+        authReq(token, '/api/labels/nope', {
           method: 'PUT',
           body: { name: 'x' },
         }),
@@ -331,7 +302,7 @@ describe('labels routes', () => {
   describe('DELETE /api/labels/:id', () => {
     it('deletes a label', async () => {
       const createRes = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'todelete', color: '#000' },
         }),
@@ -344,17 +315,14 @@ describe('labels routes', () => {
       const body = (await res.json()) as { deleted: boolean };
       expect(body.deleted).toBe(true);
 
-      // gone from list
-      const listRes = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`),
-      );
+      const listRes = await app.handle(authReq(token, '/api/labels'));
       const labels = (await listRes.json()) as unknown[];
       expect(labels).toHaveLength(0);
     });
 
     it('returns 404 for unknown label', async () => {
       const res = await app.handle(
-        authReq(token, `/api/labels/nope`, { method: 'DELETE' }),
+        authReq(token, '/api/labels/nope', { method: 'DELETE' }),
       );
       expect(res.status).toBe(404);
     });
@@ -363,14 +331,28 @@ describe('labels routes', () => {
       const { getDb } = await import('../db/client');
       const db = getDb();
 
-      // create a task and a label, apply the label
+      // Need a project + task for the FK
+      const { projectsRoutes } = await import('./projects');
+      const appWithProjects = new Elysia()
+        .use(app)
+        .use(projectsRoutes);
+
+      const projDir = mkdtempSync(join(tmpdir(), 'opencode-cascade-'));
+      const projRes = await appWithProjects.handle(
+        authReq(token, '/api/projects', {
+          method: 'POST',
+          body: { name: `cascade-proj-${Date.now()}`, directory: projDir },
+        }),
+      );
+      const proj = (await projRes.json()) as { id: string };
+
       db.run(
-        `INSERT INTO tasks (id, project_id, title, source, "column", sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, 'local', 'backlog', 0, ?, ?)`,
-        ['task-cascade', projectId, 'Cascade task', '2020-01-01', '2020-01-01'],
+        `INSERT INTO tasks (id, project_id, title, source, "column", sort_order, issue_number, created_at, updated_at)
+         VALUES (?, ?, ?, 'local', 'backlog', 0, 1, ?, ?)`,
+        ['task-cascade', proj.id, 'Cascade task', '2020-01-01', '2020-01-01'],
       );
       const createRes = await app.handle(
-        authReq(token, `/api/projects/${projectId}/labels`, {
+        authReq(token, '/api/labels', {
           method: 'POST',
           body: { name: 'cascade-label', color: '#000' },
         }),
@@ -381,7 +363,6 @@ describe('labels routes', () => {
         label.id,
       ]);
 
-      // sanity: row exists
       const before = db
         .query('SELECT COUNT(*) as c FROM task_labels WHERE label_id = ?')
         .get(label.id) as { c: number };
@@ -393,6 +374,8 @@ describe('labels routes', () => {
         .query('SELECT COUNT(*) as c FROM task_labels WHERE label_id = ?')
         .get(label.id) as { c: number };
       expect(after.c).toBe(0);
+
+      rmSync(projDir, { recursive: true, force: true });
     });
   });
 });
