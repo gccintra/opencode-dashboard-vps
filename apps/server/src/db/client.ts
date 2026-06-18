@@ -284,6 +284,20 @@ export function initDb(dbPath?: string): Database {
     console.log("[db] migrated: added 'project_changed' to task_activity.type CHECK");
   }
 
+  // Migration: add session_id and tool_calls_json to chat_messages.
+  // Index is created here (not schema.sql) because it references session_id which may
+  // not exist yet on databases created before this migration was added.
+  const chatMsgCols = db.query('PRAGMA table_info(chat_messages)').all() as Array<{ name: string }>;
+  if (!chatMsgCols.some((c) => c.name === 'session_id')) {
+    db.run('ALTER TABLE chat_messages ADD COLUMN session_id TEXT REFERENCES chat_sessions(id) ON DELETE CASCADE');
+    console.log('[db] migrated: added chat_messages.session_id column');
+  }
+  if (!chatMsgCols.some((c) => c.name === 'tool_calls_json')) {
+    db.run('ALTER TABLE chat_messages ADD COLUMN tool_calls_json TEXT');
+    console.log('[db] migrated: added chat_messages.tool_calls_json column');
+  }
+  db.run('CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at)');
+
   currentDbPath = path;
 
   console.log(`[db] connected to ${path}`);

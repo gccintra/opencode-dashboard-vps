@@ -214,6 +214,36 @@ CREATE TABLE IF NOT EXISTS canvas_slots (
   FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) STRICT;
 
+-- Chat Sessions: named conversation threads per project
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id         TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  title      TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_project
+  ON chat_sessions(project_id, created_at DESC);
+
+-- Chat Messages: persisted project chat history (Claude headless mode).
+-- One row per user/assistant turn. Streaming is volatile; only the final
+-- text content of each turn is persisted here.
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id         TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  session_id TEXT,
+  role       TEXT NOT NULL,      -- 'user' | 'assistant'
+  content    TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_project
+  ON chat_messages(project_id, created_at);
+
+
 -- Task Spawn Events: audit log of every "implement" button press
 CREATE TABLE IF NOT EXISTS task_spawn_events (
   id TEXT PRIMARY KEY,

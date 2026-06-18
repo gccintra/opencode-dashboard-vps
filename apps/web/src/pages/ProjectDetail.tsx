@@ -35,6 +35,7 @@ import {
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import FileTree from '../components/FileManager/FileTree';
 import CodeEditor from '../components/FileManager/CodeEditor';
+import ChatPanel from './Chat/ChatPanel';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { useCanvasState } from '../hooks/useCanvasState';
@@ -57,7 +58,7 @@ interface Project {
   directory: string;
 }
 
-type PageTab = 'terminal' | 'files';
+type PageTab = 'terminal' | 'files' | 'chat';
 
 /* ── Constants ── */
 
@@ -658,6 +659,7 @@ function TerminalHeader({
 const TAB_LABELS: Record<PageTab, string> = {
   terminal: 'Terminal',
   files: 'Files',
+  chat: 'Chat',
 };
 
 function TabBar({
@@ -667,7 +669,7 @@ function TabBar({
   activeTab: PageTab;
   onTabChange: (t: PageTab) => void;
 }) {
-  const tabs: PageTab[] = ['terminal', 'files'];
+  const tabs: PageTab[] = ['terminal', 'files', 'chat'];
   return (
     <div
       className="flex shrink-0 items-center gap-[24px] border-b border-white/[0.07] bg-[#111118] px-[20px]"
@@ -1476,6 +1478,13 @@ export default function ProjectDetailPage() {
                     />
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ── Chat tab ── */}
+            {activeTab === 'chat' && projectId && (
+              <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="chat-tab">
+                <ChatPanel projectId={projectId} />
               </div>
             )}
           </>

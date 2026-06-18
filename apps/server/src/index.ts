@@ -22,6 +22,7 @@ import { canvasesRoutes } from './routes/canvases';
 import { kanbanColumnsRoutes } from './routes/kanban-columns';
 import { taskActivityRoutes } from './routes/task-activity';
 import { taskLinksRoutes } from './routes/task-links';
+import { chatRoutes } from './routes/chat';
 
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
@@ -151,6 +152,7 @@ app
   .use(filesBaseRoutes)
   .use(githubRoutes)
   .use(canvasesRoutes)
+  .use(chatRoutes)
   .use(wsRoutes);
 
 // Observability — server metrics + db stats
