@@ -93,8 +93,10 @@ export function TerminalStatusBar({
             {sessionName}
           </span>
         )}
-        {/* CPU/RAM — visible on every screen, every size */}
-        <VpsStatsWidget />
+        {/* CPU/RAM — hidden on mobile to avoid bottom-bar overflow */}
+        <span className="hidden sm:inline-flex">
+          <VpsStatsWidget />
+        </span>
       </div>
 
       {/* Right: uptime · theme · zoom · keyboard */}
