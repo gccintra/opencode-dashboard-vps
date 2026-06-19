@@ -49,7 +49,7 @@ import { BunWorkerTransport } from './transport.bun';
 import { detectStatus } from './detector';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_BUFFER_MAX = 10_240; // 10 KB
+const DEFAULT_BUFFER_MAX = 51_200; // 50 KB
 
 export type SessionStatus = 'pending' | 'active' | 'exited' | 'killed';
 

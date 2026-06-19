@@ -85,6 +85,17 @@ function isValidProjectId(id: unknown): id is string {
   );
 }
 
+function estimateDims() {
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const h = typeof window !== 'undefined' ? window.innerHeight : 768;
+  const charW = 13 * 0.6;
+  const reserved = w >= 1024 ? 240 + 220 + 48 : 36;
+  return {
+    cols: Math.max(40, Math.floor((w - reserved) / charW)),
+    rows: Math.max(10, Math.floor((h - 120) / 13)),
+  };
+}
+
 /* ── Status dot for the rail ── */
 
 function statusDot(status: string): { color: string; pulse: boolean } {
@@ -100,14 +111,46 @@ function SessionRail({
   activeSessionId,
   onSelect,
   onClose,
+  onCreateSession,
+  creating,
+  onRename,
   isMobile,
 }: {
   groups: { project: ProjectBrief; sessions: SessionItem[] }[];
   activeSessionId: string | undefined;
   onSelect: (s: SessionItem) => void;
   onClose: () => void;
+  onCreateSession: (projectId: string) => void;
+  creating: string | null;
+  onRename: (sessionId: string, name: string) => void;
   isMobile: boolean;
 }) {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameOriginal, setRenameOriginal] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const startRename = useCallback((s: SessionItem) => {
+    setRenamingId(s.sessionId);
+    setRenameValue(s.name);
+    setRenameOriginal(s.name);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    const trimmed = renameValue.trim();
+    if (renamingId && trimmed && trimmed !== renameOriginal) {
+      onRename(renamingId, trimmed);
+    }
+    setRenamingId(null);
+  }, [renamingId, renameValue, renameOriginal, onRename]);
+
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-[#0a0a0f]">
       <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-[14px] py-[12px]">
@@ -140,28 +183,81 @@ function SessionRail({
         )}
         {groups.map((g) => (
           <div key={g.project.id} className="mb-[6px]">
-            <div className="px-[14px] py-[5px] font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#5a626c]">
-              {g.project.name}
+            <div className="flex items-center justify-between px-[14px] py-[5px]">
+              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#5a626c]">
+                {g.project.name}
+              </span>
+              <button
+                onClick={() => onCreateSession(g.project.id)}
+                disabled={creating === g.project.id}
+                className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all disabled:opacity-40"
+                title={`New session in ${g.project.name}`}
+              >
+                {creating === g.project.id ? (
+                  <div className="size-[8px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                )}
+              </button>
             </div>
             {g.sessions.map((s) => {
               const d = statusDot(s.status);
               const isActive = s.sessionId === activeSessionId;
-              return (
-                <button
+              const isRenaming = renamingId === s.sessionId;
+              return isRenaming ? (
+                <div
                   key={s.sessionId}
-                  onClick={() => onSelect(s)}
-                  className={`flex w-full items-center gap-[8px] px-[14px] py-[8px] text-left font-['Inter'] text-[13px] transition-colors ${
-                    isActive
-                      ? 'border-l-2 border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
-                      : 'border-l-2 border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
+                  className={`flex w-full items-center gap-[8px] px-[14px] py-[6px] border-l-2 ${
+                    isActive ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)]' : 'border-transparent'
                   }`}
                 >
                   <span
                     className={`size-[6px] shrink-0 rounded-full ${d.pulse ? 'animate-pulse' : ''}`}
                     style={{ backgroundColor: d.color }}
                   />
-                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                </button>
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+                      else if (e.key === 'Escape') setRenamingId(null);
+                    }}
+                    onBlur={commitRename}
+                    className="min-w-0 flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[2px] font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+                  />
+                </div>
+              ) : (
+                <div
+                  key={s.sessionId}
+                  className={`group flex w-full items-center gap-[8px] pl-[14px] pr-[6px] py-[8px] font-['Inter'] text-[13px] transition-colors ${
+                    isActive
+                      ? 'border-l-2 border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
+                      : 'border-l-2 border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
+                  }`}
+                >
+                  <button
+                    onClick={() => onSelect(s)}
+                    className="flex min-w-0 flex-1 items-center gap-[8px] text-left"
+                  >
+                    <span
+                      className={`size-[6px] shrink-0 rounded-full ${d.pulse ? 'animate-pulse' : ''}`}
+                      style={{ backgroundColor: d.color }}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); startRename(s); }}
+                    className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] transition-all"
+                    title="Renomear sessão"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
+                      <path d="M7.5 1.5l2 2L3.5 9.5H1.5V7.5L7.5 1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -180,6 +276,7 @@ export default function SessionTerminalPage() {
   const viewportHeight = useViewportHeight();
 
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [allProjects, setAllProjects] = useState<ProjectBrief[]>([]);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('idle');
   const [railOpen, setRailOpen] = useState(() => {
     try {
@@ -197,6 +294,7 @@ export default function SessionTerminalPage() {
     try {
       const projects = await apiFetch<ProjectBrief[]>('/api/projects');
       const safe = Array.isArray(projects) ? projects : [];
+      setAllProjects(safe.filter((p) => isValidProjectId(p.id)));
       const results = await Promise.allSettled(
         safe.flatMap((p) => {
           if (!isValidProjectId(p.id)) return [];
@@ -248,6 +346,9 @@ export default function SessionTerminalPage() {
 
   const groups = useMemo(() => {
     const byProject = new Map<string, { project: ProjectBrief; sessions: SessionItem[] }>();
+    for (const p of allProjects) {
+      byProject.set(p.id, { project: p, sessions: [] });
+    }
     for (const s of sessions) {
       let g = byProject.get(s.projectId);
       if (!g) {
@@ -320,6 +421,97 @@ export default function SessionTerminalPage() {
     [navigate, isMobile, persistRail],
   );
 
+  /* ── Rename handler ── */
+  const handleRename = useCallback(async (renameSessionId: string, name: string) => {
+    setSessions((prev) => prev.map((s) => (s.sessionId === renameSessionId ? { ...s, name } : s)));
+    try {
+      await apiFetch(`/api/sessions/${renameSessionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      });
+    } catch {
+      // next poll reverts
+    }
+  }, []);
+
+  /* ── Action handlers: kill / fit / create ── */
+  const [killing, setKilling] = useState(false);
+  const [creating, setCreating] = useState<string | null>(null);
+
+  const handleKill = useCallback(async () => {
+    if (!sessionId || killing) return;
+    setKilling(true);
+    try {
+      await apiFetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      const remaining = sessions.filter((s) => s.sessionId !== sessionId);
+      window.dispatchEvent(new Event('sessions-changed'));
+      if (remaining.length === 0) {
+        navigate('/sessions');
+      } else {
+        const next =
+          remaining.find((s) => s.projectId === activeSession?.projectId) ?? remaining[0];
+        navigate(`/sessions/${next.projectId}/${next.sessionId}`);
+      }
+    } catch {
+      // keep
+    } finally {
+      setKilling(false);
+    }
+  }, [sessionId, killing, navigate, sessions, activeSession]);
+
+  const handleFit = useCallback(() => {
+    termRef.current?.resize();
+  }, []);
+
+  const handleCreateSession = useCallback(
+    async (projectId: string) => {
+      if (creating) return;
+      setCreating(projectId);
+      try {
+        const dims = estimateDims();
+        const session = await apiFetch<{ sessionId: string }>(
+          `/api/projects/${projectId}/sessions`,
+          { method: 'POST', body: JSON.stringify({ cols: dims.cols, rows: dims.rows }) },
+        );
+        window.dispatchEvent(new Event('sessions-changed'));
+        navigate(`/sessions/${projectId}/${session.sessionId}`);
+      } catch {
+        // silently fail
+      } finally {
+        setCreating(null);
+      }
+    },
+    [creating, navigate],
+  );
+
+  /* ── Header rename state ── */
+  const [headerRenaming, setHeaderRenaming] = useState(false);
+  const [headerRenameValue, setHeaderRenameValue] = useState('');
+  const [headerRenameOriginal, setHeaderRenameOriginal] = useState('');
+  const headerRenameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (headerRenaming && headerRenameRef.current) {
+      headerRenameRef.current.focus();
+      headerRenameRef.current.select();
+    }
+  }, [headerRenaming]);
+
+  const startHeaderRename = useCallback(() => {
+    if (!sessionName) return;
+    setHeaderRenameValue(sessionName);
+    setHeaderRenameOriginal(sessionName);
+    setHeaderRenaming(true);
+  }, [sessionName]);
+
+  const commitHeaderRename = useCallback(() => {
+    const trimmed = headerRenameValue.trim();
+    if (sessionId && trimmed && trimmed !== headerRenameOriginal) {
+      handleRename(sessionId, trimmed);
+    }
+    setHeaderRenaming(false);
+  }, [headerRenameValue, headerRenameOriginal, sessionId, handleRename]);
+
   const isConnected = connStatus === 'connected';
   const isConnecting = connStatus === 'connecting' || connStatus === 'reconnecting';
 
@@ -378,9 +570,36 @@ export default function SessionTerminalPage() {
               </span>
             </>
           )}
-          <span className="truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
-            {sessionName || 'Session'}
-          </span>
+          {headerRenaming ? (
+            <input
+              ref={headerRenameRef}
+              value={headerRenameValue}
+              onChange={(e) => setHeaderRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitHeaderRename(); }
+                else if (e.key === 'Escape') setHeaderRenaming(false);
+              }}
+              onBlur={commitHeaderRename}
+              className="min-w-0 max-w-[160px] rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[8px] py-[3px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+            />
+          ) : (
+            <div className="group flex min-w-0 items-center gap-[4px]">
+              <span className="min-w-0 max-w-[140px] truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
+                {sessionName || 'Session'}
+              </span>
+              {sessionName && (
+                <button
+                  onClick={startHeaderRename}
+                  className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] transition-all"
+                  title="Renomear sessão"
+                >
+                  <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
+                    <path d="M7.5 1.5l2 2L3.5 9.5H1.5V7.5L7.5 1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
           <span
             className={`size-[6px] shrink-0 rounded-full transition-colors ${
               isConnected
@@ -393,27 +612,59 @@ export default function SessionTerminalPage() {
           />
         </div>
 
-        <button
-          onClick={() => termRef.current?.reconnect()}
-          className="flex size-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] text-[#22dd88] transition-colors hover:bg-[rgba(34,221,136,0.14)]"
-          title="Reconectar"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path
-              d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M7.5 1.5h2.5v2.5"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-[6px] shrink-0 ml-[8px]">
+          {/* New Session — for current project */}
+          {activeSession && (
+            <button
+              onClick={() => handleCreateSession(activeSession.projectId)}
+              disabled={!!creating}
+              title="New Session"
+              className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(179,229,2,0.2)] bg-[rgba(179,229,2,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.14)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {creating === activeSession.projectId ? (
+                <div className="size-[11px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+              ) : (
+                <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+                  <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              )}
+              <span className="hidden sm:inline">New Session</span>
+            </button>
+          )}
+          <button
+            onClick={() => termRef.current?.reconnect()}
+            title="Reconnect"
+            className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#2d8] hover:bg-[rgba(34,221,136,0.14)] transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M7.5 1.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="hidden sm:inline">Reconnect</span>
+          </button>
+          <button
+            onClick={handleFit}
+            title="Fit terminal layout"
+            className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <span className="hidden sm:inline">Fit</span>
+          </button>
+          <button
+            onClick={handleKill}
+            disabled={killing}
+            title={killing ? 'Killing…' : 'Kill'}
+            className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(255,85,102,0.2)] bg-[rgba(255,85,102,0.15)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#f56] hover:bg-[rgba(255,85,102,0.22)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <span className="hidden sm:inline">{killing ? 'Killing…' : 'Kill'}</span>
+          </button>
+        </div>
       </header>
 
       {/* ══ Body: rail + terminal ══ */}
@@ -426,6 +677,9 @@ export default function SessionTerminalPage() {
               activeSessionId={sessionId}
               onSelect={handleSelect}
               onClose={() => persistRail(false)}
+              onCreateSession={handleCreateSession}
+              creating={creating}
+              onRename={handleRename}
               isMobile={false}
             />
           </aside>
@@ -444,6 +698,9 @@ export default function SessionTerminalPage() {
                 activeSessionId={sessionId}
                 onSelect={handleSelect}
                 onClose={() => persistRail(false)}
+                onCreateSession={handleCreateSession}
+                creating={creating}
+                onRename={handleRename}
                 isMobile
               />
             </aside>

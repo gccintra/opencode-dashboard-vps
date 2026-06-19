@@ -152,7 +152,7 @@ For Vitest (which runs on Node, not Bun), `bun:sqlite` is mocked via `better-sql
 ## Known Pre-existing Test Failures
 
 These are documented failures that exist in the repo and are not regressions:
-- `ProjectDetail.test.tsx` — 37/38 fail (API mock setup issue)
+- `ProjectDetail.test.tsx` — 38/38 fail (stale test: mocks `../components/Terminal` without a `TerminalStatusBar` export and references a removed "Config" tab). Verified identical on a clean pre-change file — NOT a regression.
 - `Projects.test.tsx` — ~8 fail (`harnesses.map is not a function`)
 - `Sidebar.test.tsx` — 1 fail (duplicate DOM text)
 - `sessions.test.ts` (server) — 3 fail (mock assertion mismatches; spawn/exit-callback/single-bash-failure cases)

@@ -76,13 +76,15 @@ export function useSessions(): UseSessionsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchingRef = useRef(false);
+  const initializedRef = useRef(false);
 
   const fetchAll = useCallback(async () => {
     // Prevent concurrent fetches
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     try {
-      setLoading(true);
+      // Only show loading spinner on the very first fetch, not on poll cycles
+      if (!initializedRef.current) setLoading(true);
       setError(null);
 
       // Fetch all projects first.
@@ -124,6 +126,7 @@ export function useSessions(): UseSessionsReturn {
       }
 
       setGroups(loaded);
+      initializedRef.current = true;
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || 'Failed to load sessions');

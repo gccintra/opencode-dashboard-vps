@@ -55,7 +55,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
             style={{ backgroundColor: current.preview[1] }}
           />
         </span>
-        <span>{current.name}</span>
+        <span className="hidden sm:inline">{current.name}</span>
         <svg width="8" height="8" viewBox="0 0 8 8" fill="none" className={`transition-transform ${open ? 'rotate-180' : ''}`}>
           <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

@@ -478,7 +478,11 @@ if (ENTRY && import.meta.url === `file://${ENTRY}`) {
   // the pipe (e.g. during server restart). Without this listener, Node throws
   // an uncaught EPIPE that terminates the process, killing all active sessions.
   process.stdout.on('error', (err) => {
-    process.stderr.write(`[pty-worker] stdout error (suppressed): ${(err as Error).message}\n`);
+    process.stderr.write(`[pty-worker] stdout error: ${(err as Error).message}\n`);
+    if ((err as NodeJS.ErrnoException).code === 'EPIPE') {
+      process.stderr.write('[pty-worker] stdout pipe broken, exiting\n');
+      process.exit(1);
+    }
   });
 
   // Safety net: catch any node-pty socket errors that escape the try/catch in
