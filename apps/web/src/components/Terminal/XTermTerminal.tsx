@@ -92,6 +92,8 @@ export interface XTermTerminalHandle {
   selectAll: () => void;
   /** Get the current text selection. */
   getSelection: () => string;
+  /** Return current terminal cols/rows, or null if terminal not yet initialised. */
+  getDims: () => { cols: number; rows: number } | null;
 }
 
 /* ── Colour theme ── */
@@ -723,6 +725,11 @@ export const XTermTerminal = memo(
         sendKey,
         selectAll: () => terminalRef.current?.selectAll(),
         getSelection: () => terminalRef.current?.getSelection() ?? '',
+        getDims: () => {
+          const term = terminalRef.current;
+          if (!term) return null;
+          return { cols: term.cols, rows: term.rows };
+        },
       }),
       [socket, sendKey],
     );
@@ -765,9 +772,18 @@ export const XTermTerminal = memo(
       // into the terminal after terminal.open() and fit() complete.
       let terminalReady = false;
       const pendingData: (string | Uint8Array)[] = [];
+      // Track whether the first post-flush data chunk has been rendered so we
+      // can force an explicit refresh() on it. xterm's internal rAF repaint can
+      // lag on cold WebGL startup; a synchronous refresh() here guarantees the
+      // buffer-replay data is visible without waiting for a keypress or resize.
+      let firstLiveWrite = true;
       const unsubscribeData = socket.data((data) => {
         if (terminalReady && terminalRef.current) {
           terminalRef.current.write(data);
+          if (firstLiveWrite) {
+            firstLiveWrite = false;
+            try { terminalRef.current.refresh(0, terminalRef.current.rows - 1); } catch { /* disposed */ }
+          }
         } else {
           pendingData.push(data);
         }
@@ -1139,17 +1155,24 @@ export const XTermTerminal = memo(
             for (const chunk of pendingData) {
               terminal.write(chunk);
             }
-            // Force a repaint after draining buffered data. xterm's internal
-            // rAF-based render can miss the first paint when the WebGL renderer
-            // is initialising its shaders (cold page load). An explicit refresh()
-            // here guarantees the content appears without waiting for the next
-            // external trigger (e.g. a keypress or resize).
-            if (pendingData.length > 0) {
-              try {
-                terminal.refresh(0, terminal.rows - 1);
-              } catch {
-                /* disposed */
-              }
+            // Force a repaint unconditionally. xterm's internal rAF-based render
+            // can miss the first paint when the WebGL renderer is initialising its
+            // shaders (cold page load). An explicit refresh() here guarantees the
+            // content appears without waiting for the next external trigger.
+            try {
+              terminal.refresh(0, terminal.rows - 1);
+            } catch {
+              /* disposed */
+            }
+            // Send a resize to the PTY after terminal init. This ensures OpenCode
+            // (and any other TUI app) receives a SIGWINCH at the true terminal
+            // dimensions and re-renders, covering cases where the initial SIGWINCH
+            // (from notifyResizeIfChanged above) arrived while the app was still
+            // initialising and was silently ignored.
+            const { cols, rows } = terminal;
+            if (cols > 0 && rows > 0) {
+              lastSentDims.current = { cols, rows };
+              onResizeRef.current?.(cols, rows);
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();

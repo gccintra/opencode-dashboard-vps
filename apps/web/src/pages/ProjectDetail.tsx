@@ -1060,8 +1060,19 @@ export default function ProjectDetailPage() {
 
   /* ── Fit/refresh terminal layout ── */
   const handleRefresh = useCallback(() => {
-    terminalRef.current?.resize();
-  }, []);
+    const handle = terminalRef.current;
+    if (!handle) return;
+    handle.resize();
+    // Bypass the 300ms debounce for user-initiated fit — sends SIGWINCH
+    // immediately so OpenCode re-renders its TUI without perceptible delay.
+    const dims = handle.getDims();
+    if (dims && activeSessionId) {
+      apiFetch(`/api/sessions/${activeSessionId}/resize`, {
+        method: 'POST',
+        body: JSON.stringify(dims),
+      }).catch(() => {});
+    }
+  }, [activeSessionId]);
 
   /* ── Resize on tab focus ── */
   useEffect(() => {
