@@ -1144,6 +1144,13 @@ export const XTermTerminal = memo(
           terminalRef.current = terminal;
           fitAddonRef.current = fitAddon;
 
+          const sendResize = (cols: number, rows: number) => {
+            // Primary: WebSocket resize (~50ms, no SSL overhead, no debounce).
+            // Secondary: HTTP resize (300ms debounce, kept as fallback).
+            socket.send(JSON.stringify({ type: 'resize', cols, rows }));
+            onResizeRef.current?.(cols, rows);
+          };
+
           const notifyResizeIfChanged = () => {
             if (container.clientWidth === 0) return;
             try {
@@ -1159,7 +1166,7 @@ export const XTermTerminal = memo(
             }
             if (lastSentDims.current?.cols === cols && lastSentDims.current?.rows === rows) return;
             lastSentDims.current = { cols, rows };
-            onResizeRef.current?.(cols, rows);
+            sendResize(cols, rows);
           };
 
           // Buffer flush: drains pendingData AFTER a successful fit so the TUI
@@ -1190,15 +1197,13 @@ export const XTermTerminal = memo(
             const { cols, rows } = terminal;
             if (cols > 0 && rows > 0) {
               lastSentDims.current = { cols, rows };
-              onResizeRef.current?.(cols, rows);
+              sendResize(cols, rows);
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
             // Delay overlay removal to cover the SIGWINCH round-trip + opencode
-            // re-render. The buffer is drained at this point but opencode may still
-            // be processing the SIGWINCH and re-painting at the correct dimensions.
-            // 600ms covers the prod round-trip (~50-200ms) + opencode re-render
-            // (~100-300ms) with margin, preventing the brief broken-layout flash.
+            // re-render. With WS resize (~50ms) the re-render arrives well before
+            // this timeout; 600ms is kept as a safe margin.
             setTimeout(() => {
               requestAnimationFrame(() => {
                 if (!cancelled) {
@@ -1509,7 +1514,7 @@ export const XTermTerminal = memo(
             } catch {
               /* disposed */
             }
-            if (sendSigwinch) onResizeRef.current?.(term.cols, term.rows);
+            if (sendSigwinch) sendResize(term.cols, term.rows);
           };
           const unsubscribeStatus = socket.onStatus((st) => {
             onStatusChangeRef.current?.(st);
