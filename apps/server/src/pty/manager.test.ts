@@ -140,6 +140,27 @@ describe('PtyManager — writeToSession / resizeSession', () => {
     const h = makeHarness();
     expect(() => h.manager.resizeSession('ghost', 80, 24)).toThrow(/session not found/);
   });
+
+  it('armLaunchOnResize writes the command after the first resize, then once only', () => {
+    const h = makeHarness();
+    void h.manager.spawnSession('s1', '/tmp');
+    h.send({ type: 'spawned', id: 's1', pid: 1 });
+    h.manager.armLaunchOnResize('s1', 'opencode\n');
+
+    // No write should happen until the client sends a measured resize.
+    expect(h.sent().some((m) => m.type === 'write')).toBe(false);
+
+    h.manager.resizeSession('s1', 100, 30);
+    // Resize is sent first, then the armed launch command.
+    expect(h.sent().slice(-2)).toEqual([
+      { type: 'resize', id: 's1', cols: 100, rows: 30 },
+      { type: 'write', id: 's1', data: 'opencode\n' },
+    ]);
+
+    // One-shot: a second resize must NOT re-write the launch command.
+    h.manager.resizeSession('s1', 110, 32);
+    expect(h.sent().at(-1)).toEqual({ type: 'resize', id: 's1', cols: 110, rows: 32 });
+  });
 });
 
 // ── kill ───────────────────────────────────────────────────────────

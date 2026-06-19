@@ -879,17 +879,32 @@ export const XTermTerminal = memo(
           // WebGL context is created with the correct DOM dimensions and
           // devicePixelRatio. Loading before open() causes the canvas to be
           // initialized at wrong resolution → pixelated blocks on resize.
+          let webglAddon: WebglAddon | null = null;
           let webglWarmupTimer: ReturnType<typeof setTimeout> | null = null;
+
+          // Single source of truth for forcing a real paint. `refresh()` alone
+          // can no-op on a cold WebGL context (shaders still compiling), which is
+          // the root cause of "opencode doesn't appear until I resize".
+          // clearTextureAtlas() rebuilds the glyph atlas and guarantees the
+          // renderer flushes a full frame. Use rebuildAtlas=true only for
+          // cold-start paints (it's heavier); a plain refresh() suffices after.
+          const forceRepaint = (rebuildAtlas = false) => {
+            const t = terminalRef.current;
+            if (!t) return;
+            requestAnimationFrame(() => {
+              if (rebuildAtlas) {
+                try { webglAddon?.clearTextureAtlas(); } catch { /* canvas fallback / disposed */ }
+              }
+              try { t.refresh(0, t.rows - 1); } catch { /* disposed */ }
+            });
+          };
+
           try {
-            terminal.loadAddon(new WebglAddon());
-            // WebGL shaders compile asynchronously (~300ms cold-start). Any
-            // terminal.write() during this window is queued but never painted
-            // until the next user interaction triggers a repaint. Force an
-            // explicit refresh at 350ms so the TUI appears without needing a
-            // keypress from the user.
-            webglWarmupTimer = setTimeout(() => {
-              try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
-            }, 350);
+            webglAddon = new WebglAddon();
+            terminal.loadAddon(webglAddon);
+            // WebGL shaders compile asynchronously (~300ms cold-start). Force a
+            // real frame once they're warm so the TUI appears without a keypress.
+            webglWarmupTimer = setTimeout(() => forceRepaint(true), 350);
           } catch {
             // WebGL not supported — Canvas fallback is acceptable.
           }
@@ -1180,15 +1195,9 @@ export const XTermTerminal = memo(
             for (const chunk of pendingData) {
               terminal.write(chunk);
             }
-            // Force a repaint unconditionally. xterm's internal rAF-based render
-            // can miss the first paint when the WebGL renderer is initialising its
-            // shaders (cold page load). An explicit refresh() here guarantees the
-            // content appears without waiting for the next external trigger.
-            try {
-              terminal.refresh(0, terminal.rows - 1);
-            } catch {
-              /* disposed */
-            }
+            // Force a real paint (rebuild atlas) — the WebGL renderer may still
+            // be compiling shaders on cold load, where refresh() alone no-ops.
+            forceRepaint(true);
             // Send a resize to the PTY after terminal init. This ensures OpenCode
             // (and any other TUI app) receives a SIGWINCH at the true terminal
             // dimensions and re-renders, covering cases where the initial SIGWINCH
@@ -1205,15 +1214,11 @@ export const XTermTerminal = memo(
             // re-render. With WS resize (~50ms) the re-render arrives well before
             // this timeout; 600ms is kept as a safe margin.
             setTimeout(() => {
-              requestAnimationFrame(() => {
-                if (!cancelled) {
-                  // Force final repaint right before overlay drops so WebGL content
-                  // is guaranteed visible — even if the 350ms warmup fired during
-                  // shader cold-start and the GPU needed extra time.
-                  try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
-                  setTerminalReady(true);
-                }
-              });
+              if (!cancelled) {
+                // Final guaranteed paint right before the loading overlay drops.
+                forceRepaint(true);
+                setTerminalReady(true);
+              }
             }, 600);
           };
 
@@ -1500,45 +1505,25 @@ export const XTermTerminal = memo(
             for (const t of statusTimers) clearTimeout(t);
             statusTimers.length = 0;
           };
-          const doRepaint = (sendSigwinch: boolean) => {
-            const fit = fitAddonRef.current;
-            const term = terminalRef.current;
-            if (!fit || !term || term.element?.clientWidth === 0) return;
-            try {
-              fit.fit();
-            } catch {
-              return;
-            }
-            try {
-              term.refresh(0, term.rows - 1);
-            } catch {
-              /* disposed */
-            }
-            if (sendSigwinch) sendResize(term.cols, term.rows);
-          };
           const unsubscribeStatus = socket.onStatus((st) => {
             onStatusChangeRef.current?.(st);
-            // Fire fit+refresh+SIGWINCH when status becomes 'active' from any non-active
-            // state. This covers:
+            // Repaint (NO resize) when status becomes 'active', or on the first
+            // status event. The terminal size hasn't changed on a status flip, and
+            // the WS-connect effect already sent the true dimensions — so sending a
+            // SIGWINCH here would only force a needless full reflow in the TUI.
+            // We only need to ensure the WebGL renderer flushes the current frame.
             //   'waiting' → 'active': user ran a command from bash
-            //   ''        → 'active': new session; opencode started before first status poll
+            //   ''        → 'active': new session; opencode just started
             if (st === 'active' && prevStatus !== 'active') {
               clearStatusTimers();
-              // 150ms: fast refresh to cover cases where opencode has already rendered
-              statusTimers.push(setTimeout(() => doRepaint(false), 150));
-              // 1000ms: refresh + SIGWINCH after opencode has had time to initialize
-              statusTimers.push(setTimeout(() => doRepaint(true), 1000));
+              statusTimers.push(setTimeout(() => forceRepaint(false), 150));
             }
-            // On the very first status event, always send SIGWINCH so the TUI
-            // redraws at the correct terminal dimensions. This covers sessions
-            // already at the prompt ('waiting') where the 'active' path above
-            // never fires — buffer replay shows stale content at the old PTY
-            // size, so opencode must re-render to fill the current viewport.
+            // First status event (e.g. reconnect to a session already at the
+            // prompt): rebuild the atlas so the replayed buffer is guaranteed
+            // visible. The connect-effect resize handles any real size delta.
             if (!firstStatusReceived) {
               firstStatusReceived = true;
-              if (st !== 'active') {
-                statusTimers.push(setTimeout(() => doRepaint(true), 500));
-              }
+              statusTimers.push(setTimeout(() => forceRepaint(true), 300));
             }
             prevStatus = st;
             // Disable mouse tracking when the PTY session ends so clicks
@@ -1579,71 +1564,31 @@ export const XTermTerminal = memo(
           // height, so the ResizeObserver alone may miss the first keyboard event.
           window.visualViewport?.addEventListener('resize', debouncedResize);
 
-          // Re-fit when the page becomes visible again — covers browser tab switching,
-          // window minimize/restore, and WebGL context loss/restore where the RAF loop
-          // may have been paused and doesn't auto-resume painting.
+          // Repaint when the page becomes visible again (tab switch / restore /
+          // WebGL context loss). The size hasn't changed, so we only force a frame
+          // — no fit, no resize, no SIGWINCH.
           const onVisibilityChange = () => {
-            if (!document.hidden) scheduleVisibilityFit();
+            if (!document.hidden) forceRepaint(true);
           };
           document.addEventListener('visibilitychange', onVisibilityChange);
 
-          // ── Step 7: Visibility detection — re-fit + re-render on session switch ──
+          // ── Step 7: Visibility detection — re-fit on reveal (session/slot switch) ──
           //
-          // The goal is to replicate exactly what the ResizeObserver does on window
-          // resize: call notifyResizeIfChanged() (which runs fit + refresh + onResize).
-          //
-          // The parent can hide a session in several ways:
-          //   • display:none  → container.clientWidth becomes 0 → ResizeObserver fires
-          //                     automatically, AND IntersectionObserver fires.
-          //   • Tailwind `hidden` / `invisible` / opacity-0 / CSS class toggle
-          //     applied to an ANCESTOR (not the container itself) → neither
-          //     ResizeObserver nor IntersectionObserver may fire.
-          //
-          // Strategy: walk up to 8 ancestor levels and attach a MutationObserver to
-          // each one. When any ancestor's class or style changes (the typical React
-          // show/hide pattern), schedule a fit. Combined with IntersectionObserver
-          // this covers every common hiding mechanism.
-          let visibilityTimerId: ReturnType<typeof setTimeout> | null = null;
-
-          const scheduleVisibilityFit = () => {
-            // Debounce so rapid attribute flips (e.g. React batched updates) collapse
-            // into one poll cycle start. 300ms covers CSS transitions on parent
-            // containers (e.g. MobileSlot collapses with a 200ms transition).
-            if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
-            visibilityTimerId = setTimeout(() => {
-              visibilityTimerId = null;
-              // Restart the polling cycle so we keep retrying until the
-              // container becomes visible (handles display:none toggling on any
-              // ancestor, and CSS transitions that briefly give wrong dims).
-              startPollFit();
-            }, 300);
-          };
-
-          // IntersectionObserver: catches display:none toggled at any ancestor depth.
+          // display:none on the container OR any ancestor sets clientWidth=0, which
+          // the ResizeObserver above already catches (and again on reveal). The
+          // IntersectionObserver below covers reveals that change visibility without
+          // changing our box size. We deliberately do NOT attach MutationObservers to
+          // ancestors — that fired on every unrelated class change up the tree and
+          // caused a fit/resize storm (one of the main perf problems).
           const intersectionObserver = new IntersectionObserver(
             (entries) => {
               for (const entry of entries) {
-                if (entry.isIntersecting) scheduleVisibilityFit();
+                if (entry.isIntersecting) startPollFit();
               }
             },
             { threshold: 0.01 },
           );
           intersectionObserver.observe(container);
-
-          // MutationObserver: catches class/style changes on ancestors (Tailwind
-          // `hidden`, `invisible`, custom active-tab classes, inline style toggles).
-          // Walking 8 levels covers even deeply nested session panel layouts.
-          const mutationObserver = new MutationObserver(scheduleVisibilityFit);
-          let ancestor: Element | null = container.parentElement;
-          for (let depth = 0; depth < 8 && ancestor; depth++) {
-            mutationObserver.observe(ancestor, {
-              attributes: true,
-              attributeFilter: ['class', 'style'],
-              childList: false,
-              subtree: false,
-            });
-            ancestor = ancestor.parentElement;
-          }
 
           // ── Cleanup ──
           // unsubscribeData is handled at effect level (registered before font load).
@@ -1651,13 +1596,11 @@ export const XTermTerminal = memo(
             if (pollTimerId !== null) clearTimeout(pollTimerId);
             if (longPressTimer !== null) clearTimeout(longPressTimer);
             if (resizeTimerId !== null) clearTimeout(resizeTimerId);
-            if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
             if (selectionCopyTimer !== null) clearTimeout(selectionCopyTimer);
             if (webglWarmupTimer !== null) clearTimeout(webglWarmupTimer);
             selectionDisposable.dispose();
             resizeObserver.disconnect();
             intersectionObserver.disconnect();
-            mutationObserver.disconnect();
             window.visualViewport?.removeEventListener('resize', debouncedResize);
             container.removeEventListener('mouseup', onMouseUp);
             container.removeEventListener('contextmenu', onContextMenu);
@@ -1746,6 +1689,11 @@ export const XTermTerminal = memo(
             /* disposed */
           }
           lastSentDims.current = { cols: t.cols, rows: t.rows };
+          // Send the measured size over the socket so the server knows the true
+          // dimensions on (re)connect. On a fresh session this is also the signal
+          // that arms the deferred TUI launch (PtyManager.armLaunchOnResize), so
+          // opencode/claude boots at the final cols×rows with no startup reflow.
+          socket.send(JSON.stringify({ type: 'resize', cols: t.cols, rows: t.rows }));
           console.log(`[XTermTerminal] WS connect retry sync: ${t.cols}x${t.rows}`);
           onResizeRef.current?.(t.cols, t.rows);
         };
@@ -1770,6 +1718,9 @@ export const XTermTerminal = memo(
           /* disposed */
         }
         lastSentDims.current = { cols: term.cols, rows: term.rows };
+        // Send the measured size over the socket (see retry branch above). This
+        // also arms the deferred TUI launch on a fresh session.
+        socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
         console.log(`[XTermTerminal] WS reconnect resize: ${term.cols}x${term.rows}`);
         onResizeRef.current?.(term.cols, term.rows);
       }, 100);

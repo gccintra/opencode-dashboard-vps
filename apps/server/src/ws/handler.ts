@@ -207,12 +207,25 @@ export function handleMessage(ws: WSLike, message: unknown): void {
     data = new TextDecoder().decode(new Uint8Array(message));
   } else if (ArrayBuffer.isView(message)) {
     data = new TextDecoder().decode(message.buffer);
+  } else if (message && typeof message === 'object') {
+    // Elysia auto-parses JSON text frames into objects. Handle control
+    // messages (resize) here directly. NEVER String(object) — that yields
+    // "[object Object]" which would be written into the PTY and corrupt the
+    // TUI's input. For any other object frame, re-serialize to the original
+    // JSON text so e.g. a pasted JSON snippet still reaches the PTY intact.
+    const m = message as { type?: unknown; cols?: unknown; rows?: unknown };
+    if (m.type === 'resize' && typeof m.cols === 'number' && typeof m.rows === 'number') {
+      getPtyManager().resizeSession(sessionId, m.cols, m.rows);
+      return;
+    }
+    data = JSON.stringify(message);
   } else {
-    // Unknown type — coerce to string best-effort.
-    data = String(message);
+    // null/undefined or primitive — nothing to write.
+    return;
   }
 
   // Fast-path: check for JSON control messages (resize) before writing to PTY.
+  // Covers the case where Elysia passes the frame through as a raw string.
   // Resize over WebSocket avoids the 300ms HTTP debounce + SSL round-trip,
   // so the SIGWINCH reaches opencode in ~50ms instead of ~500ms.
   if (data.charCodeAt(0) === 0x7b /* '{' */) {

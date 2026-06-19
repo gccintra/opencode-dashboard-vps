@@ -98,6 +98,14 @@ export class PtyManager {
   private statusMonitorInterval: ReturnType<typeof setInterval> | null = null;
   /** Map sessionId → last detected status to detect transitions. */
   private readonly lastDetectedStatus = new Map<string, string>();
+  /**
+   * Map sessionId → one-shot command written to the PTY the first time the
+   * client sends a real (measured) resize. This defers launching the TUI app
+   * (opencode/claude) until the browser has measured the true terminal size,
+   * so the app's first full-screen paint happens at the final cols×rows with
+   * zero startup reflow. See {@link armLaunchOnResize}.
+   */
+  private readonly pendingLaunch = new Map<string, string>();
 
   constructor(opts: PtyManagerOptions = {}) {
     this.transport = opts.transport ?? new InMemoryWorkerTransport();
@@ -220,6 +228,26 @@ export class PtyManager {
     if (session.status === 'exited' || session.status === 'killed') return;
     console.error(`[pty-manager] resizeSession: ${id} -> ${cols}x${rows}`);
     this.transport.send({ type: 'resize', id, cols, rows });
+
+    // Deferred launch: the first measured resize from the client is the signal
+    // that the terminal is mounted at its true size. Write the armed launch
+    // command now (after the resize is applied) so the TUI app boots at the
+    // final cols×rows. One-shot — cleared so reconnect resizes never relaunch.
+    const launchCmd = this.pendingLaunch.get(id);
+    if (launchCmd !== undefined) {
+      this.pendingLaunch.delete(id);
+      this.transport.send({ type: 'write', id, data: launchCmd });
+    }
+  }
+
+  /**
+   * Arm a one-shot command to be written to the PTY the first time the client
+   * sends a measured resize (see {@link resizeSession}). Used to launch TUI
+   * apps at the true terminal size, eliminating the startup reflow caused by
+   * spawning at an estimated size and resizing afterward.
+   */
+  armLaunchOnResize(id: string, command: string): void {
+    this.pendingLaunch.set(id, command);
   }
 
   /**
@@ -457,12 +485,14 @@ export class PtyManager {
       clearTimeout(pendingSpawn.timer);
       this.pendingSpawns.delete(msg.id);
       this.sessions.delete(msg.id);
+      this.pendingLaunch.delete(msg.id);
       pendingSpawn.reject(new Error(`process exited before spawn completed (code=${msg.code})`));
       return;
     }
 
     const session = this.sessions.get(msg.id);
     if (!session) return;
+    this.pendingLaunch.delete(msg.id);
     session.status = 'exited';
     for (const cb of session.exitCallbacks) {
       try {

@@ -64,7 +64,12 @@ const KILL_HOLD_MS = 30_000;
 
 // Hedge settings (defaults; overridable per-call via HandleDeps for tests).
 const HEDGE_COUNT_DEFAULT = 1;
-const HEDGE_SETTLE_MS_DEFAULT = 1000;
+// Fallback wait before selecting the winner when NO PTY output has arrived yet.
+// Winner selection is normally event-driven (first-data + 100ms grace), so this
+// only bounds the silent-process edge case. With pty-sighup-exec eliminating the
+// SIGHUP race at the source, a short fallback is safe — 400ms instead of 1000ms
+// shaves latency off spawns that don't emit a prompt immediately.
+const HEDGE_SETTLE_MS_DEFAULT = 400;
 
 // Circuit breaker: if N consecutive hedge-all-dead events occur (evidence of
 // a sustained SIGHUP cascade), pause ALL spawns for CIRCUIT_BREAKER_PAUSE_MS
