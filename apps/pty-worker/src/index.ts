@@ -230,6 +230,24 @@ function handleSpawn(
     startRelay: (fn: (chunk: string) => void) => void;
   }>();
 
+  // Event-driven winner selection: instead of a fixed settle timeout, we
+  // trigger winner selection as soon as any hedge produces its first output
+  // (meaning the process has started and is running). A short grace period
+  // (FIRST_DATA_GRACE_MS) lets the process stabilise before we commit.
+  // The fallback timer (HEDGE_SETTLE_MS) fires if no data arrives in time.
+  const FIRST_DATA_GRACE_MS = 100;
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+  let firstDataSeen = false;
+
+  const triggerSettle = (reason: string) => {
+    if (settleTimer !== null) {
+      clearTimeout(settleTimer);
+      settleTimer = null;
+    }
+    process.stderr.write(`[pty-worker] SETTLE_TRIGGER id=${msg.id} reason=${reason}\n`);
+    selectWinner();
+  };
+
   // Spawn all hedges in parallel.
   let spawnCount = 0;
   for (const hid of hedgeIds) {
@@ -249,9 +267,19 @@ function handleSpawn(
       });
 
       // Buffer output during the settle window; forward immediately once relayFn is set.
+      // On first data from any hedge: cancel the fallback timer and trigger winner
+      // selection after a short grace period so the process can stabilise.
       proc.onData((chunk) => {
-        if (relayFn) relayFn(chunk);
-        else tempBuffer.push(chunk);
+        if (relayFn) {
+          relayFn(chunk);
+        } else {
+          tempBuffer.push(chunk);
+          if (!firstDataSeen && settleTimer !== null) {
+            firstDataSeen = true;
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => triggerSettle('first-data'), FIRST_DATA_GRACE_MS);
+          }
+        }
       });
 
       // Cleanup-only onExit per hedge: just remove from map.
@@ -271,8 +299,13 @@ function handleSpawn(
     return;
   }
 
-  // After a short settle period, pick the first hedge that survived.
-  setTimeout(() => {
+  // Fallback: if no PTY data arrives within HEDGE_SETTLE_MS, select winner anyway.
+  settleTimer = setTimeout(() => {
+    settleTimer = null;
+    triggerSettle('timeout-fallback');
+  }, HEDGE_SETTLE_MS);
+
+  function selectWinner() {
     let winnerProc: IPty | null = null;
     let winnerHid: string | null = null;
 
@@ -373,7 +406,7 @@ function handleSpawn(
 
     process.stderr.write(`[pty-worker] HEDGE_WINNER id=${msg.id} winner=${winnerHid} pid=${winnerProc.pid} sessions=${map.size}\n`);
     write({ type: 'spawned', id: msg.id, pid: winnerProc.pid });
-  }, HEDGE_SETTLE_MS);
+  }
 }
 
 function handleWrite(
