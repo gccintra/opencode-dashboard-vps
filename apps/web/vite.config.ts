@@ -43,6 +43,21 @@ export default defineConfig(({ mode }) => {
     outDir: 'dist',
     sourcemap: false,
     minify: 'esbuild',
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-terminal': [
+            '@xterm/xterm',
+            '@xterm/addon-fit',
+            '@xterm/addon-web-links',
+            '@xterm/addon-webgl',
+            '@xterm/addon-unicode11',
+          ],
+        },
+      },
+    },
   },
   server: {
     host: '0.0.0.0',
