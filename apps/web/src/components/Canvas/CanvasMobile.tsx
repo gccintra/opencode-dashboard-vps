@@ -403,6 +403,7 @@ function MobileSlot({
       {/* Terminal — hidden when collapsed */}
       <div className={`relative flex-1 min-h-0 overflow-hidden ${collapsed ? 'hidden' : ''}`}>
         <XTermTerminal
+          key={sessionId}
           ref={terminalRef}
           sessionId={sessionId}
           onResize={handleResize}

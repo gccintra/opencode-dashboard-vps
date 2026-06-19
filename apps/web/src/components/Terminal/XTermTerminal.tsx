@@ -879,8 +879,17 @@ export const XTermTerminal = memo(
           // WebGL context is created with the correct DOM dimensions and
           // devicePixelRatio. Loading before open() causes the canvas to be
           // initialized at wrong resolution → pixelated blocks on resize.
+          let webglWarmupTimer: ReturnType<typeof setTimeout> | null = null;
           try {
             terminal.loadAddon(new WebglAddon());
+            // WebGL shaders compile asynchronously (~300ms cold-start). Any
+            // terminal.write() during this window is queued but never painted
+            // until the next user interaction triggers a repaint. Force an
+            // explicit refresh at 350ms so the TUI appears without needing a
+            // keypress from the user.
+            webglWarmupTimer = setTimeout(() => {
+              try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
+            }, 350);
           } catch {
             // WebGL not supported — Canvas fallback is acceptable.
           }
@@ -1192,7 +1201,13 @@ export const XTermTerminal = memo(
             // (~100-300ms) with margin, preventing the brief broken-layout flash.
             setTimeout(() => {
               requestAnimationFrame(() => {
-                if (!cancelled) setTerminalReady(true);
+                if (!cancelled) {
+                  // Force final repaint right before overlay drops so WebGL content
+                  // is guaranteed visible — even if the 350ms warmup fired during
+                  // shader cold-start and the GPU needed extra time.
+                  try { terminal.refresh(0, terminal.rows - 1); } catch { /* disposed */ }
+                  setTerminalReady(true);
+                }
               });
             }, 600);
           };
@@ -1633,6 +1648,7 @@ export const XTermTerminal = memo(
             if (resizeTimerId !== null) clearTimeout(resizeTimerId);
             if (visibilityTimerId !== null) clearTimeout(visibilityTimerId);
             if (selectionCopyTimer !== null) clearTimeout(selectionCopyTimer);
+            if (webglWarmupTimer !== null) clearTimeout(webglWarmupTimer);
             selectionDisposable.dispose();
             resizeObserver.disconnect();
             intersectionObserver.disconnect();

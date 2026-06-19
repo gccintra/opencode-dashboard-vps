@@ -1445,6 +1445,7 @@ export default function ProjectDetailPage() {
                         data-testid="terminal-container"
                       >
                         <XTermTerminal
+                          key={activeSessionId}
                           ref={terminalRef}
                           sessionId={activeSessionId}
                           onResize={onResize}
