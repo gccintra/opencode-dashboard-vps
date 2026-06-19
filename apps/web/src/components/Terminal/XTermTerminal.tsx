@@ -909,6 +909,26 @@ export const XTermTerminal = memo(
             // WebGL not supported — Canvas fallback is acceptable.
           }
 
+          // ── Alt-screen repaint trigger ──
+          // A TUI entering the alternate screen (opencode/claude/vim emit
+          // CSI ? 1049 h) is the exact moment we must guarantee a real frame: the
+          // app paints its first full screen, but on a warm-but-idle WebGL
+          // renderer that paint can sit unflushed until the next input. This is
+          // the "I run `opencode` from bash and the screen freezes until I type"
+          // bug — a MANUAL launch has no resize and no status transition (the
+          // detector is already 'active' at the bash prompt) to trigger a repaint.
+          // Returning false leaves the sequence unconsumed so xterm still performs
+          // the alt-screen switch. Fires for every alt-screen enter (launch,
+          // re-launch after Ctrl+C, etc.).
+          terminal.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
+            if (params.includes(1049)) {
+              forceRepaint(true);
+              setTimeout(() => forceRepaint(true), 80);
+              setTimeout(() => forceRepaint(true), 250);
+            }
+            return false; // not consumed — xterm performs the alt-screen switch
+          });
+
           // ── OSC 52 clipboard handler ──
           // TUI apps (opencode, Claude Code) use OSC 52 to write to the terminal
           // clipboard: \x1b]52;c;<base64text>\x07. xterm.js receives the sequence
