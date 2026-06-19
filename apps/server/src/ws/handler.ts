@@ -212,6 +212,19 @@ export function handleMessage(ws: WSLike, message: unknown): void {
     data = String(message);
   }
 
+  // Fast-path: check for JSON control messages (resize) before writing to PTY.
+  // Resize over WebSocket avoids the 300ms HTTP debounce + SSL round-trip,
+  // so the SIGWINCH reaches opencode in ~50ms instead of ~500ms.
+  if (data.charCodeAt(0) === 0x7b /* '{' */) {
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'resize' && typeof msg.cols === 'number' && typeof msg.rows === 'number') {
+        getPtyManager().resizeSession(sessionId, msg.cols, msg.rows);
+        return;
+      }
+    } catch { /* not JSON — fall through to PTY write */ }
+  }
+
   try {
     getPtyManager().writeToSession(sessionId, data);
   } catch {
