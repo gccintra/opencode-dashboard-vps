@@ -777,6 +777,9 @@ export const XTermTerminal = memo(
       // xterm.js measures character width/height at `terminal.open()` time.
       // If the font isn't loaded yet, it falls back to the system monospace,
       // producing wrong column counts and broken opencode TUI layout.
+      // Must be generous: xterm measures char width at open() time, so opening
+      // before JetBrains Mono loads (slow mobile cold start) uses the wider
+      // fallback font → fewer cols → empty vertical strip on the right.
       const FONT_LOAD_TIMEOUT_MS = 3000;
       const fontTimeout = new Promise<void>((resolve) => {
         setTimeout(resolve, FONT_LOAD_TIMEOUT_MS);
@@ -807,6 +810,11 @@ export const XTermTerminal = memo(
             fontWeight: '400',
             fontWeightBold: '700',
             theme: theme ?? TERMINAL_THEME,
+            // 0 is correct for TUI apps (opencode/Claude Code use the alternate
+            // screen + manage their own scroll). It also makes FitAddon use
+            // scrollbarWidth=0, so cols fill the full container width — a non-zero
+            // scrollback makes FitAddon subtract a scrollbar gutter, leaving an
+            // empty vertical strip on the right.
             scrollback: 0,
             convertEol: false,
             allowProposedApi: true,
@@ -818,7 +826,7 @@ export const XTermTerminal = memo(
             drawBoldTextInBrightColors: true,
             customGlyphs: true,
             rescaleOverlappingGlyphs: true,
-            minimumContrastRatio: 4.5,
+            minimumContrastRatio: 1,
             allowTransparency: false,
             /* Performance: logging disabled in production, info in dev */
             logLevel: import.meta.env.DEV ? 'info' : 'off',
@@ -838,6 +846,10 @@ export const XTermTerminal = memo(
           // (▀ ▄ █ ░ ▒ ▓) used by @opentui for the logo and UI chrome.
           // Canvas/DOM renderers suffer from sub-pixel anti-aliasing that
           // creates horizontal gaps between adjacent block characters.
+          // WebGL is required on ALL devices (including mobile): the Canvas
+          // fallback renders block-element logos with sub-pixel gaps
+          // ("quadriculado") and is far slower (≈10fps animations on mobile
+          // GPUs). The ~300ms shader cold-start is an acceptable tradeoff.
           try {
             terminal.loadAddon(new WebglAddon());
           } catch {
@@ -1099,25 +1111,21 @@ export const XTermTerminal = memo(
           fitAddonRef.current = fitAddon;
 
           const notifyResizeIfChanged = () => {
-            // Skip when container is hidden — fitAddon.fit() would read clientWidth=0
-            // and resize the PTY to 0 cols, corrupting the TUI.
             if (container.clientWidth === 0) return;
             try {
               fitAddon.fit();
             } catch {
               return; /* addon disposed */
             }
-            // Force a full visual re-render — xterm (especially WebGL renderer)
-            // can remain visually stale after being hidden/shown even when
-            // cols/rows are unchanged. refresh() repaints every row.
+            const { cols, rows } = terminal;
             try {
-              terminal.refresh(0, terminal.rows - 1);
+              terminal.refresh(0, rows - 1);
             } catch {
               /* disposed */
             }
-            lastSentDims.current = { cols: terminal.cols, rows: terminal.rows };
-            console.log(`[XTermTerminal] resize: ${terminal.cols}x${terminal.rows}`);
-            onResizeRef.current?.(terminal.cols, terminal.rows);
+            if (lastSentDims.current?.cols === cols && lastSentDims.current?.rows === rows) return;
+            lastSentDims.current = { cols, rows };
+            onResizeRef.current?.(cols, rows);
           };
 
           // Buffer flush: drains pendingData AFTER a successful fit so the TUI

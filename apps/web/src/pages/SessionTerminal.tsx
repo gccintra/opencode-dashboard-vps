@@ -276,6 +276,7 @@ export default function SessionTerminalPage() {
   const viewportHeight = useViewportHeight();
 
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [allProjects, setAllProjects] = useState<ProjectBrief[]>([]);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('idle');
   const [railOpen, setRailOpen] = useState(() => {
     try {
@@ -293,6 +294,7 @@ export default function SessionTerminalPage() {
     try {
       const projects = await apiFetch<ProjectBrief[]>('/api/projects');
       const safe = Array.isArray(projects) ? projects : [];
+      setAllProjects(safe.filter((p) => isValidProjectId(p.id)));
       const results = await Promise.allSettled(
         safe.flatMap((p) => {
           if (!isValidProjectId(p.id)) return [];
@@ -344,6 +346,9 @@ export default function SessionTerminalPage() {
 
   const groups = useMemo(() => {
     const byProject = new Map<string, { project: ProjectBrief; sessions: SessionItem[] }>();
+    for (const p of allProjects) {
+      byProject.set(p.id, { project: p, sessions: [] });
+    }
     for (const s of sessions) {
       let g = byProject.get(s.projectId);
       if (!g) {
@@ -438,14 +443,21 @@ export default function SessionTerminalPage() {
     setKilling(true);
     try {
       await apiFetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      const remaining = sessions.filter((s) => s.sessionId !== sessionId);
       window.dispatchEvent(new Event('sessions-changed'));
-      navigate('/sessions');
+      if (remaining.length === 0) {
+        navigate('/sessions');
+      } else {
+        const next =
+          remaining.find((s) => s.projectId === activeSession?.projectId) ?? remaining[0];
+        navigate(`/sessions/${next.projectId}/${next.sessionId}`);
+      }
     } catch {
       // keep
     } finally {
       setKilling(false);
     }
-  }, [sessionId, killing, navigate]);
+  }, [sessionId, killing, navigate, sessions, activeSession]);
 
   const handleFit = useCallback(() => {
     termRef.current?.resize();
