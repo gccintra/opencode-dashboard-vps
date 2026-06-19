@@ -54,7 +54,7 @@ let gLastKillTime = -500;
 const SPAWN_COOLDOWN_MS = 500;
 
 // Hedge settings (defaults; overridable per-call via HandleDeps for tests).
-const HEDGE_COUNT_DEFAULT = 3;
+const HEDGE_COUNT_DEFAULT = 1;
 const HEDGE_SETTLE_MS_DEFAULT = 1000;
 
 // Circuit breaker: if N consecutive hedge-all-dead events occur (evidence of
@@ -212,6 +212,14 @@ function handleSpawn(
 
   process.stderr.write(`[pty-worker] HEDGE_SPAWN id=${msg.id} count=${HEDGE_COUNT} retry=${retryAttempt} map_size=${map.size}\n`);
 
+  // Per-hedge output relay: buffer all PTY output during the settle window so
+  // it is not silently dropped. When the winner is selected, startRelay() drains
+  // the buffer and switches future onData calls to the live send function.
+  // JS is single-threaded, so setting relayFn + draining is atomic w.r.t. onData.
+  const hedgeRelays = new Map<string, {
+    startRelay: (fn: (chunk: string) => void) => void;
+  }>();
+
   // Spawn all hedges in parallel.
   let spawnCount = 0;
   for (const hid of hedgeIds) {
@@ -219,6 +227,23 @@ function handleSpawn(
       const proc = ptySpawn(msg.command, msg.args ?? [], spawnOpts);
       map.set(hid, proc);
       spawnCount++;
+
+      const tempBuffer: string[] = [];
+      let relayFn: ((chunk: string) => void) | null = null;
+      hedgeRelays.set(hid, {
+        startRelay: (fn) => {
+          relayFn = fn;
+          for (const c of tempBuffer) fn(c);
+          tempBuffer.length = 0;
+        },
+      });
+
+      // Buffer output during the settle window; forward immediately once relayFn is set.
+      proc.onData((chunk) => {
+        if (relayFn) relayFn(chunk);
+        else tempBuffer.push(chunk);
+      });
+
       // Cleanup-only onExit per hedge: just remove from map.
       // NEVER call destroy() here — closing the master fd queues a kernel
       // tty_hangup(SIGHUP) that can cascade to the next spawned session.
@@ -302,15 +327,17 @@ function handleSpawn(
       }
     }
 
-    // Wire the winner's output and exit to the real session ID.
-    winnerProc.onData((chunk) => {
-      write({
-        type: 'data',
-        id: msg.id,
-        chunk: Buffer.from(chunk, 'utf8').toString('base64'),
-        encoding: 'base64',
-      });
+    // Wire the winner's output: drain buffered output from the settle window,
+    // then relay all subsequent output live. hedgeRelays entry for losers is
+    // simply abandoned (their buffers GC'd since the procs are killed above).
+    const sendChunk = (chunk: string) => write({
+      type: 'data',
+      id: msg.id,
+      chunk: Buffer.from(chunk, 'utf8').toString('base64'),
+      encoding: 'base64',
     });
+    hedgeRelays.get(winnerHid)?.startRelay(sendChunk);
+    hedgeRelays.clear();
 
     const winnerPromotedAt = Date.now();
     winnerProc.onExit(({ exitCode, signal: exitSignal }) => {
