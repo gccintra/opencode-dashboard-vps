@@ -348,10 +348,12 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
               cols,
               rows,
             );
-            // Start claude in the winner's shell. Writing to the PTY stdin
-            // buffers the command for bash to execute as soon as it's ready.
-            // This runs AFTER the 1000ms hedge settle, so bash is confirmed alive.
-            manager.writeToSession(sessionId, initialCmd);
+            // Deferred launch: do NOT write the CLI command now. Arm it to fire
+            // on the client's first measured resize, so opencode/claude boots at
+            // the true terminal cols×rows and paints once — no startup reflow.
+            // (The bash shell sits idle at a prompt until the browser connects,
+            // fits, and sends its real size.) See PtyManager.armLaunchOnResize.
+            manager.armLaunchOnResize(sessionId, initialCmd);
           } catch (spawnErr) {
             sessionMeta.delete(sessionId);
             db.run('DELETE FROM sessions WHERE id = ?', [sessionId]);
