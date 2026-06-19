@@ -53,6 +53,15 @@ process.stderr.write(`[pty-worker] START PATH=${process.env.PATH}\n`);
 let gLastKillTime = -500;
 const SPAWN_COOLDOWN_MS = 500;
 
+// Keep strong references to recently-killed IPty objects for KILL_HOLD_MS after
+// the kill. Without this, V8 GC collects the object quickly → close(master_fd) →
+// tty_hangup queued by kernel. If the PTY device number is reallocated to a new
+// session before the queued SIGHUP is delivered, the new session dies immediately.
+// Holding the reference keeps the master fd open and the device number reserved,
+// so the tty_hangup targets no live process when it fires after KILL_HOLD_MS.
+const gKilledProcRefs = new Set<IPty>();
+const KILL_HOLD_MS = 30_000;
+
 // Hedge settings (defaults; overridable per-call via HandleDeps for tests).
 const HEDGE_COUNT_DEFAULT = 1;
 const HEDGE_SETTLE_MS_DEFAULT = 1000;
@@ -96,6 +105,7 @@ export function resetGlobalState(): void {
   gLastKillTime = -SPAWN_COOLDOWN_MS;
   gConsecutiveSpawnFailures = 0;
   gCircuitBreakerUntil = 0;
+  gKilledProcRefs.clear();
 }
 
 // ── Handler surface (testable) ─────────────────────────────────────
@@ -428,6 +438,11 @@ function handleKill(
     process.stderr.write(`[pty-worker] KILL_SENT id=${msg.id} pid=${proc.pid}\n`);
     map.delete(msg.id);
     process.stderr.write(`[pty-worker] KILL_MAP_DELETED id=${msg.id} map_size_after=${map.size}\n`);
+    // Hold a strong reference for KILL_HOLD_MS to delay GC of the native IPty
+    // object. Premature GC closes the master PTY fd → tty_hangup → SIGHUP cascade
+    // kills the next session that reuses that PTY device number.
+    gKilledProcRefs.add(proc);
+    setTimeout(() => { gKilledProcRefs.delete(proc); }, KILL_HOLD_MS);
   }
   write({ type: 'killed', id: msg.id });
 }
