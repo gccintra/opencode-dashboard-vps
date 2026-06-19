@@ -667,6 +667,17 @@ export const XTermTerminal = memo(
           }
           lastSentDims.current = { cols: term.cols, rows: term.rows };
           onResizeRef.current?.(term.cols, term.rows);
+          // Second SIGWINCH after the debounce window clears. If opencode was
+          // busy during the first one (e.g., rendering its startup screen), the
+          // second guarantees a re-render at the correct viewport dimensions.
+          setTimeout(() => {
+            const f = fitAddonRef.current;
+            const t = terminalRef.current;
+            if (!f || !t) return;
+            try { f.fit(); } catch { return; }
+            lastSentDims.current = { cols: t.cols, rows: t.rows };
+            onResizeRef.current?.(t.cols, t.rows);
+          }, 400);
         },
         focus: () => {
           const term = terminalRef.current;
@@ -1463,10 +1474,27 @@ export const XTermTerminal = memo(
           // Data subscription was already wired before font loading.
           const MOUSE_RESET = '\x1b[?1000l\x1b[?1002l\x1b[?1003l';
           let prevStatus = '';
+          let firstStatusReceived = false;
           const statusTimers: ReturnType<typeof setTimeout>[] = [];
           const clearStatusTimers = () => {
             for (const t of statusTimers) clearTimeout(t);
             statusTimers.length = 0;
+          };
+          const doRepaint = (sendSigwinch: boolean) => {
+            const fit = fitAddonRef.current;
+            const term = terminalRef.current;
+            if (!fit || !term || term.element?.clientWidth === 0) return;
+            try {
+              fit.fit();
+            } catch {
+              return;
+            }
+            try {
+              term.refresh(0, term.rows - 1);
+            } catch {
+              /* disposed */
+            }
+            if (sendSigwinch) onResizeRef.current?.(term.cols, term.rows);
           };
           const unsubscribeStatus = socket.onStatus((st) => {
             onStatusChangeRef.current?.(st);
@@ -1476,26 +1504,21 @@ export const XTermTerminal = memo(
             //   ''        → 'active': new session; opencode started before first status poll
             if (st === 'active' && prevStatus !== 'active') {
               clearStatusTimers();
-              const doRepaint = (sendSigwinch: boolean) => {
-                const fit = fitAddonRef.current;
-                const term = terminalRef.current;
-                if (!fit || !term || term.element?.clientWidth === 0) return;
-                try {
-                  fit.fit();
-                } catch {
-                  return;
-                }
-                try {
-                  term.refresh(0, term.rows - 1);
-                } catch {
-                  /* disposed */
-                }
-                if (sendSigwinch) onResizeRef.current?.(term.cols, term.rows);
-              };
               // 150ms: fast refresh to cover cases where opencode has already rendered
               statusTimers.push(setTimeout(() => doRepaint(false), 150));
               // 1000ms: refresh + SIGWINCH after opencode has had time to initialize
               statusTimers.push(setTimeout(() => doRepaint(true), 1000));
+            }
+            // On the very first status event, always send SIGWINCH so the TUI
+            // redraws at the correct terminal dimensions. This covers sessions
+            // already at the prompt ('waiting') where the 'active' path above
+            // never fires — buffer replay shows stale content at the old PTY
+            // size, so opencode must re-render to fill the current viewport.
+            if (!firstStatusReceived) {
+              firstStatusReceived = true;
+              if (st !== 'active') {
+                statusTimers.push(setTimeout(() => doRepaint(true), 500));
+              }
             }
             prevStatus = st;
             // Disable mouse tracking when the PTY session ends so clicks
@@ -1641,6 +1664,9 @@ export const XTermTerminal = memo(
 
       return () => {
         cancelled = true;
+        // Reset dims so the next session always sends SIGWINCH on first fit,
+        // even if the new session happens to have the same cols×rows.
+        lastSentDims.current = null;
         unsubscribeData(); // always cleanup: registered before font loading
         scheduledCleanup?.();
       };
