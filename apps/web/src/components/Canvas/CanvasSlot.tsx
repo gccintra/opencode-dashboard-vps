@@ -326,6 +326,7 @@ export function CanvasSlot({
           />
           <div className="relative flex-1 min-h-0 overflow-hidden">
             <XTermTerminal
+              key={sessionId}
               ref={terminalRef}
               sessionId={sessionId}
               onResize={handleResize}
