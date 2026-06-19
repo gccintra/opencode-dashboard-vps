@@ -185,7 +185,7 @@ function estimateSidebarTerminalDims() {
   const availH = Math.max(10, h - 50 - 42 - 26 - 34);
   return {
     cols: Math.floor(availW / charW),
-    rows: Math.floor(availH / fontSize),
+    rows: Math.floor(availH / (fontSize * 1.2)), // xterm lineHeight:1.2
   };
 }
 

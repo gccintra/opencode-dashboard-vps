@@ -868,24 +868,22 @@ export const XTermTerminal = memo(
           terminal.loadAddon(unicode11);
           terminal.unicode.activeVersion = '11';
 
-          // ── WebGL renderer (falls back to Canvas if unavailable) ──
+          // ── Step 4: Open terminal in DOM ──
+          // pendingData is already accumulating (subscribed before font load).
+          terminal.open(container);
+
+          // ── WebGL renderer (must load AFTER terminal.open()) ──
           // WebGL gives pixel-perfect rendering of Unicode block elements
           // (▀ ▄ █ ░ ▒ ▓) used by @opentui for the logo and UI chrome.
-          // Canvas/DOM renderers suffer from sub-pixel anti-aliasing that
-          // creates horizontal gaps between adjacent block characters.
-          // WebGL is required on ALL devices (including mobile): the Canvas
-          // fallback renders block-element logos with sub-pixel gaps
-          // ("quadriculado") and is far slower (≈10fps animations on mobile
-          // GPUs). The ~300ms shader cold-start is an acceptable tradeoff.
+          // IMPORTANT: WebglAddon must be loaded after terminal.open() so the
+          // WebGL context is created with the correct DOM dimensions and
+          // devicePixelRatio. Loading before open() causes the canvas to be
+          // initialized at wrong resolution → pixelated blocks on resize.
           try {
             terminal.loadAddon(new WebglAddon());
           } catch {
             // WebGL not supported — Canvas fallback is acceptable.
           }
-
-          // ── Step 4: Open terminal in DOM ──
-          // pendingData is already accumulating (subscribed before font load).
-          terminal.open(container);
 
           // ── OSC 52 clipboard handler ──
           // TUI apps (opencode, Claude Code) use OSC 52 to write to the terminal
@@ -1187,14 +1185,16 @@ export const XTermTerminal = memo(
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
-            // Defer the overlay removal to the next animation frame.
-            // setTerminalReady(true) called directly inside a Promise .then()
-            // runs as a microtask — before the browser paints — so the spinner
-            // would never be visible when fonts are cached. rAF guarantees at
-            // least one painted frame with the overlay before it's removed.
-            requestAnimationFrame(() => {
-              if (!cancelled) setTerminalReady(true);
-            });
+            // Delay overlay removal to cover the SIGWINCH round-trip + opencode
+            // re-render. The buffer is drained at this point but opencode may still
+            // be processing the SIGWINCH and re-painting at the correct dimensions.
+            // 600ms covers the prod round-trip (~50-200ms) + opencode re-render
+            // (~100-300ms) with margin, preventing the brief broken-layout flash.
+            setTimeout(() => {
+              requestAnimationFrame(() => {
+                if (!cancelled) setTerminalReady(true);
+              });
+            }, 600);
           };
 
           // Immediate fit attempt. If the container is already visible, drain

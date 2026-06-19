@@ -87,7 +87,7 @@ function estimateTerminalDims(fontSize: number, isMobile = false): { cols: numbe
   const availH = Math.max(10, h - headerHeight - tabBarHeight - statusBarHeight - containerPadding);
 
   const charW = fontSize * 0.6;
-  const charH = fontSize;
+  const charH = fontSize * 1.2; // xterm lineHeight:1.2 — actual cell height
 
   const cols = Math.floor(availW / charW);
   const rows = Math.floor(availH / charH);
@@ -1385,7 +1385,7 @@ export default function ProjectDetailPage() {
             {/* ── Terminal tab — kept mounted via CSS display ── */}
             {!sessionsError && (
               <div
-                className="flex flex-1 min-h-0 flex-col"
+                className="relative flex flex-1 min-h-0 flex-col"
                 style={{ display: activeTab === 'terminal' ? 'flex' : 'none' }}
               >
                 {sessionsLoading ? (
@@ -1416,6 +1416,15 @@ export default function ProjectDetailPage() {
                   </div>
                 ) : activeSessionId ? (
                   <>
+                    {creating && (
+                      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#1e1e2e]/80 backdrop-blur-sm">
+                        <svg className="animate-spin size-5" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="9" stroke="rgba(179,229,2,0.2)" strokeWidth="2" />
+                          <path d="M21 12a9 9 0 00-9-9" stroke="#aaff00" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                        <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.4)]">Criando sessão…</span>
+                      </div>
+                    )}
                     {closeError && (
                       <div
                         className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-[20px] py-[8px] font-['Inter'] text-[13px] text-red-400"
