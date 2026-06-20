@@ -61,7 +61,15 @@ export const CLOSE_SESSION_ENDED = 4004;
 
 /** Public surface for the handler — minimal subset of ElysiaWS we need. */
 export interface WSLike {
-  data: { params: { sessionId: string } };
+  data: {
+    params: { sessionId: string };
+    /**
+     * Connect-time query string. The client appends `?cols=&rows=` (its
+     * last-known dimensions) so the armed TUI launch can fire on open — see
+     * {@link handleOpen}. Optional: absent on first-ever load and in tests.
+     */
+    query?: Record<string, string | undefined>;
+  };
   readyState: number;
   send(data: string | ArrayBufferLike | ArrayBufferView): unknown;
   close(code?: number, reason?: string): void;
@@ -189,6 +197,24 @@ export function handleOpen(ws: WSLike): void {
     connectedClients.set(sessionId, new Set());
   }
   connectedClients.get(sessionId)!.add(entry);
+
+  // Early launch: if the client passed its last-known dimensions on the connect
+  // URL, resize the PTY now — which fires any armed TUI launch (one-shot) right
+  // away, instead of waiting for the client to load fonts, mount xterm, fit, and
+  // send a separate resize frame. Over WAN that handshake costs 1-2 RTT; firing
+  // here overlaps the TUI boot with the client's render init. The client still
+  // sends an authoritative resize after its real fit() to correct any drift.
+  // MUST run after the dataCb subscription above so the launch's first output is
+  // delivered to this client. No-op if the session has no armed launch.
+  const cols = Number(ws.data.query?.cols);
+  const rows = Number(ws.data.query?.rows);
+  if (Number.isFinite(cols) && Number.isFinite(rows) && cols > 0 && rows > 0) {
+    try {
+      manager.resizeSession(sessionId, Math.round(cols), Math.round(rows));
+    } catch {
+      // Session may have exited between the status check and here — ignore.
+    }
+  }
 }
 
 /**
