@@ -154,7 +154,9 @@ export function loadSessionsFromDb(): void {
       db.run(`UPDATE sessions SET status = 'exited' WHERE id IN (${placeholders})`, staleIds);
     }
     if (rows.length > 0) {
-      console.log(`[sessions] recovered ${rows.length} sessions from db (${staleIds.length} marked exited)`);
+      console.log(
+        `[sessions] recovered ${rows.length} sessions from db (${staleIds.length} marked exited)`,
+      );
     }
   } catch (err) {
     console.warn('[sessions] failed to load sessions from db:', (err as Error).message);
@@ -363,70 +365,24 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             };
           }
 
-          // 7. Wire the exit callback with transparent auto-respawn.
+          // 7. Wire the exit callback: mark the session exited when the PTY dies.
           //
-          //    When the PTY process dies within RESPAWN_THRESHOLD_MS of being
-          //    spawned, we assume it was a victim of the SIGHUP kernel race and
-          //    automatically re-spawn under the same sessionId. The browser's
-          //    WebSocket reconnect logic (exponential back-off, up to 10 attempts)
-          //    handles the brief gap between exit and respawn transparently.
-          //
-          //    Auto-respawn is limited to MAX_AUTORESPAWNS attempts so a truly
-          //    broken command doesn't loop forever.
-          const RESPAWN_THRESHOLD_MS = 6_000;
-          const MAX_AUTORESPAWNS = 4;
-          let autoRespawnCount = 0;
-          let lastSpawnedAt = Date.now();
-
-          const registerExitCallback = () => {
-            manager.onSessionExit(sessionId, async (code) => {
-              const aliveMs = Date.now() - lastSpawnedAt;
-              const m = sessionMeta.get(sessionId);
-
-              if (aliveMs < RESPAWN_THRESHOLD_MS && autoRespawnCount < MAX_AUTORESPAWNS && m) {
-                autoRespawnCount++;
-                console.error(
-                  `[sessions] auto-respawn ${autoRespawnCount}/${MAX_AUTORESPAWNS} for ${sessionId} (lived ${aliveMs}ms code=${code})`,
-                );
-                m.status = 'active'; // keep session visible while respawning
-
-                // Brief pause so pending kernel SIGHUPs drain before the next spawn.
-                await new Promise<void>((r) => setTimeout(r, 2_000));
-
-                try {
-                  lastSpawnedAt = Date.now();
-                  await manager.spawnSession(
-                    sessionId,
-                    directory,
-                    spawnCommand,
-                    spawnArgs,
-                    extraEnv,
-                    cols,
-                    rows,
-                  );
-                  // Same as initial spawn: write command after winner is confirmed.
-                  manager.writeToSession(sessionId, initialCmd);
-                  registerExitCallback(); // wire for the new process
-                  console.error(`[sessions] auto-respawn ${autoRespawnCount} succeeded for ${sessionId}`);
-                } catch (respawnErr) {
-                  console.error(
-                    `[sessions] auto-respawn ${autoRespawnCount} failed for ${sessionId}: ${(respawnErr as Error).message}`,
-                  );
-                  if (m) m.status = 'exited';
-                  try { getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]); } catch { /* non-fatal */ }
-                }
-              } else {
-                // Normal exit (lived long enough) or retries exhausted.
-                if (m) m.status = 'exited';
-                try {
-                  getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
-                } catch { /* non-fatal */ }
-                void code;
-              }
-            });
-          };
-
-          registerExitCallback();
+          //    No auto-respawn anymore. It existed only to paper over the Linux
+          //    PTY SIGHUP race (sessions dying seconds after spawn). That race is
+          //    now eliminated at the source by pty-sighup-exec (SIGHUP=SIG_IGN
+          //    before exec — see the spawnCommand comment above), so a PTY exit
+          //    is a genuine exit (user typed `exit`, process crashed) and should
+          //    be reflected, not silently respawned.
+          manager.onSessionExit(sessionId, (code) => {
+            const m = sessionMeta.get(sessionId);
+            if (m) m.status = 'exited';
+            try {
+              getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
+            } catch {
+              /* non-fatal */
+            }
+            void code;
+          });
 
           set.status = 201;
           return sessionMeta.get(sessionId)!;
@@ -632,7 +588,9 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             sessionMeta.delete(s.sessionId);
             try {
               getDb().run('DELETE FROM sessions WHERE id = ?', [s.sessionId]);
-            } catch { /* non-fatal */ }
+            } catch {
+              /* non-fatal */
+            }
             break;
           }
         }
@@ -724,7 +682,9 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
       try {
         const projectId = params.id;
         const db = getDb();
-        const project = db.query('SELECT id FROM projects WHERE id = ?').get(projectId) as { id: string } | null;
+        const project = db.query('SELECT id FROM projects WHERE id = ?').get(projectId) as {
+          id: string;
+        } | null;
         if (!project) {
           set.status = 404;
           return { error: 'Project not found' };
@@ -767,7 +727,9 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
 
         // Verify the session exists at all (memory or DB).
         if (!sessionMeta.has(sessionId)) {
-          const row = getDb().query('SELECT id FROM sessions WHERE id = ?').get(sessionId) as { id: string } | null;
+          const row = getDb().query('SELECT id FROM sessions WHERE id = ?').get(sessionId) as {
+            id: string;
+          } | null;
           if (!row) {
             set.status = 404;
             return { error: 'Session not found' };

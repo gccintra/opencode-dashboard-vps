@@ -39,14 +39,28 @@ function killPreviousWorker(): void {
   try {
     const pid = parseInt(readFileSync(WORKER_PID_FILE, 'utf8').trim(), 10);
     if (pid && pid > 0) {
-      try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {
+        /* already dead */
+      }
     }
-  } catch { /* no pid file */ }
-  try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
+  } catch {
+    /* no pid file */
+  }
+  try {
+    unlinkSync(WORKER_PID_FILE);
+  } catch {
+    /* ok */
+  }
 }
 
 function writeWorkerPid(pid: number): void {
-  try { writeFileSync(WORKER_PID_FILE, String(pid)); } catch { /* non-fatal */ }
+  try {
+    writeFileSync(WORKER_PID_FILE, String(pid));
+  } catch {
+    /* non-fatal */
+  }
 }
 
 /** Resolve Node 18 binary. Prefers PTY_NODE_BIN env var, then tries common paths. */
@@ -90,50 +104,93 @@ export class BunWorkerTransport implements WorkerTransport {
     // Node 18 LTS is REQUIRED for node-pty ABI compatibility (§3, §10).
     const nodeBin = resolveNodeBin();
 
-    this.proc = Bun.spawn([nodeBin, tsxBin, workerSrc], {
+    // Capture the spawned process in a local so async handlers (stdout loop,
+    // stderr pipe, exited) can detect when they have been superseded by a
+    // restart() and bail out instead of clobbering the newer worker's state.
+    const proc = Bun.spawn([nodeBin, tsxBin, workerSrc], {
       cwd: workerDir,
       stdin: 'pipe',
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, NODE_NO_WARNINGS: '1' },
     });
+    this.proc = proc;
 
-    writeWorkerPid(this.proc.pid);
+    writeWorkerPid(proc.pid);
     this.started = true;
-    console.error(`[pty-transport] worker started pid=${this.proc.pid}`);
+    this.buf = '';
+    console.error(`[pty-transport] worker started pid=${proc.pid}`);
 
     // Protect worker from OOM killer — it holds all live PTY state.
     try {
-      writeFileSync(`/proc/${this.proc.pid}/oom_score_adj`, '-1000');
+      writeFileSync(`/proc/${proc.pid}/oom_score_adj`, '-1000');
     } catch {
       // Non-fatal: might lack permissions in some environments.
     }
 
     // Stream worker stderr → server stderr (prefixed for clarity).
-    this.pipeStderrToServer(this.proc);
+    this.pipeStderrToServer(proc);
 
     // Stream worker stdout → JSON line parser.
-    void this.readStdoutLoop();
+    void this.readStdoutLoop(proc);
 
     // Surface worker exit to the manager. Reset state so start() can
     // respawn the worker when ensureStarted() is called on next request.
     void this.proc.exited
       .then((code) => {
-        console.error(`[pty-transport] worker exited code=${code} pid=${this.proc?.pid ?? '?'}`);
-        try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
-        this.proc = null;
-        this.started = false;
-        this.buf = '';
-        if (this.exitCb) this.exitCb(code);
+        this.handleProcExit(proc, code);
       })
       .catch((err) => {
         console.error('[pty-manager] worker exit promise rejected:', err);
-        try { unlinkSync(WORKER_PID_FILE); } catch { /* ok */ }
-        this.proc = null;
-        this.started = false;
-        this.buf = '';
-        if (this.exitCb) this.exitCb(null);
+        this.handleProcExit(proc, null);
       });
+  }
+
+  /**
+   * Tear down the current worker and spawn a fresh one, preserving the
+   * registered callbacks. Self-heal path for a wedged worker (e.g. a dead
+   * stdout read loop) — without this, every request would time out forever
+   * until someone manually restarted the worker process.
+   */
+  restart(): void {
+    console.error('[pty-transport] worker RESTART requested (self-heal)');
+    const old = this.proc;
+    this.proc = null;
+    this.started = false;
+    this.buf = '';
+    if (old) {
+      // Force-kill the (possibly wedged) old worker. Its `exited` handler is
+      // guarded by handleProcExit's identity check, so it won't clobber the
+      // fresh worker we spawn below.
+      try {
+        void old.kill();
+      } catch {
+        /* already dead */
+      }
+    }
+    this.start();
+  }
+
+  /**
+   * Handle a worker process exit. Guarded by an identity check so a stale
+   * exit (from a worker superseded by restart()) is ignored and never resets
+   * the live worker's state.
+   */
+  private handleProcExit(proc: Bun.Subprocess, code: number | null): void {
+    if (this.proc !== null && this.proc !== proc) {
+      console.error(`[pty-transport] ignoring stale exit from superseded worker pid=${proc.pid}`);
+      return;
+    }
+    console.error(`[pty-transport] worker exited code=${code} pid=${proc.pid}`);
+    try {
+      unlinkSync(WORKER_PID_FILE);
+    } catch {
+      /* ok */
+    }
+    this.proc = null;
+    this.started = false;
+    this.buf = '';
+    if (this.exitCb) this.exitCb(code);
   }
 
   send(msg: ClientMessage): void {
@@ -194,18 +251,23 @@ export class BunWorkerTransport implements WorkerTransport {
 
   // ── Internals ───────────────────────────────────────────────────
 
-  private async readStdoutLoop(): Promise<void> {
-    if (!this.proc) return;
+  private async readStdoutLoop(proc: Bun.Subprocess): Promise<void> {
     const decoder = new TextDecoder();
-    const stdout = this.proc.stdout as ReadableByteStream;
+    const stdout = proc.stdout as ReadableByteStream;
     const reader = stdout.getReader();
     let lineCount = 0;
+    let crashed = false;
     console.error('[pty-transport] readStdoutLoop STARTED');
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
           console.error('[pty-transport] readStdoutLoop DONE (stream ended)');
+          return;
+        }
+        // Drop output from a worker that has been superseded by restart().
+        if (this.proc !== proc) {
+          console.error('[pty-transport] readStdoutLoop superseded, exiting');
           return;
         }
         this.buf += decoder.decode(value, { stream: true });
@@ -223,9 +285,27 @@ export class BunWorkerTransport implements WorkerTransport {
         }
       }
     } catch (err) {
-      console.error('[pty-manager] worker stdout read error (LOOP DEAD):', err);
+      // The read loop died while the worker is (probably) still alive. Without
+      // recovery this silently wedges the transport: the worker keeps running,
+      // `started` stays true, so every future spawn/kill times out forever and
+      // only a manual worker restart recovers. Force-kill the worker so its
+      // `exited` handler fires and the standard exit → respawn path runs.
+      crashed = true;
+      console.error(
+        '[pty-manager] worker stdout read error (LOOP DEAD), killing worker to recover:',
+        err,
+      );
+      if (this.proc === proc) {
+        try {
+          void proc.kill();
+        } catch {
+          /* already dead */
+        }
+      }
     } finally {
-      console.error(`[pty-transport] readStdoutLoop EXITED linesProcessed=${lineCount}`);
+      console.error(
+        `[pty-transport] readStdoutLoop EXITED linesProcessed=${lineCount} crashed=${crashed}`,
+      );
       try {
         reader.releaseLock();
       } catch {

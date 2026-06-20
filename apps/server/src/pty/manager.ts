@@ -106,6 +106,15 @@ export class PtyManager {
    * zero startup reflow. See {@link armLaunchOnResize}.
    */
   private readonly pendingLaunch = new Map<string, string>();
+  /**
+   * Count of consecutive spawn timeouts. A single timeout can be transient,
+   * but repeated timeouts mean the worker is wedged (alive but not responding)
+   * — in that state every request hangs until the worker is restarted. After
+   * {@link RESTART_AFTER_TIMEOUTS} in a row we self-heal by restarting the
+   * worker. Reset to 0 on any successful spawn response.
+   */
+  private consecutiveSpawnTimeouts = 0;
+  private static readonly RESTART_AFTER_TIMEOUTS = 2;
 
   constructor(opts: PtyManagerOptions = {}) {
     this.transport = opts.transport ?? new InMemoryWorkerTransport();
@@ -205,6 +214,7 @@ export class PtyManager {
         if (this.pendingSpawns.get(id)?.timer === timer) {
           this.pendingSpawns.delete(id);
           this.sessions.delete(id);
+          this.onSpawnTimeout();
           reject(new Error(`spawn timeout after ${this.timeoutMs}ms`));
         }
       }, this.timeoutMs);
@@ -427,12 +437,33 @@ export class PtyManager {
     }
     clearTimeout(pending.timer);
     this.pendingSpawns.delete(msg.id);
+    // Worker responded — it is healthy, clear the wedged-worker counter.
+    this.consecutiveSpawnTimeouts = 0;
     const session = this.sessions.get(msg.id);
     if (session) {
       session.pid = msg.pid;
       session.status = 'active';
     }
     pending.resolve(msg.pid);
+  }
+
+  /**
+   * Called when a spawn request times out. Restarts the worker once enough
+   * consecutive timeouts accumulate to conclude the worker is wedged, so the
+   * next request hits a fresh worker instead of timing out forever.
+   */
+  private onSpawnTimeout(): void {
+    this.consecutiveSpawnTimeouts++;
+    console.error(`[pty-manager] spawn timeout (${this.consecutiveSpawnTimeouts} consecutive)`);
+    if (this.consecutiveSpawnTimeouts >= PtyManager.RESTART_AFTER_TIMEOUTS) {
+      this.consecutiveSpawnTimeouts = 0;
+      console.error('[pty-manager] worker appears wedged — restarting it (self-heal)');
+      try {
+        this.transport.restart();
+      } catch (err) {
+        console.error('[pty-manager] worker restart failed:', err);
+      }
+    }
   }
 
   private onKilled(msg: KilledResponse): void {
@@ -463,9 +494,8 @@ export class PtyManager {
 
     // Decode base64 back to binary (latin1) string so byte values
     // 0-255 are preserved without UTF-8 corruption through the IPC layer.
-    const chunk = msg.encoding === 'base64'
-      ? Buffer.from(msg.chunk, 'base64').toString('binary')
-      : msg.chunk;
+    const chunk =
+      msg.encoding === 'base64' ? Buffer.from(msg.chunk, 'base64').toString('binary') : msg.chunk;
 
     this.appendToBuffer(session, chunk);
     for (const cb of session.dataCallbacks) {
@@ -531,7 +561,11 @@ export class PtyManager {
         if (session && session.status !== 'exited' && session.status !== 'killed') {
           session.status = 'exited';
           for (const cb of session.exitCallbacks) {
-            try { cb(-1); } catch { /* best-effort */ }
+            try {
+              cb(-1);
+            } catch {
+              /* best-effort */
+            }
           }
         }
       }

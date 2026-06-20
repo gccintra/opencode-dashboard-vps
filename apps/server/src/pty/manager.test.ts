@@ -58,8 +58,14 @@ describe('PtyManager — spawnSession', () => {
     void h.manager.spawnSession('s1', '/srv/p1', 'opencode', ['--flag']).catch(() => {});
     expect(h.sent()).toEqual([
       {
-        type: 'spawn', id: 's1', cwd: '/srv/p1', command: 'opencode',
-        args: ['--flag'], env: undefined, cols: 120, rows: 35,
+        type: 'spawn',
+        id: 's1',
+        cwd: '/srv/p1',
+        command: 'opencode',
+        args: ['--flag'],
+        env: undefined,
+        cols: 120,
+        rows: 35,
       },
     ]);
   });
@@ -69,8 +75,14 @@ describe('PtyManager — spawnSession', () => {
     void h.manager.spawnSession('s1', '/tmp').catch(() => {});
     expect(h.sent()).toEqual([
       {
-        type: 'spawn', id: 's1', cwd: '/tmp', command: 'bash',
-        args: [], env: undefined, cols: 120, rows: 35,
+        type: 'spawn',
+        id: 's1',
+        cwd: '/tmp',
+        command: 'bash',
+        args: [],
+        env: undefined,
+        cols: 120,
+        rows: 35,
       },
     ]);
   });
@@ -118,7 +130,16 @@ describe('PtyManager — writeToSession / resizeSession', () => {
     h.send({ type: 'spawned', id: 's1', pid: 1 });
     h.manager.writeToSession('s1', 'ls\r');
     expect(h.sent()).toEqual([
-      { type: 'spawn', id: 's1', cwd: '/tmp', command: 'bash', args: [], env: undefined, cols: 120, rows: 35 },
+      {
+        type: 'spawn',
+        id: 's1',
+        cwd: '/tmp',
+        command: 'bash',
+        args: [],
+        env: undefined,
+        cols: 120,
+        rows: 35,
+      },
       { type: 'write', id: 's1', data: 'ls\r' },
     ]);
   });
@@ -486,6 +507,36 @@ describe('PtyManager — lifecycle', () => {
     // re-arms the transport, which is a known trade-off documented
     // in the manager. Here we only assert that pending rejections
     // were sent — see shutdown() test above.
+  });
+});
+
+// ── self-heal: restart wedged worker ───────────────────────────────
+
+describe('PtyManager — worker self-heal on spawn timeouts', () => {
+  it('does NOT restart the worker on a single spawn timeout', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(0);
+  });
+
+  it('restarts the worker after RESTART_AFTER_TIMEOUTS consecutive timeouts', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    // Two consecutive timeouts (RESTART_AFTER_TIMEOUTS = 2) trip the restart.
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    await expect(h.manager.spawnSession('s2', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(1);
+  });
+
+  it('a successful spawn resets the consecutive-timeout counter', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    // One timeout, then a success, then one more timeout — must NOT restart
+    // because the success cleared the counter.
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    const ok = h.manager.spawnSession('s2', '/tmp');
+    h.send({ type: 'spawned', id: 's2', pid: 7 });
+    await expect(ok).resolves.toBe(7);
+    await expect(h.manager.spawnSession('s3', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(0);
   });
 });
 

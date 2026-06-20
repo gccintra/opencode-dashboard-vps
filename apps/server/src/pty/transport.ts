@@ -34,6 +34,13 @@ export interface WorkerTransport {
   onMessage(cb: (msg: ServerMessage) => void): void;
   /** Register the single exit handler. Replaces any prior callback. */
   onExit(cb: (code: number | null) => void): void;
+  /**
+   * Tear down the current worker (if any) and spawn a fresh one, preserving
+   * the registered `onMessage`/`onExit` callbacks. Used for self-healing when
+   * the worker becomes unresponsive (e.g. a dead stdout read loop) — a wedged
+   * worker would otherwise make every request time out until manual restart.
+   */
+  restart(): void;
   /** Best-effort graceful close. Safe to call more than once. */
   shutdown(): Promise<void>;
 }
