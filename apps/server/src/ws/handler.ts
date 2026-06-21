@@ -263,6 +263,12 @@ export function handleMessage(ws: WSLike, message: unknown): void {
     data = new TextDecoder().decode(new Uint8Array(message));
   } else if (ArrayBuffer.isView(message)) {
     data = new TextDecoder().decode(message.buffer);
+  } else if (typeof message === 'number' || typeof message === 'boolean') {
+    // Elysia auto-parses valid JSON text frames. Single digits ("5") and
+    // booleans ("true"/"false") are valid JSON — Elysia passes them as number
+    // or boolean primitives. Convert back to the original string so the PTY
+    // receives the correct character.
+    data = String(message);
   } else if (message && typeof message === 'object') {
     // Elysia auto-parses JSON text frames into objects. Handle control
     // messages (resize) here directly. NEVER String(object) — that yields
@@ -276,7 +282,7 @@ export function handleMessage(ws: WSLike, message: unknown): void {
     }
     data = JSON.stringify(message);
   } else {
-    // null/undefined or primitive — nothing to write.
+    // null/undefined — nothing to write.
     return;
   }
 
