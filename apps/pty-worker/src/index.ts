@@ -529,5 +529,7 @@ if (ENTRY && import.meta.url === `file://${ENTRY}`) {
 
   // Self-heal the node-pty Linux busy-loop (hung-up master fd spun by libuv at
   // ~100% CPU). Exiting lets the server reattach tmux-backed sessions losslessly.
-  createCpuWatchdog();
+  // 2 samples × 1 000 ms = ~2 s detection window (vs default 3 × 2 000 = 6 s).
+  // Faster kill → shorter window where new spawns fail with code=1.
+  createCpuWatchdog({ sampleMs: 1000, strikesToExit: 2 });
 }
