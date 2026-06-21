@@ -38,7 +38,7 @@ import CodeEditor from '../components/FileManager/CodeEditor';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { useCanvasState } from '../hooks/useCanvasState';
-import type { CanvasLayout } from '../hooks/useCanvasState';
+import { CANVAS_TEMPLATES, getTemplate } from '../components/Canvas/canvasTemplates';
 
 const ResourceConfig = lazy(() => import('../components/ResourceConfig/ResourceConfig'));
 
@@ -63,15 +63,30 @@ type PageTab = 'terminal' | 'files';
 
 const DEAD_STATUSES = new Set(['exited', 'killed', 'finished']);
 
-const CANVAS_LAYOUTS: Array<{ cols: number; rows: number; label: string }> = [
-  { cols: 1, rows: 1, label: '1×1' },
-  { cols: 1, rows: 2, label: '1×2' },
-  { cols: 2, rows: 1, label: '2×1' },
-  { cols: 2, rows: 2, label: '2×2' },
-  { cols: 2, rows: 3, label: '2×3' },
-];
 
 /* ── Helpers ── */
+
+function TemplatePickerIcon({ id }: { id: string }) {
+  const W = 20, H = 13, g = 1, p = 1;
+  const w = W - 2 * p, h = H - 2 * p;
+  const hw = (w - g) / 2, hh = (h - g) / 2, tw = (w - 2 * g) / 3;
+  const r = (x: number, y: number, rw: number, rh: number, key: string) => (
+    <rect key={key} x={x} y={y} width={rw} height={rh} rx={0.5} />
+  );
+  const rects = (() => {
+    switch (id) {
+      case 'single':      return [r(p,p,w,h,'a')];
+      case '2col':        return [r(p,p,hw,h,'a'), r(p+hw+g,p,hw,h,'b')];
+      case '2row':        return [r(p,p,w,hh,'a'), r(p,p+hh+g,w,hh,'b')];
+      case 'left-stack':  return [r(p,p,hw,hh,'a'), r(p,p+hh+g,hw,hh,'b'), r(p+hw+g,p,hw,h,'c')];
+      case 'right-stack': return [r(p,p,hw,h,'a'), r(p+hw+g,p,hw,hh,'b'), r(p+hw+g,p+hh+g,hw,hh,'c')];
+      case '2x2':         return [r(p,p,hw,hh,'a'), r(p,p+hh+g,hw,hh,'b'), r(p+hw+g,p,hw,hh,'c'), r(p+hw+g,p+hh+g,hw,hh,'d')];
+      case '3col':        return [r(p,p,tw,h,'a'), r(p+tw+g,p,tw,h,'b'), r(p+2*(tw+g),p,tw,h,'c')];
+      default:            return [r(p,p,hw,h,'a'), r(p+hw+g,p,hw,h,'b')];
+    }
+  })();
+  return <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="currentColor">{rects}</svg>;
+}
 
 function estimateTerminalDims(fontSize: number, isMobile = false): { cols: number; rows: number } {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
@@ -425,8 +440,8 @@ function TerminalHeader({
   showCanvas,
   canvasShowFiles,
   onToggleCanvasFiles,
-  canvasLayout,
-  onLayoutChange,
+  canvasTemplateId,
+  onTemplateChange,
   onReconnect,
   onRefresh,
   onKill,
@@ -441,8 +456,8 @@ function TerminalHeader({
   showCanvas: boolean;
   canvasShowFiles: boolean;
   onToggleCanvasFiles: () => void;
-  canvasLayout: Pick<CanvasLayout, 'cols' | 'rows'>;
-  onLayoutChange: (dims: { cols: number; rows: number }) => void;
+  canvasTemplateId: string;
+  onTemplateChange: (templateId: string) => void;
   onReconnect: () => void;
   onRefresh: () => void;
   onKill: () => void;
@@ -558,21 +573,22 @@ function TerminalHeader({
           {/* Layout picker */}
           <span className="font-['Inter'] text-[11px] text-[#5a626c]">Layout:</span>
           <div className="flex items-center gap-[4px]" role="group" aria-label="Layout do canvas">
-            {CANVAS_LAYOUTS.map((opt) => {
-              const isActive = canvasLayout.cols === opt.cols && canvasLayout.rows === opt.rows;
+            {CANVAS_TEMPLATES.map((t) => {
+              const isActive = canvasTemplateId === t.id;
               return (
                 <button
-                  key={opt.label}
-                  onClick={() => onLayoutChange({ cols: opt.cols, rows: opt.rows })}
+                  key={t.id}
+                  onClick={() => onTemplateChange(t.id)}
                   aria-pressed={isActive}
-                  className={`rounded-[5px] px-[8px] py-[4px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+                  title={t.label}
+                  className={`rounded-[5px] px-[7px] py-[4px] transition-colors ${
                     isActive
                       ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
                       : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
                   }`}
-                  data-testid={`layout-btn-${opt.label}`}
+                  data-testid={`layout-btn-${t.id}`}
                 >
-                  {opt.label}
+                  <TemplatePickerIcon id={t.id} />
                 </button>
               );
             })}
@@ -1031,7 +1047,7 @@ export default function ProjectDetailPage() {
   /* ── Canvas state ── */
   const {
     layout: canvasLayout,
-    setCanvasLayout,
+    setTemplate: setCanvasTemplate,
     assignSlot,
     clearSlot,
   } = useCanvasState(projectId ?? '', sessions);
@@ -1272,8 +1288,8 @@ export default function ProjectDetailPage() {
             showCanvas={showCanvas}
             canvasShowFiles={canvasShowFiles}
             onToggleCanvasFiles={() => setCanvasShowFiles((v) => !v)}
-            canvasLayout={canvasLayout}
-            onLayoutChange={setCanvasLayout}
+            canvasTemplateId={canvasLayout.templateId}
+            onTemplateChange={setCanvasTemplate}
             onReconnect={handleReconnect}
             onRefresh={handleRefresh}
             onKill={handleKillSession}
@@ -1298,12 +1314,15 @@ export default function ProjectDetailPage() {
                 projectName={projectName}
                 sidebarOpen={sidebarOpen}
                 onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-                externalSlots={Array.from(
-                  { length: canvasLayout.cols * canvasLayout.rows },
-                  (_, i) => canvasLayout.slots[i] ?? null,
+                externalSlots={getTemplate(canvasLayout.templateId).slots.map(
+                  (id) => canvasLayout.slots[id] ?? null,
                 )}
-                onAssignSlot={assignSlot}
-                onClearSlot={clearSlot}
+                onAssignSlot={(index, sid) =>
+                  assignSlot(getTemplate(canvasLayout.templateId).slots[index], sid)
+                }
+                onClearSlot={(index) =>
+                  clearSlot(getTemplate(canvasLayout.templateId).slots[index])
+                }
               />
             ) : (
               <>
@@ -1338,9 +1357,9 @@ export default function ProjectDetailPage() {
 
                 {/* Canvas grid */}
                 <CanvasGrid
-                  cols={canvasLayout.cols}
-                  rows={canvasLayout.rows}
+                  templateId={canvasLayout.templateId}
                   slots={canvasLayout.slots}
+                  storageKey={projectId ?? ''}
                   sessions={sessions}
                   fontSize={fontSize}
                   theme={getThemeById(themeId).xterm}

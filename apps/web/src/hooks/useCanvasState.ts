@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
+import { DEFAULT_TEMPLATE_ID, getTemplate } from '../components/Canvas/canvasTemplates';
 
-export interface CanvasLayout {
-  cols: number;
-  rows: number;
-  slots: Record<number, string | null>;
+export interface CanvasPanelLayout {
+  templateId: string;
+  slots: Record<string, string | null>;
 }
 
 interface Session {
@@ -11,39 +11,32 @@ interface Session {
 }
 
 export interface UseCanvasStateResult {
-  layout: CanvasLayout;
-  setCanvasLayout: (dims: { cols: number; rows: number }) => void;
-  assignSlot: (slotIndex: number, sessionId: string) => void;
-  clearSlot: (slotIndex: number) => void;
+  layout: CanvasPanelLayout;
+  setTemplate: (templateId: string) => void;
+  assignSlot: (slotId: string, sessionId: string) => void;
+  clearSlot: (slotId: string) => void;
 }
 
 const STORAGE_KEY_PREFIX = 'canvas-grid-';
 
-export const DEFAULT_LAYOUT: CanvasLayout = { cols: 2, rows: 2, slots: {} };
+export const DEFAULT_LAYOUT: CanvasPanelLayout = {
+  templateId: DEFAULT_TEMPLATE_ID,
+  slots: {},
+};
 
-const VALID_CONFIGS = [
-  { cols: 1, rows: 1 },
-  { cols: 1, rows: 2 },
-  { cols: 2, rows: 1 },
-  { cols: 2, rows: 2 },
-  { cols: 2, rows: 3 },
-];
-
-function isValidLayout(layout: unknown): layout is CanvasLayout {
+function isValidLayout(layout: unknown): layout is CanvasPanelLayout {
   if (!layout || typeof layout !== 'object' || Array.isArray(layout)) return false;
   const l = layout as Record<string, unknown>;
-  const { cols, rows, slots } = l;
-  if (typeof cols !== 'number' || typeof rows !== 'number') return false;
-  if (!VALID_CONFIGS.some((c) => c.cols === cols && c.rows === rows)) return false;
-  if (typeof slots !== 'object' || slots === null || Array.isArray(slots)) return false;
-  for (const [k, v] of Object.entries(slots as Record<string, unknown>)) {
-    if (Number.isNaN(Number(k))) return false;
+  if (typeof l.templateId !== 'string') return false;
+  if (typeof l.slots !== 'object' || l.slots === null || Array.isArray(l.slots)) return false;
+  for (const [k, v] of Object.entries(l.slots as Record<string, unknown>)) {
+    if (typeof k !== 'string') return false;
     if (v !== null && typeof v !== 'string') return false;
   }
   return true;
 }
 
-export function loadCanvasLayout(projectId: string): CanvasLayout {
+export function loadCanvasLayout(projectId: string): CanvasPanelLayout {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${projectId}`);
     if (!raw) return { ...DEFAULT_LAYOUT, slots: {} };
@@ -55,7 +48,7 @@ export function loadCanvasLayout(projectId: string): CanvasLayout {
   return { ...DEFAULT_LAYOUT, slots: {} };
 }
 
-function saveCanvasLayout(projectId: string, layout: CanvasLayout): void {
+function saveCanvasLayout(projectId: string, layout: CanvasPanelLayout): void {
   localStorage.setItem(`${STORAGE_KEY_PREFIX}${projectId}`, JSON.stringify(layout));
 }
 
@@ -63,24 +56,20 @@ export function useCanvasState(
   projectId: string,
   sessions: Session[],
 ): UseCanvasStateResult {
-  const [layout, setLayout] = useState<CanvasLayout>(() => loadCanvasLayout(projectId));
+  const [layout, setLayout] = useState<CanvasPanelLayout>(() => loadCanvasLayout(projectId));
 
-  // Reload when projectId changes
   useEffect(() => {
     setLayout(loadCanvasLayout(projectId));
   }, [projectId]);
 
-  // Auto-clean orphaned slots when session list changes
   useEffect(() => {
     const liveIds = new Set(sessions.map((s) => s.sessionId));
     setLayout((prev) => {
-      const capacity = prev.cols * prev.rows;
       let changed = false;
       const newSlots = { ...prev.slots };
-      for (let i = 0; i < capacity; i++) {
-        const sid = newSlots[i];
+      for (const [slotId, sid] of Object.entries(newSlots)) {
         if (sid && !liveIds.has(sid)) {
-          newSlots[i] = null;
+          newSlots[slotId] = null;
           changed = true;
         }
       }
@@ -91,30 +80,26 @@ export function useCanvasState(
     });
   }, [sessions, projectId]);
 
-  const setCanvasLayout = useCallback(
-    (dims: { cols: number; rows: number }) => {
+  const setTemplate = useCallback(
+    (templateId: string) => {
       setLayout((prev) => {
-        const liveIds = new Set(sessions.map((s) => s.sessionId));
-        const capacity = dims.cols * dims.rows;
-        const newSlots: Record<number, string | null> = {};
-        for (let i = 0; i < capacity; i++) {
-          const sid = prev.slots[i];
-          newSlots[i] = sid && liveIds.has(sid) ? sid : null;
+        const template = getTemplate(templateId);
+        const newSlots: Record<string, string | null> = {};
+        for (const slotId of template.slots) {
+          newSlots[slotId] = prev.slots[slotId] ?? null;
         }
-        const next = { cols: dims.cols, rows: dims.rows, slots: newSlots };
+        const next = { templateId, slots: newSlots };
         saveCanvasLayout(projectId, next);
         return next;
       });
     },
-    // sessions intentionally captured via closure to avoid stale closure
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [projectId, sessions],
+    [projectId],
   );
 
   const assignSlot = useCallback(
-    (slotIndex: number, sessionId: string) => {
+    (slotId: string, sessionId: string) => {
       setLayout((prev) => {
-        const next = { ...prev, slots: { ...prev.slots, [slotIndex]: sessionId } };
+        const next = { ...prev, slots: { ...prev.slots, [slotId]: sessionId } };
         saveCanvasLayout(projectId, next);
         return next;
       });
@@ -123,9 +108,9 @@ export function useCanvasState(
   );
 
   const clearSlot = useCallback(
-    (slotIndex: number) => {
+    (slotId: string) => {
       setLayout((prev) => {
-        const next = { ...prev, slots: { ...prev.slots, [slotIndex]: null } };
+        const next = { ...prev, slots: { ...prev.slots, [slotId]: null } };
         saveCanvasLayout(projectId, next);
         return next;
       });
@@ -133,5 +118,5 @@ export function useCanvasState(
     [projectId],
   );
 
-  return { layout, setCanvasLayout, assignSlot, clearSlot };
+  return { layout, setTemplate, assignSlot, clearSlot };
 }

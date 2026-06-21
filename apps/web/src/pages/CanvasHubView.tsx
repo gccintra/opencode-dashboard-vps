@@ -46,6 +46,14 @@ const CANVAS_LAYOUTS = [
   { cols: 4, rows: 2, label: '4×2' },
 ];
 
+function colsRowsToTemplateId(cols: number, rows: number): string {
+  if (cols === 1 && rows === 1) return 'single';
+  if (cols === 1 && rows === 2) return '2row';
+  if (cols === 2 && rows === 1) return '2col';
+  if (cols === 2 && rows === 2) return '2x2';
+  return '2x2'; // fallback for 2×3 and others
+}
+
 // Returns the smallest layout that fits at least `minSlots` slots
 function getAutoGrowLayout(minSlots: number): { cols: number; rows: number } {
   if (minSlots <= 2) return { cols: 2, rows: 1 };
@@ -372,15 +380,15 @@ export default function CanvasHubViewPage() {
     });
   }, [canvas, sessions]);
 
-  // Desktop slots: capacity-limited by current layout, dead sessions treated as null
-  const desktopSlotsRecord: Record<number, string | null> = useMemo(() => {
+  // Desktop slots: string-keyed for CanvasGrid (a=0, b=1, ...)
+  const desktopSlotsRecord: Record<string, string | null> = useMemo(() => {
     if (!canvas) return {};
     const liveIds = new Set(sessions.map((s) => s.sessionId));
     const capacity = canvas.cols * canvas.rows;
-    const rec: Record<number, string | null> = {};
+    const rec: Record<string, string | null> = {};
     for (let i = 0; i < capacity; i++) {
       const sid = canvas.slots[i] ?? null;
-      rec[i] = sid && liveIds.has(sid) ? sid : null;
+      rec[String.fromCharCode(97 + i)] = sid && liveIds.has(sid) ? sid : null;
     }
     return rec;
   }, [canvas, sessions]);
@@ -609,14 +617,14 @@ export default function CanvasHubViewPage() {
           />
         ) : (
           <CanvasGrid
-            cols={canvas.cols}
-            rows={canvas.rows}
+            templateId={colsRowsToTemplateId(canvas.cols, canvas.rows)}
             slots={desktopSlotsRecord}
+            storageKey={canvas.id}
             sessions={sessions}
             fontSize={fontSize}
             theme={getThemeById(themeId).xterm}
-            onAssign={handleAssignSlot}
-            onRemove={handleClearSlot}
+            onAssign={(slotId, sid) => handleAssignSlot(slotId.charCodeAt(0) - 97, sid)}
+            onRemove={(slotId) => handleClearSlot(slotId.charCodeAt(0) - 97)}
             onKill={handleKillSession}
             onCreateSession={handleCreateSession}
             onRename={handleRenameSession}
