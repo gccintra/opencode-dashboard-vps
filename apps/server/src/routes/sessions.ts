@@ -484,6 +484,10 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           } catch (spawnErr) {
             sessionMeta.delete(sessionId);
             db.run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+            // Reap any orphan tmux session: `new-session -A` may have created
+            // the session in the daemon before the attach client died, which
+            // would otherwise leave a detached session running forever.
+            void tmuxKillSession(sessionId);
             set.status = 500;
             return {
               error: `Failed to spawn session: ${(spawnErr as Error).message}`,
@@ -752,6 +756,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           } catch {
             // non-fatal
           }
+          // Reap any orphan tmux session created before the attach client died.
+          void tmuxKillSession(sessionId);
           set.status = 500;
           return {
             error: `Failed to spawn emergency terminal: ${(err as Error).message}`,

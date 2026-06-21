@@ -20,6 +20,7 @@ import { Elysia } from 'elysia';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { tmuxKillSession } from '../pty/tmux';
 
 // ── PTY manager mock ────────────────────────────────────────────────
 // vi.hoisted runs before the vi.mock factories are evaluated, so the
@@ -328,6 +329,7 @@ describe('sessions routes', () => {
 
     it('returns 500 and rolls back metadata when both spawns fail', async () => {
       mockManager.spawnSession.mockRejectedValue(new Error('totally broken'));
+      vi.mocked(tmuxKillSession).mockClear();
 
       const token = await getToken();
       const res = await app.handle(
@@ -337,6 +339,9 @@ describe('sessions routes', () => {
       expect(res.status).toBe(500);
       const body = (await res.json()) as { error: string };
       expect(body.error).toContain('totally broken');
+
+      // Orphan tmux session (if any) must be reaped on spawn failure.
+      expect(vi.mocked(tmuxKillSession)).toHaveBeenCalled();
 
       // The session must NOT appear in the list after the failed spawn.
       const listRes = await app.handle(authReq(token, `/api/projects/${projectId}/sessions`));
