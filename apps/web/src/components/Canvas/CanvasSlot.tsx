@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { XTermTerminal } from '../Terminal';
 import type { XTermTerminalHandle } from '../Terminal';
 import { apiFetch } from '../../lib/api';
@@ -258,6 +258,16 @@ export function CanvasSlot({
   const terminalRef = useRef<XTermTerminalHandle | null>(null);
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDimsRef = useRef<{ cols: number; rows: number } | null>(null);
+
+  // TUI sessions replay their buffer at the slot dimensions, but opencode may
+  // not process the first SIGWINCH while busy mid-task. Extra resize at 1.5s
+  // and 3s guarantees opencode re-renders once idle.
+  useEffect(() => {
+    if (!sessionId) return;
+    const t1 = setTimeout(() => terminalRef.current?.resize(), 1500);
+    const t2 = setTimeout(() => terminalRef.current?.resize(), 3000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [sessionId]);
 
   const handleResize = useCallback(
     (cols: number, rows: number) => {

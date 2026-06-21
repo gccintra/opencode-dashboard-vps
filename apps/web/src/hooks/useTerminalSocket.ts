@@ -52,6 +52,16 @@ export interface UseTerminalSocketOptions {
    */
   buildUrl?: (sessionId: string) => string;
   /**
+   * Optional last-known terminal dimensions, appended to the connect URL as
+   * `?cols=&rows=`. The server uses these to fire the armed TUI launch the
+   * moment the socket opens — before the client has finished loading fonts and
+   * measuring — overlapping server-side boot with client-side init. This shaves
+   * 1-2 WAN round-trips off first paint. Stale-but-close values are corrected by
+   * the authoritative resize the client sends after its real fit(). Evaluated
+   * on every (re)connect so reconnects use the most recent measured size.
+   */
+  connectDims?: () => { cols: number; rows: number } | null;
+  /**
    * Backoff sequence in milliseconds. The first attempt uses index 0.
    * Defaults to `[1000, 2000, 4000, 8000, 16000, 30000]`.
    */
@@ -146,9 +156,12 @@ export function useTerminalSocket(
   const {
     WebSocketImpl,
     buildUrl = buildDefaultUrl,
+    connectDims,
     backoffSequence = DEFAULT_BACKOFF_MS,
     maxAttempts = DEFAULT_MAX_ATTEMPTS,
   } = options;
+  const connectDimsRef = useRef(connectDims);
+  connectDimsRef.current = connectDims;
 
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const [error, setError] = useState<ConnectionError | null>(null);
@@ -217,7 +230,14 @@ export function useTerminalSocket(
     setStatus(attemptRef.current > 0 ? 'reconnecting' : 'connecting');
     setError(null);
 
-    const url = buildUrl(sessionIdRef.current);
+    let url = buildUrl(sessionIdRef.current);
+    // Attach last-known dims so the server can fire the armed TUI launch on open
+    // (see UseTerminalSocketOptions.connectDims). Only valid positive ints.
+    const dims = connectDimsRef.current?.();
+    if (dims && dims.cols > 0 && dims.rows > 0) {
+      const sep = url.includes('?') ? '&' : '?';
+      url += `${sep}cols=${Math.round(dims.cols)}&rows=${Math.round(dims.rows)}`;
+    }
     const Ctor: typeof WebSocket | undefined =
       WebSocketImpl ?? (typeof WebSocket !== 'undefined' ? WebSocket : undefined);
     if (!Ctor) {

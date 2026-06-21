@@ -58,8 +58,14 @@ describe('PtyManager — spawnSession', () => {
     void h.manager.spawnSession('s1', '/srv/p1', 'opencode', ['--flag']).catch(() => {});
     expect(h.sent()).toEqual([
       {
-        type: 'spawn', id: 's1', cwd: '/srv/p1', command: 'opencode',
-        args: ['--flag'], env: undefined, cols: 120, rows: 35,
+        type: 'spawn',
+        id: 's1',
+        cwd: '/srv/p1',
+        command: 'opencode',
+        args: ['--flag'],
+        env: undefined,
+        cols: 120,
+        rows: 35,
       },
     ]);
   });
@@ -69,8 +75,14 @@ describe('PtyManager — spawnSession', () => {
     void h.manager.spawnSession('s1', '/tmp').catch(() => {});
     expect(h.sent()).toEqual([
       {
-        type: 'spawn', id: 's1', cwd: '/tmp', command: 'bash',
-        args: [], env: undefined, cols: 120, rows: 35,
+        type: 'spawn',
+        id: 's1',
+        cwd: '/tmp',
+        command: 'bash',
+        args: [],
+        env: undefined,
+        cols: 120,
+        rows: 35,
       },
     ]);
   });
@@ -118,7 +130,16 @@ describe('PtyManager — writeToSession / resizeSession', () => {
     h.send({ type: 'spawned', id: 's1', pid: 1 });
     h.manager.writeToSession('s1', 'ls\r');
     expect(h.sent()).toEqual([
-      { type: 'spawn', id: 's1', cwd: '/tmp', command: 'bash', args: [], env: undefined, cols: 120, rows: 35 },
+      {
+        type: 'spawn',
+        id: 's1',
+        cwd: '/tmp',
+        command: 'bash',
+        args: [],
+        env: undefined,
+        cols: 120,
+        rows: 35,
+      },
       { type: 'write', id: 's1', data: 'ls\r' },
     ]);
   });
@@ -489,6 +510,36 @@ describe('PtyManager — lifecycle', () => {
   });
 });
 
+// ── self-heal: restart wedged worker ───────────────────────────────
+
+describe('PtyManager — worker self-heal on spawn timeouts', () => {
+  it('does NOT restart the worker on a single spawn timeout', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(0);
+  });
+
+  it('restarts the worker after RESTART_AFTER_TIMEOUTS consecutive timeouts', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    // Two consecutive timeouts (RESTART_AFTER_TIMEOUTS = 2) trip the restart.
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    await expect(h.manager.spawnSession('s2', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(1);
+  });
+
+  it('a successful spawn resets the consecutive-timeout counter', async () => {
+    const h = makeHarness({ timeoutMs: 50 });
+    // One timeout, then a success, then one more timeout — must NOT restart
+    // because the success cleared the counter.
+    await expect(h.manager.spawnSession('s1', '/tmp')).rejects.toThrow(/spawn timeout/);
+    const ok = h.manager.spawnSession('s2', '/tmp');
+    h.send({ type: 'spawned', id: 's2', pid: 7 });
+    await expect(ok).resolves.toBe(7);
+    await expect(h.manager.spawnSession('s3', '/tmp')).rejects.toThrow(/spawn timeout/);
+    expect(h.transport.restartCalls).toBe(0);
+  });
+});
+
 // ── InMemory transport contract sanity ─────────────────────────────
 
 describe('InMemoryWorkerTransport — contract', () => {
@@ -521,5 +572,96 @@ describe('InMemoryWorkerTransport — contract', () => {
     t.onExit(cb);
     t.simulateExit(137);
     expect(cb).toHaveBeenCalledWith(137);
+  });
+});
+
+// ── tmux reattach / worker-lost handler ────────────────────────────
+
+describe('PtyManager — tmux reattach', () => {
+  async function spawned(h: Harness, id = 's1', command = 'pty-sighup-exec', args = ['tmux']) {
+    const p = h.manager.spawnSession(id, '/p', command, args);
+    h.send({ type: 'spawned', id, pid: 1 });
+    await p;
+  }
+
+  it('default (no handler): a worker crash marks active sessions exited (code -1)', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let code: number | undefined;
+    h.manager.onSessionExit('s1', (c) => (code = c));
+    h.crash(1);
+    expect(code).toBe(-1);
+  });
+
+  it('with a handler: a worker crash delegates instead of marking exited', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let exited = false;
+    h.manager.onSessionExit('s1', () => (exited = true));
+    let handlerCalls = 0;
+    h.manager.setWorkerLostHandler(() => handlerCalls++);
+    h.crash(1);
+    expect(handlerCalls).toBe(1);
+    expect(exited).toBe(false);
+  });
+
+  it('getReattachableSessions returns only live (active/pending) sessions', async () => {
+    const h = makeHarness();
+    await spawned(h, 's1');
+    await spawned(h, 's2');
+    h.manager.markSessionExited('s2');
+    expect(h.manager.getReattachableSessions()).toEqual(['s1']);
+  });
+
+  it('reattachSession re-sends spawn with stored command/args and preserves buffer + callbacks', async () => {
+    const h = makeHarness();
+    await spawned(h, 's1', 'pty-sighup-exec', ['tmux', 'attach']);
+    // Accumulate buffer + register a data subscriber (simulates a live WS).
+    h.send({
+      type: 'data',
+      id: 's1',
+      chunk: Buffer.from('hello').toString('base64'),
+      encoding: 'base64',
+    });
+    const chunks: string[] = [];
+    h.manager.onSessionData('s1', (c) => chunks.push(c));
+
+    const p = h.manager.reattachSession('s1');
+    const last = h.sent().at(-1);
+    expect(last).toMatchObject({
+      type: 'spawn',
+      id: 's1',
+      command: 'pty-sighup-exec',
+      args: ['tmux', 'attach'],
+    });
+    h.send({ type: 'spawned', id: 's1', pid: 99 });
+    await expect(p).resolves.toBe(99);
+
+    // Buffer survived the reattach.
+    expect(h.manager.getSessionBuffer('s1')).toContain('hello');
+    // The pre-existing data callback is still wired — new output reaches it
+    // without a client reconnect.
+    h.send({
+      type: 'data',
+      id: 's1',
+      chunk: Buffer.from('world').toString('base64'),
+      encoding: 'base64',
+    });
+    expect(chunks.join('')).toContain('world');
+  });
+
+  it('reattachSession throws synchronously for an unknown session', () => {
+    const h = makeHarness();
+    expect(() => h.manager.reattachSession('nope')).toThrow(/session not found/);
+  });
+
+  it('markSessionExited fires exit callbacks exactly once (idempotent)', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let count = 0;
+    h.manager.onSessionExit('s1', () => count++);
+    h.manager.markSessionExited('s1');
+    h.manager.markSessionExited('s1');
+    expect(count).toBe(1);
   });
 });

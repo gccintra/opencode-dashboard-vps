@@ -46,6 +46,7 @@ import type {
 import type { WorkerTransport } from './transport';
 import { InMemoryWorkerTransport } from './transport.memory';
 import { BunWorkerTransport } from './transport.bun';
+import { ControlWorkerTransport } from './control';
 import { detectStatus } from './detector';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -106,6 +107,24 @@ export class PtyManager {
    * zero startup reflow. See {@link armLaunchOnResize}.
    */
   private readonly pendingLaunch = new Map<string, string>();
+  /**
+   * Count of consecutive spawn timeouts. A single timeout can be transient,
+   * but repeated timeouts mean the worker is wedged (alive but not responding)
+   * — in that state every request hangs until the worker is restarted. After
+   * {@link RESTART_AFTER_TIMEOUTS} in a row we self-heal by restarting the
+   * worker. Reset to 0 on any successful spawn response.
+   */
+  private consecutiveSpawnTimeouts = 0;
+  private static readonly RESTART_AFTER_TIMEOUTS = 2;
+  /**
+   * Optional hook invoked when the worker is lost (crash, exit, or self-heal
+   * restart). When set, it OVERRIDES the default "mark every session exited"
+   * behavior: with tmux-backed sessions the underlying processes survive the
+   * worker, so the handler re-attaches live sessions instead of killing them.
+   * Tests (in-memory transport) leave this unset and get the default behavior.
+   * See {@link setWorkerLostHandler}, {@link reattachSession}.
+   */
+  private workerLostHandler: (() => void) | null = null;
 
   constructor(opts: PtyManagerOptions = {}) {
     this.transport = opts.transport ?? new InMemoryWorkerTransport();
@@ -205,6 +224,7 @@ export class PtyManager {
         if (this.pendingSpawns.get(id)?.timer === timer) {
           this.pendingSpawns.delete(id);
           this.sessions.delete(id);
+          this.onSpawnTimeout();
           reject(new Error(`spawn timeout after ${this.timeoutMs}ms`));
         }
       }, this.timeoutMs);
@@ -248,6 +268,88 @@ export class PtyManager {
    */
   armLaunchOnResize(id: string, command: string): void {
     this.pendingLaunch.set(id, command);
+  }
+
+  // ── Worker resilience (tmux reattach) ────────────────────────────
+
+  /**
+   * Register the worker-lost handler. The server sets this to a tmux-aware
+   * reattach orchestrator: when the worker dies or is restarted, the handler
+   * re-attaches sessions whose tmux session is still alive (zero data loss)
+   * and marks the rest exited. Without a handler the manager falls back to
+   * marking every active session exited (the pre-tmux behavior).
+   */
+  setWorkerLostHandler(fn: () => void): void {
+    this.workerLostHandler = fn;
+  }
+
+  /**
+   * Return the ids of sessions that should be reattached after a worker loss —
+   * i.e. those the manager still considers live (`active` or `pending`).
+   */
+  getReattachableSessions(): string[] {
+    const ids: string[] = [];
+    for (const s of this.sessions.values()) {
+      if (s.status === 'active' || s.status === 'pending') ids.push(s.id);
+    }
+    return ids;
+  }
+
+  /**
+   * Re-attach an existing session to a (possibly fresh) worker WITHOUT
+   * tearing down its {@link SessionState}. The buffer and all registered
+   * callbacks (WS subscribers) are preserved, so an in-flight browser
+   * connection keeps streaming once the new `tmux new-session -A` attach is
+   * live — no client reconnect needed. The inner tmux session must still
+   * exist (verified by the caller via {@link tmuxHasSession}).
+   *
+   * @returns the new attach client's pid
+   */
+  reattachSession(id: string): Promise<number> {
+    const session = this.sessions.get(id);
+    if (!session) throw new Error(`session not found: ${id}`);
+    session.status = 'pending';
+    session.pid = undefined;
+    this.ensureStarted();
+
+    return new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (this.pendingSpawns.get(id)?.timer === timer) {
+          this.pendingSpawns.delete(id);
+          // Do NOT trip onSpawnTimeout here: a failed reattach must not cascade
+          // into another worker restart (which would re-enter reattach).
+          reject(new Error(`reattach timeout after ${this.timeoutMs}ms`));
+        }
+      }, this.timeoutMs);
+      this.pendingSpawns.set(id, { resolve, reject, timer, method: 'spawn' });
+      this.transport.send({
+        type: 'spawn',
+        id,
+        cwd: session.cwd,
+        command: session.command,
+        args: session.args,
+        cols: 120,
+        rows: 35,
+      });
+    });
+  }
+
+  /**
+   * Mark a session exited and fire its exit callbacks. Used by the worker-lost
+   * handler for sessions whose tmux session is gone (so the WS layer closes
+   * the client). The buffer is retained for any late replay.
+   */
+  markSessionExited(id: string): void {
+    const session = this.sessions.get(id);
+    if (!session || session.status === 'exited' || session.status === 'killed') return;
+    session.status = 'exited';
+    for (const cb of session.exitCallbacks) {
+      try {
+        cb(-1);
+      } catch {
+        // best-effort
+      }
+    }
   }
 
   /**
@@ -427,12 +529,44 @@ export class PtyManager {
     }
     clearTimeout(pending.timer);
     this.pendingSpawns.delete(msg.id);
+    // Worker responded — it is healthy, clear the wedged-worker counter.
+    this.consecutiveSpawnTimeouts = 0;
     const session = this.sessions.get(msg.id);
     if (session) {
       session.pid = msg.pid;
       session.status = 'active';
     }
     pending.resolve(msg.pid);
+  }
+
+  /**
+   * Called when a spawn request times out. Restarts the worker once enough
+   * consecutive timeouts accumulate to conclude the worker is wedged, so the
+   * next request hits a fresh worker instead of timing out forever.
+   */
+  private onSpawnTimeout(): void {
+    this.consecutiveSpawnTimeouts++;
+    console.error(`[pty-manager] spawn timeout (${this.consecutiveSpawnTimeouts} consecutive)`);
+    if (this.consecutiveSpawnTimeouts >= PtyManager.RESTART_AFTER_TIMEOUTS) {
+      this.consecutiveSpawnTimeouts = 0;
+      console.error('[pty-manager] worker appears wedged — restarting it (self-heal)');
+      try {
+        this.transport.restart();
+      } catch (err) {
+        console.error('[pty-manager] worker restart failed:', err);
+      }
+      // restart() spawns a FRESH worker and suppresses the stale worker's exit
+      // (identity check in BunWorkerTransport.handleProcExit), so handleWorkerExit
+      // never fires for this path. Re-attach explicitly onto the new worker so
+      // tmux-backed sessions survive the self-heal restart with no data loss.
+      if (this.workerLostHandler) {
+        try {
+          this.workerLostHandler();
+        } catch (err) {
+          console.error('[pty-manager] worker-lost handler (restart) failed:', err);
+        }
+      }
+    }
   }
 
   private onKilled(msg: KilledResponse): void {
@@ -463,9 +597,8 @@ export class PtyManager {
 
     // Decode base64 back to binary (latin1) string so byte values
     // 0-255 are preserved without UTF-8 corruption through the IPC layer.
-    const chunk = msg.encoding === 'base64'
-      ? Buffer.from(msg.chunk, 'base64').toString('binary')
-      : msg.chunk;
+    const chunk =
+      msg.encoding === 'base64' ? Buffer.from(msg.chunk, 'base64').toString('binary') : msg.chunk;
 
     this.appendToBuffer(session, chunk);
     for (const cb of session.dataCallbacks) {
@@ -531,7 +664,11 @@ export class PtyManager {
         if (session && session.status !== 'exited' && session.status !== 'killed') {
           session.status = 'exited';
           for (const cb of session.exitCallbacks) {
-            try { cb(-1); } catch { /* best-effort */ }
+            try {
+              cb(-1);
+            } catch {
+              /* best-effort */
+            }
           }
         }
       }
@@ -552,8 +689,19 @@ export class PtyManager {
     this.started = false;
     const err = new Error(`worker exited unexpectedly (code=${code})`);
     this.rejectAllPending(err);
-    // Mark every active session as exited and notify subscribers with
-    // sentinel code -1 so they know it wasn't a clean exit.
+    // tmux-backed: the worker died but the underlying tmux sessions survive.
+    // Delegate to the reattach orchestrator instead of killing every session.
+    if (this.workerLostHandler) {
+      try {
+        this.workerLostHandler();
+      } catch (e) {
+        console.error('[pty-manager] worker-lost handler failed:', e);
+      }
+      return;
+    }
+    // Default (no handler / in-memory tests): mark every active session as
+    // exited and notify subscribers with sentinel code -1 so they know it
+    // wasn't a clean exit.
     for (const session of this.sessions.values()) {
       if (session.status === 'active' || session.status === 'pending') {
         session.status = 'exited';
@@ -651,7 +799,14 @@ let _singleton: PtyManager | null = null;
  */
 export function getPtyManager(): PtyManager {
   if (!_singleton) {
-    _singleton = new PtyManager({ transport: new BunWorkerTransport() });
+    // PTY_BACKEND selects the transport. `control` uses tmux control mode
+    // (no node-pty, no Node 18 worker, no PTY → no CPU-spin wedge); `node-pty`
+    // (default) keeps the legacy worker. Flagged for instant rollback.
+    const backend = process.env.PTY_BACKEND ?? 'node-pty';
+    const transport =
+      backend === 'control' ? new ControlWorkerTransport() : new BunWorkerTransport();
+    console.error(`[pty-manager] PTY backend: ${backend}`);
+    _singleton = new PtyManager({ transport });
   }
   return _singleton;
 }

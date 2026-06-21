@@ -20,6 +20,7 @@ export class InMemoryWorkerTransport implements WorkerTransport {
   private exitCb: ((code: number | null) => void) | null = null;
   private started = false;
   private shutdownCount = 0;
+  private restartCount = 0;
 
   /** Outgoing messages in send order. Tests assert against this list. */
   public readonly sentMessages: ClientMessage[] = [];
@@ -43,6 +44,11 @@ export class InMemoryWorkerTransport implements WorkerTransport {
     this.exitCb = cb;
   }
 
+  restart(): void {
+    this.restartCount += 1;
+    this.started = true;
+  }
+
   async shutdown(): Promise<void> {
     this.shutdownCount += 1;
     this.started = false;
@@ -63,6 +69,11 @@ export class InMemoryWorkerTransport implements WorkerTransport {
   /** Inspect how many times shutdown() was called. */
   get shutdownCalls(): number {
     return this.shutdownCount;
+  }
+
+  /** Inspect how many times restart() was called. */
+  get restartCalls(): number {
+    return this.restartCount;
   }
 
   /** Has start() been called? */

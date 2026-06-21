@@ -50,6 +50,39 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import { useTerminalSocket, type ConnectionError } from '../../hooks/useTerminalSocket';
 
+/* ── Last-measured terminal dimensions (per device) ── */
+
+// localStorage key holding the most recent measured cols×rows for this device.
+// Sent on WS connect so the server can fire the TUI launch before the client
+// has finished measuring. Device-scoped (not session-scoped) because terminal
+// size is a function of screen + font, which is stable across sessions.
+const TERM_DIMS_KEY = 'term_last_dims';
+
+/** Read the device's last-measured terminal dims, or null if none/invalid. */
+function readLastTermDims(): { cols: number; rows: number } | null {
+  try {
+    const raw = localStorage.getItem(TERM_DIMS_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as { cols?: unknown; rows?: unknown };
+    if (typeof d.cols === 'number' && typeof d.rows === 'number' && d.cols > 0 && d.rows > 0) {
+      return { cols: d.cols, rows: d.rows };
+    }
+  } catch {
+    /* corrupt or unavailable — fall through */
+  }
+  return null;
+}
+
+/** Persist the latest measured terminal dims for the next connect. */
+function writeLastTermDims(cols: number, rows: number): void {
+  if (cols <= 0 || rows <= 0) return;
+  try {
+    localStorage.setItem(TERM_DIMS_KEY, JSON.stringify({ cols, rows }));
+  } catch {
+    /* storage full / disabled — non-fatal */
+  }
+}
+
 /* ── Types ── */
 
 export type ConnectionStatus =
@@ -557,7 +590,12 @@ export const XTermTerminal = memo(
     const terminalRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const lastSentDims = useRef<{ cols: number; rows: number } | null>(null);
-    const socket = useTerminalSocket(sessionId);
+    // Pass the device's last-measured terminal size on connect so the server can
+    // fire the TUI launch immediately (overlapping boot with our font/render
+    // init). Keyed per-device, not per-session: dims depend on screen/font, which
+    // are stable across the volatile sessions on one device. Read fresh on every
+    // (re)connect via the hook's connectDims callback. See readLastTermDims().
+    const socket = useTerminalSocket(sessionId, { connectDims: readLastTermDims });
 
     const sendKey = useCallback(
       (seq: string) => {
@@ -782,6 +820,23 @@ export const XTermTerminal = memo(
       // Subscribing here captures all data into pendingData; it is drained
       // into the terminal after terminal.open() and fit() complete.
       let terminalReady = false;
+      // Event-driven overlay removal: assigned inside the font-load `.then()`
+      // once forceRepaint/setTerminalReady are in scope. Dropping the loading
+      // overlay is driven by the launched TUI's first real frame (first live
+      // data chunk / alt-screen enter) rather than a fixed timer, so it never
+      // lifts on a blank screen when WAN latency pushes the data past a guess.
+      let markReady: () => void = () => {};
+      // ── WAN repaint window ──
+      // When a TUI enters the alternate screen (CSI ?1049h), its full-screen
+      // paint streams in over the following frames. Over WAN those chunks arrive
+      // fragmented and can land AFTER the fixed forceRepaint timers (0/80/250ms)
+      // have already fired — so the content writes to the xterm buffer but the
+      // WebGL renderer never flushes it, leaving a frozen pre-launch screen until
+      // the user types. To fix: the alt-screen handler opens this window and each
+      // data chunk that arrives while it's open forces a flush. `requestFlush` is
+      // assigned inside the font-load `.then()` once forceRepaint is in scope.
+      let altRepaintUntil = 0;
+      let requestFlush: () => void = () => {};
       const pendingData: (string | Uint8Array)[] = [];
       // Track whether the first post-flush data chunk has been rendered so we
       // can force an explicit refresh() on it. xterm's internal rAF repaint can
@@ -794,6 +849,16 @@ export const XTermTerminal = memo(
           if (firstLiveWrite) {
             firstLiveWrite = false;
             try { terminalRef.current.refresh(0, terminalRef.current.rows - 1); } catch { /* disposed */ }
+            // First live frame from the launched command = the screen now has
+            // real content. Drop the loading overlay (idempotent).
+            markReady();
+          }
+          // Inside the post-alt-screen window, force a flush on every chunk so
+          // the TUI's full-screen paint becomes visible the moment it arrives —
+          // even when WAN fragmentation pushes it past the fixed repaint timers.
+          // This is the fix for "open opencode → frozen screen until I type".
+          if (Date.now() < altRepaintUntil) {
+            requestFlush();
           }
         } else {
           pendingData.push(data);
@@ -899,6 +964,25 @@ export const XTermTerminal = memo(
             });
           };
 
+          // Wire the per-chunk flush used inside the post-alt-screen window
+          // (see altRepaintUntil). A plain refresh() — no atlas rebuild — is
+          // enough here since the renderer is already warm by launch time.
+          requestFlush = () => forceRepaint(false);
+
+          // Idempotent overlay removal. Forces a real paint then reveals the
+          // terminal. Wired to the launched TUI's first real frame (first live
+          // data chunk in the socket subscription, or alt-screen enter below),
+          // with a safety-net timer in flushBuffer as the fallback. Replaces the
+          // old fixed 600ms timer that could lift the overlay on a blank screen
+          // when WAN latency delayed the TUI's first paint.
+          let readyFired = false;
+          markReady = () => {
+            if (readyFired || cancelled) return;
+            readyFired = true;
+            forceRepaint(true);
+            setTerminalReady(true);
+          };
+
           try {
             webglAddon = new WebglAddon();
             terminal.loadAddon(webglAddon);
@@ -925,6 +1009,14 @@ export const XTermTerminal = memo(
               forceRepaint(true);
               setTimeout(() => forceRepaint(true), 80);
               setTimeout(() => forceRepaint(true), 250);
+              // Open the WAN repaint window: the TUI's full-screen paint streams
+              // in over the next frames and, over WAN, can arrive after the fixed
+              // timers above. While this window is open every incoming data chunk
+              // forces a flush (see the socket.data handler), so the launch paints
+              // as soon as its bytes land instead of freezing until a keypress.
+              altRepaintUntil = Date.now() + 2000;
+              // TUI just painted its first full screen — safe to reveal.
+              markReady();
             }
             return false; // not consumed — xterm performs the alt-screen switch
           });
@@ -1183,6 +1275,9 @@ export const XTermTerminal = memo(
             // Primary: WebSocket resize (~50ms, no SSL overhead, no debounce).
             // Secondary: HTTP resize (300ms debounce, kept as fallback).
             socket.send(JSON.stringify({ type: 'resize', cols, rows }));
+            // Cache the authoritative measured size for the next connect's
+            // early-launch path (see readLastTermDims / connectDims).
+            writeLastTermDims(cols, rows);
             onResizeRef.current?.(cols, rows);
           };
 
@@ -1212,6 +1307,7 @@ export const XTermTerminal = memo(
             if (bufferFlushed) return;
             bufferFlushed = true;
             terminalReady = true;
+            const hadReplayContent = pendingData.length > 0;
             for (const chunk of pendingData) {
               terminal.write(chunk);
             }
@@ -1230,16 +1326,18 @@ export const XTermTerminal = memo(
             }
             // Give the terminal focus after the content is rendered.
             terminal.focus();
-            // Delay overlay removal to cover the SIGWINCH round-trip + opencode
-            // re-render. With WS resize (~50ms) the re-render arrives well before
-            // this timeout; 600ms is kept as a safe margin.
-            setTimeout(() => {
-              if (!cancelled) {
-                // Final guaranteed paint right before the loading overlay drops.
-                forceRepaint(true);
-                setTerminalReady(true);
-              }
-            }, 600);
+            // Reconnect/buffer-replay: the screen is already populated with the
+            // restored session state — reveal immediately, there's no fresh
+            // launch frame to wait for.
+            if (hadReplayContent) {
+              markReady();
+            }
+            // Safety net: reveal even if no live frame and no alt-screen enter
+            // arrive — e.g. the opencode binary is missing and we fell back to a
+            // bare shell, or the session is idle. Event-driven markReady() (first
+            // live data / alt-screen) normally fires first; this only guards
+            // against the overlay sticking forever.
+            setTimeout(() => markReady(), 1500);
           };
 
           // Immediate fit attempt. If the container is already visible, drain

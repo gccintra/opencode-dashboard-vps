@@ -34,7 +34,8 @@
 
 import { Elysia } from 'elysia';
 import { getPtyManager } from '../pty/manager';
-import { getSessionMetaById } from '../routes/sessions';
+import { getSessionMetaById, ensureSessionAttached } from '../routes/sessions';
+import { tmuxHasSession } from '../pty/tmux';
 
 /* ── Types ── */
 
@@ -58,10 +59,25 @@ const connectedClients = new Map<string, Set<ClientEntry>>();
 /** Close codes (4000-4999 reserved for application use). */
 export const CLOSE_SESSION_NOT_FOUND = 4004;
 export const CLOSE_SESSION_ENDED = 4004;
+/**
+ * The attach client died but the tmux session is still alive (born-dead resize
+ * EBADF, worker SIGKILL/respawn). NOT a real session end — the client should
+ * reconnect, and handleOpen will re-attach it. Any non-permanent code triggers
+ * the frontend's reconnect path; 4002 is explicit about why.
+ */
+export const CLOSE_REATTACHING = 4002;
 
 /** Public surface for the handler — minimal subset of ElysiaWS we need. */
 export interface WSLike {
-  data: { params: { sessionId: string } };
+  data: {
+    params: { sessionId: string };
+    /**
+     * Connect-time query string. The client appends `?cols=&rows=` (its
+     * last-known dimensions) so the armed TUI launch can fire on open — see
+     * {@link handleOpen}. Optional: absent on first-ever load and in tests.
+     */
+    query?: Record<string, string | undefined>;
+  };
   readyState: number;
   send(data: string | ArrayBufferLike | ArrayBufferView): unknown;
   close(code?: number, reason?: string): void;
@@ -104,20 +120,25 @@ export function sessionExists(sessionId: string): boolean {
  * otherwise registers the connection, replays the buffer, and subscribes
  * to PTY output and exit events.
  */
-export function handleOpen(ws: WSLike): void {
+export async function handleOpen(ws: WSLike): Promise<void> {
   const sessionId = ws.data.params.sessionId;
 
-  const status = getPtyManager().getSessionStatus(sessionId);
-  if (!status) {
-    // If the session exists in metadata but the PTY is gone, it ended (e.g. after restart).
-    // Otherwise it was never created or already cleaned up.
-    const meta = getSessionMetaById(sessionId);
-    ws.close(CLOSE_SESSION_ENDED, meta ? 'Session has ended' : 'Session not found');
-    return;
-  }
-  if (status === 'exited' || status === 'killed') {
-    ws.close(CLOSE_SESSION_ENDED, 'Session has ended');
-    return;
+  let status = getPtyManager().getSessionStatus(sessionId);
+  // Revive a stranded session: the attach client may have died (born-dead
+  // resize EBADF, worker SIGKILL) while claude/opencode keeps running in the
+  // tmux daemon. ensureSessionAttached re-attaches if the tmux session is still
+  // alive, so a reconnect/refresh — or the connect right after creation —
+  // recovers it instead of showing "Session has ended". No-op if already live.
+  if (!status || status === 'exited' || status === 'killed') {
+    if (ws.readyState === 3 /* CLOSED: client gave up during the await */) return;
+    const revived = await ensureSessionAttached(sessionId);
+    if (!revived) {
+      const meta = getSessionMetaById(sessionId);
+      ws.close(CLOSE_SESSION_ENDED, meta ? 'Session has ended' : 'Session not found');
+      return;
+    }
+    status = getPtyManager().getSessionStatus(sessionId);
+    if (ws.readyState === 3) return; // client closed while we revived
   }
 
   // Buffer replay: send the accumulated output so xterm.js can
@@ -160,12 +181,29 @@ export function handleOpen(ws: WSLike): void {
   // xterm.js can mark the session as finished.
   const exitCb: ExitCb = (code) => {
     if (ws.readyState === 3) return;
-    try {
-      ws.send(JSON.stringify({ type: 'exit', code }));
-    } catch {
-      // ignore: socket may have closed mid-frame
-    }
-    ws.close();
+    // Distinguish a real session end from a mere attach-client death. If the
+    // tmux session is still alive, claude/opencode is still running — close with
+    // a retryable code so the client reconnects and handleOpen re-attaches it,
+    // instead of flashing "Session ended" and stranding a live session.
+    void (async () => {
+      let tmuxAlive = false;
+      try {
+        tmuxAlive = await tmuxHasSession(sessionId);
+      } catch {
+        /* treat as gone */
+      }
+      if (ws.readyState === 3) return;
+      if (tmuxAlive) {
+        ws.close(CLOSE_REATTACHING, 'reattaching');
+        return;
+      }
+      try {
+        ws.send(JSON.stringify({ type: 'exit', code }));
+      } catch {
+        // ignore: socket may have closed mid-frame
+      }
+      ws.close();
+    })();
   };
 
   // Subscribe to status changes. The status monitor polls every
@@ -189,6 +227,24 @@ export function handleOpen(ws: WSLike): void {
     connectedClients.set(sessionId, new Set());
   }
   connectedClients.get(sessionId)!.add(entry);
+
+  // Early launch: if the client passed its last-known dimensions on the connect
+  // URL, resize the PTY now — which fires any armed TUI launch (one-shot) right
+  // away, instead of waiting for the client to load fonts, mount xterm, fit, and
+  // send a separate resize frame. Over WAN that handshake costs 1-2 RTT; firing
+  // here overlaps the TUI boot with the client's render init. The client still
+  // sends an authoritative resize after its real fit() to correct any drift.
+  // MUST run after the dataCb subscription above so the launch's first output is
+  // delivered to this client. No-op if the session has no armed launch.
+  const cols = Number(ws.data.query?.cols);
+  const rows = Number(ws.data.query?.rows);
+  if (Number.isFinite(cols) && Number.isFinite(rows) && cols > 0 && rows > 0) {
+    try {
+      manager.resizeSession(sessionId, Math.round(cols), Math.round(rows));
+    } catch {
+      // Session may have exited between the status check and here — ignore.
+    }
+  }
 }
 
 /**
@@ -235,7 +291,9 @@ export function handleMessage(ws: WSLike, message: unknown): void {
         getPtyManager().resizeSession(sessionId, msg.cols, msg.rows);
         return;
       }
-    } catch { /* not JSON — fall through to PTY write */ }
+    } catch {
+      /* not JSON — fall through to PTY write */
+    }
   }
 
   try {
@@ -282,7 +340,7 @@ export function handleClose(ws: WSLike): void {
 export const wsRoutes = new Elysia().ws('/terminal/:sessionId', {
   // ── open: WS connection established ─────────────────────────────
   open(ws) {
-    handleOpen(ws as unknown as WSLike);
+    void handleOpen(ws as unknown as WSLike);
   },
 
   // ── message: text from the browser → PTY stdin ──────────────────

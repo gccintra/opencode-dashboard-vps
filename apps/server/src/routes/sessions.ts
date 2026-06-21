@@ -27,6 +27,13 @@ import { Elysia, t } from 'elysia';
 import { authGuard } from '../auth/middleware';
 import { getPtyManager } from '../pty/manager';
 import { detectStatus, getLastActiveAt } from '../pty/detector';
+import {
+  SPAWN_WRAPPER,
+  buildTmuxSpawnArgs,
+  tmuxKillSession,
+  tmuxListSessions,
+  tmuxHasSession,
+} from '../pty/tmux';
 import { getActiveResourcesForProject } from './resources';
 import { getDb } from '../db/client';
 import { existsSync } from 'node:fs';
@@ -124,9 +131,10 @@ export function resetSessionMeta(): void {
 
 /**
  * Restore session metadata from SQLite into the in-memory Map.
- * Called once at server boot after initDb(). Sessions that were
- * active when the server last stopped are marked 'exited' since
- * their PTY processes no longer exist.
+ * Called once at server boot after initDb(). Non-terminal sessions are
+ * tentatively marked 'exited' because no attach client exists yet at this
+ * instant — {@link reconcileTmuxSessions} runs immediately after and REVIVES
+ * any whose tmux session is still alive in the daemon.
  */
 export function loadSessionsFromDb(): void {
   try {
@@ -154,11 +162,212 @@ export function loadSessionsFromDb(): void {
       db.run(`UPDATE sessions SET status = 'exited' WHERE id IN (${placeholders})`, staleIds);
     }
     if (rows.length > 0) {
-      console.log(`[sessions] recovered ${rows.length} sessions from db (${staleIds.length} marked exited)`);
+      console.log(
+        `[sessions] recovered ${rows.length} sessions from db (${staleIds.length} marked exited)`,
+      );
     }
   } catch (err) {
     console.warn('[sessions] failed to load sessions from db:', (err as Error).message);
   }
+}
+
+/**
+ * Wire the exit callback for a session: mark its metadata + DB row exited when
+ * the PTY (tmux attach client + its inner session) dies. Shared by the create,
+ * emergency, and boot-reconcile paths so the behavior stays identical.
+ */
+function wireSessionExit(sessionId: string): void {
+  getPtyManager().onSessionExit(sessionId, (code) => {
+    const m = sessionMeta.get(sessionId);
+    if (m) m.status = 'exited';
+    try {
+      getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
+    } catch {
+      /* non-fatal */
+    }
+    void code;
+  });
+}
+
+/**
+ * Run a spawn, retrying once if the pty-worker was bouncing when the request
+ * landed. When the worker dies/restarts, the manager rejects every in-flight
+ * request (`worker exited unexpectedly`) and a spawn that raced the restart
+ * would otherwise become a "born dead" session. The worker respawns within a
+ * few hundred ms; `tmux new-session -A` is idempotent (re-attaches if the first
+ * attempt reached a now-dead worker, starts fresh otherwise), so the retry is
+ * safe and never duplicates a session.
+ *
+ * @param attempt  thunk that performs one spawnSession call
+ */
+async function spawnWithRetry(attempt: () => Promise<number>): Promise<number> {
+  try {
+    return await attempt();
+  } catch (err) {
+    const msg = (err as Error).message || '';
+    const transient =
+      msg.includes('worker exited') ||
+      msg.includes('spawn timeout') ||
+      msg.includes('manager shut down') ||
+      msg.includes('transport not started');
+    if (!transient) throw err;
+    console.warn(`[sessions] spawn raced a worker restart (${msg}); retrying once`);
+    // Give the transport a beat to respawn the worker before the second try.
+    await new Promise((r) => setTimeout(r, 500));
+    return await attempt();
+  }
+}
+
+/**
+ * Reconcile in-memory/DB session metadata with the live tmux daemon at boot.
+ *
+ * tmux sessions outlive the server, so after a restart the processes are still
+ * running even though `loadSessionsFromDb` just marked every non-terminal
+ * session 'exited' (no attach clients exist yet at that instant). This:
+ *
+ *  1. RE-ADOPTS each live tmux session that has known metadata — spawning a
+ *     fresh attach client and flipping the status back to 'active'. The session
+ *     becomes immediately usable again (the WS reconnects on its own).
+ *  2. KILLS orphan tmux sessions that have no metadata (cleanup).
+ *
+ * Best-effort and idempotent: failures are logged, never fatal.
+ */
+export async function reconcileTmuxSessions(): Promise<void> {
+  let liveIds: string[];
+  try {
+    liveIds = await tmuxListSessions();
+  } catch (err) {
+    console.warn('[sessions] tmux reconcile skipped:', (err as Error).message);
+    return;
+  }
+  if (liveIds.length === 0) return;
+
+  const db = getDb();
+  const manager = getPtyManager();
+  let readopted = 0;
+  let orphansKilled = 0;
+
+  for (const sessionId of liveIds) {
+    const meta = sessionMeta.get(sessionId);
+    if (!meta) {
+      // Orphan tmux session — no metadata to attach it to. Reap it.
+      await tmuxKillSession(sessionId);
+      orphansKilled += 1;
+      continue;
+    }
+
+    // Resolve the working directory: project dir for project sessions, /root
+    // for the emergency terminal.
+    let cwd = '/root';
+    if (meta.projectId) {
+      try {
+        const project = db
+          .query('SELECT directory FROM projects WHERE id = ?')
+          .get(meta.projectId) as { directory?: string } | null;
+        if (project?.directory && existsSync(project.directory)) cwd = project.directory;
+      } catch {
+        /* fall back to /root */
+      }
+    }
+
+    try {
+      // `new-session -A` attaches to the existing session (innerCmd ignored).
+      await manager.spawnSession(
+        sessionId,
+        cwd,
+        SPAWN_WRAPPER,
+        buildTmuxSpawnArgs(sessionId, 120, 35),
+        undefined,
+        120,
+        35,
+      );
+      wireSessionExit(sessionId);
+      meta.status = 'active';
+      try {
+        db.run("UPDATE sessions SET status = 'active' WHERE id = ?", [sessionId]);
+      } catch {
+        /* non-fatal */
+      }
+      readopted += 1;
+    } catch (err) {
+      console.warn(
+        `[sessions] failed to re-adopt tmux session ${sessionId}:`,
+        (err as Error).message,
+      );
+    }
+  }
+
+  console.log(
+    `[sessions] tmux reconcile: re-adopted ${readopted}, killed ${orphansKilled} orphan(s)`,
+  );
+}
+
+/** Resolve a session's working directory: project dir if valid, else /root. */
+function resolveSessionCwd(meta: SessionMeta): string {
+  if (!meta.projectId) return '/root';
+  try {
+    const project = getDb()
+      .query('SELECT directory FROM projects WHERE id = ?')
+      .get(meta.projectId) as { directory?: string } | null;
+    if (project?.directory && existsSync(project.directory)) return project.directory;
+  } catch {
+    /* fall back */
+  }
+  return '/root';
+}
+
+/**
+ * Ensure a session has a LIVE attach client, reviving it if its tmux session
+ * outlived the client (the "born dead" / stranded case: the attach client died
+ * — e.g. a resize EBADF or a worker SIGKILL — but claude/opencode is still
+ * running in the tmux daemon). This is the backbone of seamless recovery:
+ * the WS layer calls it on connect, so a stranded session is reattached and
+ * streams again with no user action.
+ *
+ * @returns true if the session is (now) attached and usable; false if it is
+ *          genuinely gone (no metadata, or no live tmux session).
+ */
+export async function ensureSessionAttached(sessionId: string): Promise<boolean> {
+  const manager = getPtyManager();
+  const status = manager.getSessionStatus(sessionId);
+  if (status === 'active' || status === 'pending') return true; // already attached
+
+  const meta = sessionMeta.get(sessionId);
+  if (!meta) return false; // unknown session
+  if (!(await tmuxHasSession(sessionId))) return false; // tmux gone → truly dead
+
+  // tmux is alive but there's no live attach client — reattach. spawnSession
+  // clears any stale 'exited' SessionState and re-runs `tmux new-session -A`,
+  // which idempotently attaches to the existing session (claude keeps running).
+  try {
+    await spawnWithRetry(() =>
+      manager.spawnSession(
+        sessionId,
+        resolveSessionCwd(meta),
+        SPAWN_WRAPPER,
+        buildTmuxSpawnArgs(sessionId, 120, 35),
+        undefined,
+        120,
+        35,
+      ),
+    );
+  } catch (err) {
+    // A concurrent revive may have already re-attached it — treat that as success.
+    if (manager.getSessionStatus(sessionId) === 'active') return true;
+    console.warn(
+      `[sessions] ensureSessionAttached failed for ${sessionId}:`,
+      (err as Error).message,
+    );
+    return false;
+  }
+  wireSessionExit(sessionId);
+  meta.status = 'active';
+  try {
+    getDb().run("UPDATE sessions SET status = 'active' WHERE id = ?", [sessionId]);
+  } catch {
+    /* non-fatal */
+  }
+  return true;
 }
 
 /**
@@ -304,22 +513,11 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
 
           const manager = getPtyManager();
 
-          // Spawn args extracted so the auto-respawn closure can reuse them.
-          //
-          // IMPORTANT: spawn only `bash` (not `bash -c 'claude; ...'`).
-          // The hedge system creates 3 parallel PTYs to survive the Linux PTY
-          // SIGHUP race. If the spawn command includes `claude`, all 3 hedges
-          // start claude in the same project directory simultaneously — they
-          // compete for claude's per-project lock/local-server, causing the
-          // winner's claude to detect the conflict and exit cleanly (code=0).
-          // Instead, spawn a bare bash shell, then write the initial command
-          // to the PTY *after* the winner hedge is confirmed alive. This
-          // guarantees only ONE claude instance ever starts per session.
-          const spawnCommand = 'pty-sighup-exec';
-          const spawnArgs = ['bash'];
-          // The command written to the winner's PTY after successful spawn.
-          // agentType 'opencode' → opencode CLI; default (claude/undefined) → claude CLI.
-          // Configured with the selected agent (--agent) and LLM (--model).
+          // The CLI command run INSIDE the tmux session. agentType 'opencode'
+          // → opencode CLI; default (claude/undefined) → claude CLI. Configured
+          // with the selected agent (--agent), LLM (--model), and effort. Ends
+          // with `exec zsh || exec bash` so the tmux session stays alive (drops
+          // to a shell) when the CLI exits.
           const initialCmd = buildCliCommand({
             agentType: body?.agentType,
             model: body?.model,
@@ -328,105 +526,57 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             effort: body?.effort,
           });
 
+          // tmux-backed spawn: the worker runs a thin `tmux new-session -A`
+          // attach client via pty-sighup-exec; the real processes live in the
+          // tmux daemon and survive the worker (and the server) being killed.
+          // pty-sighup-exec sets SIGHUP=SIG_IGN before exec (inherited across
+          // all descendants, POSIX), neutralizing the Linux PTY SIGHUP race.
+          // The TUI launches at the requested cols×rows; tmux repaints on the
+          // client's first resize, so no deferred-launch arming is needed.
+          const spawnCommand = SPAWN_WRAPPER;
+          const spawnArgs = buildTmuxSpawnArgs(sessionId, cols, rows, initialCmd, extraEnv);
+
+          // Spawn with one retry. A spawn that lands while the pty-worker is
+          // bouncing (a tsx --watch reload in dev, or the CPU-spin self-heal
+          // restart) gets its in-flight request rejected by rejectAllPending,
+          // which would otherwise surface as a "born dead" session. The worker
+          // respawns within a few hundred ms; `tmux new-session -A` is
+          // idempotent, so a retry safely re-attaches if the first attempt did
+          // reach a now-dead worker, or starts fresh if it never did.
           try {
-            await manager.spawnSession(
-              sessionId,
-              directory,
-              // pty-sighup-exec sets SIGHUP=SIG_IGN via sigaction() BEFORE exec-ing
-              // bash. SIG_IGN is inherited across all fork/exec descendants (POSIX
-              // guarantee), so claude, zsh, and the fallback bash are all immune
-              // from the very first instruction — zero race window vs the ~2ms
-              // window that `trap "" HUP` inside bash has (bash must start up and
-              // parse the script before trap takes effect). This eliminates the
-              // Linux PTY SIGHUP race where a stale SIGHUP queued by close(master_fd)
-              // hits the new session's pgrp when the kernel reuses the same /dev/pts/N.
-              // Binary compiled from apps/pty-worker/src/pty-sighup-exec.c and
-              // installed at /usr/local/bin/pty-sighup-exec.
-              spawnCommand,
-              spawnArgs,
-              extraEnv,
-              cols,
-              rows,
+            await spawnWithRetry(() =>
+              manager.spawnSession(
+                sessionId,
+                directory,
+                spawnCommand,
+                spawnArgs,
+                extraEnv,
+                cols,
+                rows,
+              ),
             );
-            // Deferred launch: do NOT write the CLI command now. Arm it to fire
-            // on the client's first measured resize, so opencode/claude boots at
-            // the true terminal cols×rows and paints once — no startup reflow.
-            // (The bash shell sits idle at a prompt until the browser connects,
-            // fits, and sends its real size.) See PtyManager.armLaunchOnResize.
-            manager.armLaunchOnResize(sessionId, initialCmd);
           } catch (spawnErr) {
             sessionMeta.delete(sessionId);
             db.run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+            // Reap any orphan tmux session: `new-session -A` may have created
+            // the session in the daemon before the attach client died, which
+            // would otherwise leave a detached session running forever.
+            void tmuxKillSession(sessionId);
             set.status = 500;
             return {
               error: `Failed to spawn session: ${(spawnErr as Error).message}`,
             };
           }
 
-          // 7. Wire the exit callback with transparent auto-respawn.
+          // 7. Wire the exit callback: mark the session exited when the PTY dies.
           //
-          //    When the PTY process dies within RESPAWN_THRESHOLD_MS of being
-          //    spawned, we assume it was a victim of the SIGHUP kernel race and
-          //    automatically re-spawn under the same sessionId. The browser's
-          //    WebSocket reconnect logic (exponential back-off, up to 10 attempts)
-          //    handles the brief gap between exit and respawn transparently.
-          //
-          //    Auto-respawn is limited to MAX_AUTORESPAWNS attempts so a truly
-          //    broken command doesn't loop forever.
-          const RESPAWN_THRESHOLD_MS = 6_000;
-          const MAX_AUTORESPAWNS = 4;
-          let autoRespawnCount = 0;
-          let lastSpawnedAt = Date.now();
-
-          const registerExitCallback = () => {
-            manager.onSessionExit(sessionId, async (code) => {
-              const aliveMs = Date.now() - lastSpawnedAt;
-              const m = sessionMeta.get(sessionId);
-
-              if (aliveMs < RESPAWN_THRESHOLD_MS && autoRespawnCount < MAX_AUTORESPAWNS && m) {
-                autoRespawnCount++;
-                console.error(
-                  `[sessions] auto-respawn ${autoRespawnCount}/${MAX_AUTORESPAWNS} for ${sessionId} (lived ${aliveMs}ms code=${code})`,
-                );
-                m.status = 'active'; // keep session visible while respawning
-
-                // Brief pause so pending kernel SIGHUPs drain before the next spawn.
-                await new Promise<void>((r) => setTimeout(r, 2_000));
-
-                try {
-                  lastSpawnedAt = Date.now();
-                  await manager.spawnSession(
-                    sessionId,
-                    directory,
-                    spawnCommand,
-                    spawnArgs,
-                    extraEnv,
-                    cols,
-                    rows,
-                  );
-                  // Same as initial spawn: write command after winner is confirmed.
-                  manager.writeToSession(sessionId, initialCmd);
-                  registerExitCallback(); // wire for the new process
-                  console.error(`[sessions] auto-respawn ${autoRespawnCount} succeeded for ${sessionId}`);
-                } catch (respawnErr) {
-                  console.error(
-                    `[sessions] auto-respawn ${autoRespawnCount} failed for ${sessionId}: ${(respawnErr as Error).message}`,
-                  );
-                  if (m) m.status = 'exited';
-                  try { getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]); } catch { /* non-fatal */ }
-                }
-              } else {
-                // Normal exit (lived long enough) or retries exhausted.
-                if (m) m.status = 'exited';
-                try {
-                  getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
-                } catch { /* non-fatal */ }
-                void code;
-              }
-            });
-          };
-
-          registerExitCallback();
+          //    No auto-respawn anymore. It existed only to paper over the Linux
+          //    PTY SIGHUP race (sessions dying seconds after spawn). That race is
+          //    now eliminated at the source by pty-sighup-exec (SIGHUP=SIG_IGN
+          //    before exec — see the spawnCommand comment above), so a PTY exit
+          //    is a genuine exit (user typed `exit`, process crashed) and should
+          //    be reflected, not silently respawned.
+          wireSessionExit(sessionId);
 
           set.status = 201;
           return sessionMeta.get(sessionId)!;
@@ -632,7 +782,9 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             sessionMeta.delete(s.sessionId);
             try {
               getDb().run('DELETE FROM sessions WHERE id = ?', [s.sessionId]);
-            } catch { /* non-fatal */ }
+            } catch {
+              /* non-fatal */
+            }
             break;
           }
         }
@@ -661,7 +813,16 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
 
         const manager = getPtyManager();
         try {
-          await manager.spawnSession(sessionId, '/root', 'bash', [], undefined, 120, 35);
+          // tmux-backed: no innerCmd → tmux launches the default shell at /root.
+          await manager.spawnSession(
+            sessionId,
+            '/root',
+            SPAWN_WRAPPER,
+            buildTmuxSpawnArgs(sessionId, 120, 35),
+            undefined,
+            120,
+            35,
+          );
         } catch (err) {
           sessionMeta.delete(sessionId);
           try {
@@ -669,6 +830,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           } catch {
             // non-fatal
           }
+          // Reap any orphan tmux session created before the attach client died.
+          void tmuxKillSession(sessionId);
           set.status = 500;
           return {
             error: `Failed to spawn emergency terminal: ${(err as Error).message}`,
@@ -676,16 +839,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
         }
 
         // Wire exit callback.
-        manager.onSessionExit(sessionId, (code) => {
-          const m = sessionMeta.get(sessionId);
-          if (m) m.status = 'exited';
-          try {
-            getDb().run("UPDATE sessions SET status = 'exited' WHERE id = ?", [sessionId]);
-          } catch {
-            // non-fatal
-          }
-          void code;
-        });
+        wireSessionExit(sessionId);
 
         set.status = 201;
         return sessionMeta.get(sessionId)!;
@@ -724,7 +878,9 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
       try {
         const projectId = params.id;
         const db = getDb();
-        const project = db.query('SELECT id FROM projects WHERE id = ?').get(projectId) as { id: string } | null;
+        const project = db.query('SELECT id FROM projects WHERE id = ?').get(projectId) as {
+          id: string;
+        } | null;
         if (!project) {
           set.status = 404;
           return { error: 'Project not found' };
@@ -740,6 +896,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
 
         for (const id of toRemove) {
           sessionMeta.delete(id);
+          // Best-effort: reap any lingering tmux session (idempotent).
+          void tmuxKillSession(id);
         }
 
         if (toRemove.length > 0) {
@@ -767,19 +925,29 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
 
         // Verify the session exists at all (memory or DB).
         if (!sessionMeta.has(sessionId)) {
-          const row = getDb().query('SELECT id FROM sessions WHERE id = ?').get(sessionId) as { id: string } | null;
+          const row = getDb().query('SELECT id FROM sessions WHERE id = ?').get(sessionId) as {
+            id: string;
+          } | null;
           if (!row) {
             set.status = 404;
             return { error: 'Session not found' };
           }
-          // Known to DB but not in memory — PTY is already gone, just clean up.
+          // Known to DB but not in memory — PTY is already gone. Reap any
+          // lingering tmux session, then clean up the row.
+          await tmuxKillSession(sessionId);
           getDb().run('DELETE FROM sessions WHERE id = ?', [sessionId]);
           return { success: true };
         }
 
-        // Attempt to kill the live PTY. If the PTY process has already exited
-        // (session is 'finished'), killSession throws "session not found: id".
-        // In that case we still clean up metadata — the goal is removal.
+        // Kill the tmux session FIRST: this terminates the real processes in
+        // the daemon (the attach client alone surviving would leave a detached
+        // session running forever). Idempotent — a missing session is a no-op.
+        await tmuxKillSession(sessionId);
+
+        // Then kill the attach client. If the PTY has already exited (session
+        // is 'finished', or it died when its tmux session went away above),
+        // killSession throws "session not found: id" — we still clean up
+        // metadata, the goal is removal.
         try {
           await getPtyManager().killSession(sessionId);
         } catch (killErr) {
