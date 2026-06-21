@@ -210,6 +210,20 @@ export class ControlClient {
       this.ev.onData(unescapeOutput(line, j + 1));
       return;
     }
+    // %pane-focus-in %<paneId>  — fired on attach even for idle sessions.
+    // %window-pane-changed @<winId> %<paneId> — fires when active pane changes.
+    // Both give us the pane ID before any %output arrives.
+    if (verb === '%pane-focus-in' || verb === '%window-pane-changed') {
+      const rest = ASCII.decode(line.subarray(sp + 1)).trim();
+      // For %window-pane-changed the last token is the pane id (%N).
+      const tokens = rest.split(' ');
+      const candidate = tokens[tokens.length - 1];
+      if (!this.paneId && candidate.startsWith('%')) {
+        this.paneId = candidate;
+        this.flushPendingInput();
+      }
+      return;
+    }
     if (verb === '%exit') {
       this.handleProcExit(0);
       return;
