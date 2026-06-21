@@ -13,7 +13,6 @@ import {
 } from '../components/Terminal';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
-import { CanvasToolbar } from '../components/Canvas/CanvasToolbar';
 import { getTemplate, CANVAS_TEMPLATES } from '../components/Canvas/canvasTemplates';
 import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
@@ -543,6 +542,7 @@ export default function SessionTerminalPage() {
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('2col');
   const [canvasResetKey, setCanvasResetKey] = useState(0);
+  const [isCustomLayout, setIsCustomLayout] = useState(false);
   const [, setCanvasDataLoading] = useState(false);
   type PickerResolver = (projectId: string | null) => void;
   const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
@@ -700,16 +700,18 @@ export default function SessionTerminalPage() {
     [selectedCanvasId],
   );
 
-  /* ── Canvas: template change ── */
-  const handleTemplateChange = useCallback(
-    async (templateId: string) => {
-      if (!canvasData) return;
-      saveCanvasTemplate(canvasData.id, templateId);
-      setSelectedTemplateId(templateId);
-      const { cols, rows } = templateIdToColsRows(templateId);
-      if (cols !== canvasData.cols || rows !== canvasData.rows) {
-        await handleCanvasLayoutChange(cols, rows);
+  /* ── Canvas: layout preset selection ── */
+  const handleLayoutPreset = useCallback(
+    async (cols: number, rows: number) => {
+      const templateId = colsRowsToTemplateId(cols, rows);
+      if (canvasData) {
+        resetCanvasLayout(canvasData.id, templateId);
+        saveCanvasTemplate(canvasData.id, templateId);
       }
+      setSelectedTemplateId(templateId);
+      setIsCustomLayout(false);
+      setCanvasResetKey((k) => k + 1);
+      await handleCanvasLayoutChange(cols, rows);
     },
     [canvasData, handleCanvasLayoutChange],
   );
@@ -872,29 +874,76 @@ export default function SessionTerminalPage() {
         {/* Right: mode-specific actions */}
         <div className="flex items-center gap-[6px] shrink-0 ml-[8px]">
           {showCanvas && selectedCanvasId && canvasData ? (
-            /* Canvas embed: template picker + reset + New Session */
+            /* Canvas embed: layout presets (desktop) + New Session */
             <>
               {!isMobile && (
                 <>
-                  <CanvasToolbar
-                    templateId={selectedTemplateId}
-                    onTemplateChange={handleTemplateChange}
-                  />
-                  {/* Reset layout sizes */}
-                  <button
-                    onClick={() => {
-                      resetCanvasLayout(canvasData.id, selectedTemplateId);
-                      setCanvasResetKey((k) => k + 1);
-                    }}
-                    title="Restaurar tamanhos iguais"
-                    className="flex items-center justify-center size-[26px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M1.5 6A4.5 4.5 0 0 1 10 3.2M10.5 6A4.5 4.5 0 0 1 2 8.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M8.5 3l1.5.2-.2 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M3.5 9l-1.5-.2.2-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+                  {[
+                    { cols: 1, rows: 1, label: '1×1' },
+                    { cols: 2, rows: 1, label: '2×1' },
+                    { cols: 3, rows: 1, label: '3×1' },
+                    { cols: 4, rows: 1, label: '4×1' },
+                  ].map((opt) => {
+                    const active = !isCustomLayout && canvasData.cols === opt.cols && canvasData.rows === opt.rows && getTemplate(selectedTemplateId).slots.length <= opt.cols * opt.rows;
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => handleLayoutPreset(opt.cols, opt.rows)}
+                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+                          active
+                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                  <div className="h-[14px] w-px bg-white/[0.08]" />
+                  {[
+                    { cols: 2, rows: 2, label: '2×2' },
+                    { cols: 3, rows: 2, label: '3×2' },
+                    { cols: 4, rows: 2, label: '4×2' },
+                  ].map((opt) => {
+                    const active = !isCustomLayout && canvasData.cols === opt.cols && canvasData.rows === opt.rows;
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => handleLayoutPreset(opt.cols, opt.rows)}
+                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+                          active
+                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                  {/* Personalizado badge + reset */}
+                  {isCustomLayout && (
+                    <>
+                      <div className="h-[14px] w-px bg-white/[0.08]" />
+                      <span className="rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]">
+                        Personalizado
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (canvasData) resetCanvasLayout(canvasData.id, selectedTemplateId);
+                          setIsCustomLayout(false);
+                          setCanvasResetKey((k) => k + 1);
+                        }}
+                        title="Restaurar tamanhos iguais"
+                        className="flex items-center justify-center size-[22px] rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path d="M1 5a4 4 0 0 1 7.2-2.4M9 5a4 4 0 0 1-7.2 2.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                          <path d="M7 2.3l1.2.3-.3 1.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M3 7.7l-1.2-.3.3-1.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </>
+                  )}
                   <div className="mx-[2px] h-[16px] w-px bg-white/[0.08]" />
                 </>
               )}
@@ -1086,6 +1135,7 @@ export default function SessionTerminalPage() {
                   key={`${canvasData.id}-${selectedTemplateId}-${canvasResetKey}`}
                   templateId={selectedTemplateId}
                   storageKey={canvasData.id}
+                  onUserResized={() => setIsCustomLayout(true)}
                   slots={(() => {
                     const liveIds = new Set(sessions.map((s) => s.sessionId));
                     const templateSlots = getTemplate(selectedTemplateId).slots;

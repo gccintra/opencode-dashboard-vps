@@ -22,6 +22,7 @@ interface CanvasGridProps {
   onKill?: (sessionId: string) => Promise<void>;
   onCreateSession?: () => Promise<string | null>;
   onRename?: (sessionId: string, newName: string) => Promise<void>;
+  onUserResized?: () => void;
   theme?: ITheme;
 }
 
@@ -34,9 +35,10 @@ function readLayout(key: string): Layout | undefined {
   }
 }
 
-function saveLayout(key: string, layout: Layout): void {
+function saveLayout(key: string, layout: Layout, onUserResized?: () => void): void {
   try {
     localStorage.setItem(key, JSON.stringify(layout));
+    onUserResized?.();
   } catch {
     // ignore quota errors
   }
@@ -69,9 +71,11 @@ export function CanvasGrid({
   onKill,
   onCreateSession,
   onRename,
+  onUserResized,
   theme,
 }: CanvasGridProps) {
   const [focusedSlot, setFocusedSlot] = useState<string | null>(null);
+  const save = (key: string, layout: Layout) => saveLayout(key, layout, onUserResized);
 
   const sessionMap = useMemo(() => new Map(sessions.map((s) => [s.sessionId, s])), [sessions]);
 
@@ -141,7 +145,7 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
@@ -160,7 +164,7 @@ export function CanvasGrid({
             orientation="vertical"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
@@ -179,14 +183,14 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vlLayout}
-                onLayoutChanged={(l) => saveLayout(vlKey, l)}
+                onLayoutChanged={(l) => save(vlKey, l)}
               >
                 <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('a', 0)}
@@ -211,7 +215,7 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
@@ -222,7 +226,7 @@ export function CanvasGrid({
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vrLayout}
-                onLayoutChanged={(l) => saveLayout(vrKey, l)}
+                onLayoutChanged={(l) => save(vrKey, l)}
               >
                 <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('b', 1)}
@@ -243,14 +247,14 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vlLayout}
-                onLayoutChanged={(l) => saveLayout(vlKey, l)}
+                onLayoutChanged={(l) => save(vlKey, l)}
               >
                 <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('a', 0)}
@@ -267,7 +271,7 @@ export function CanvasGrid({
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vrLayout}
-                onLayoutChanged={(l) => saveLayout(vrKey, l)}
+                onLayoutChanged={(l) => save(vrKey, l)}
               >
                 <Panel id="c" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('c', 2)}
@@ -288,7 +292,7 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="a" defaultSize={33} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
@@ -311,7 +315,7 @@ export function CanvasGrid({
             orientation="horizontal"
             className="h-full"
             defaultLayout={hLayout}
-            onLayoutChanged={(l) => saveLayout(hKey, l)}
+            onLayoutChanged={(l) => save(hKey, l)}
           >
             <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
