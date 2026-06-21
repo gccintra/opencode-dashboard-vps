@@ -46,10 +46,9 @@ function readLayout(key: string): Layout | undefined {
   }
 }
 
-function saveLayout(key: string, layout: Layout, onUserResized?: () => void): void {
+function persistLayout(key: string, layout: Layout): void {
   try {
     localStorage.setItem(key, JSON.stringify(layout));
-    onUserResized?.();
   } catch {
     // ignore quota errors
   }
@@ -77,29 +76,37 @@ function HSep() {
   );
 }
 
-/** Panel that collapses imperatively when slot becomes empty */
+/** Panel that collapses imperatively when slot becomes empty (only if another slot has a session) */
 function SlotPanel({
   id,
   hasSession,
+  anySiblingHasSession,
   defaultSize,
   minSize = 10,
   children,
 }: {
   id: string;
   hasSession: boolean;
+  anySiblingHasSession: boolean;
   defaultSize: number;
   minSize?: number;
   children: React.ReactNode;
 }) {
   const ref = useRef<PanelImperativeHandle | null>(null);
-  const prev = useRef(hasSession);
+  const prev = useRef<boolean | null>(null);
 
   useEffect(() => {
+    if (prev.current === null) {
+      prev.current = hasSession;
+      // only auto-collapse on mount when some other slot has content
+      if (!hasSession && anySiblingHasSession) ref.current?.collapse();
+      return;
+    }
     if (prev.current === hasSession) return;
     prev.current = hasSession;
     if (!hasSession) ref.current?.collapse();
     else ref.current?.expand();
-  }, [hasSession]);
+  }, [hasSession, anySiblingHasSession]);
 
   return (
     <Panel
@@ -107,7 +114,7 @@ function SlotPanel({
       panelRef={ref}
       collapsible
       collapsedSize={0}
-      defaultSize={hasSession ? defaultSize : 0}
+      defaultSize={defaultSize}
       minSize={minSize}
       style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
     >
@@ -206,7 +213,18 @@ export function CanvasGrid({
 }: CanvasGridProps) {
   const [focusedSlot, setFocusedSlot] = useState<string | null>(null);
   const [activeDragSlot, setActiveDragSlot] = useState<string | null>(null);
-  const save = (key: string, layout: Layout) => saveLayout(key, layout, onUserResized);
+
+  // Ignore onLayoutChanged fired during initial mount (Groups emit it on first render)
+  const userInteractedRef = useRef(false);
+  useEffect(() => {
+    const id = setTimeout(() => { userInteractedRef.current = true; }, 300);
+    return () => clearTimeout(id);
+  }, []);
+
+  const save = (key: string, layout: Layout) => {
+    persistLayout(key, layout);
+    if (userInteractedRef.current) onUserResized?.();
+  };
 
   const sessionMap = useMemo(() => new Map(sessions.map((s) => [s.sessionId, s])), [sessions]);
 
@@ -284,10 +302,13 @@ export function CanvasGrid({
     );
   };
 
+  const anySlotHasSession = useMemo(() => Object.values(slots).some(Boolean), [slots]);
+
   const mkPanel = (slotId: string, slotIndex: number, defaultSize: number, minSize = 10) => (
     <SlotPanel
       id={`panel-${slotId}`}
       hasSession={!!(slots[slotId])}
+      anySiblingHasSession={anySlotHasSession}
       defaultSize={defaultSize}
       minSize={minSize}
     >
