@@ -143,11 +143,11 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
             </Panel>
             <VSep />
-            <Panel id="b" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="b" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('b', 1)}
             </Panel>
           </Group>
@@ -162,11 +162,11 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+            <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
             </Panel>
             <HSep />
-            <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+            <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('b', 1)}
             </Panel>
           </Group>
@@ -181,24 +181,24 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vlLayout}
                 onLayoutChanged={(l) => saveLayout(vlKey, l)}
               >
-                <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('a', 0)}
                 </Panel>
                 <HSep />
-                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('b', 1)}
                 </Panel>
               </Group>
             </Panel>
             <VSep />
-            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('c', 2)}
             </Panel>
           </Group>
@@ -213,22 +213,22 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
             </Panel>
             <VSep />
-            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vrLayout}
                 onLayoutChanged={(l) => saveLayout(vrKey, l)}
               >
-                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('b', 1)}
                 </Panel>
                 <HSep />
-                <Panel id="c" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="c" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('c', 2)}
                 </Panel>
               </Group>
@@ -245,35 +245,35 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vlLayout}
                 onLayoutChanged={(l) => saveLayout(vlKey, l)}
               >
-                <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="a" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('a', 0)}
                 </Panel>
                 <HSep />
-                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="b" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('b', 1)}
                 </Panel>
               </Group>
             </Panel>
             <VSep />
-            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group
                 orientation="vertical"
                 className="h-full"
                 defaultLayout={vrLayout}
                 onLayoutChanged={(l) => saveLayout(vrKey, l)}
               >
-                <Panel id="c" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="c" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('c', 2)}
                 </Panel>
                 <HSep />
-                <Panel id="d" defaultSize={50} minSize={10} style={{ overflow: 'hidden' }}>
+                <Panel id="d" defaultSize={50} minSize={10} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {makeSlot('d', 3)}
                 </Panel>
               </Group>
@@ -290,15 +290,15 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="a" defaultSize={33} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="a" defaultSize={33} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
             </Panel>
             <VSep />
-            <Panel id="b" defaultSize={34} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="b" defaultSize={34} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('b', 1)}
             </Panel>
             <VSep />
-            <Panel id="c" defaultSize={33} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="c" defaultSize={33} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('c', 2)}
             </Panel>
           </Group>
@@ -313,11 +313,11 @@ export function CanvasGrid({
             defaultLayout={hLayout}
             onLayoutChanged={(l) => saveLayout(hKey, l)}
           >
-            <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="a" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('a', 0)}
             </Panel>
             <VSep />
-            <Panel id="b" defaultSize={50} minSize={15} style={{ overflow: 'hidden' }}>
+            <Panel id="b" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {makeSlot('b', 1)}
             </Panel>
           </Group>

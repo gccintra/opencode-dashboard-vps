@@ -316,7 +316,7 @@ export function CanvasSlot({
 
   return (
     <div
-      className={`relative flex flex-col overflow-hidden rounded-[6px] border bg-[#0a0a0f] transition-all ${borderStyle} ${
+      className={`relative flex flex-col overflow-hidden rounded-[6px] border bg-[#0a0a0f] transition-all h-full ${borderStyle} ${
         sessionId && !isFocused ? 'opacity-[0.95]' : ''
       }`}
       onClick={sessionId ? handleFocus : undefined}
