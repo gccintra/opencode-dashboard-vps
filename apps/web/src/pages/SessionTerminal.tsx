@@ -13,7 +13,8 @@ import {
 } from '../components/Terminal';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
-import { getTemplate } from '../components/Canvas/canvasTemplates';
+import { CanvasToolbar } from '../components/Canvas/CanvasToolbar';
+import { getTemplate, CANVAS_TEMPLATES } from '../components/Canvas/canvasTemplates';
 import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 
@@ -109,6 +110,41 @@ function colsRowsToTemplateId(cols: number, rows: number): string {
   if (cols === 2 && rows === 1) return '2col';
   if (cols === 2 && rows === 2) return '2x2';
   return '2x2';
+}
+
+function templateIdToColsRows(templateId: string): { cols: number; rows: number } {
+  switch (templateId) {
+    case 'single':      return { cols: 1, rows: 1 };
+    case '2col':        return { cols: 2, rows: 1 };
+    case '2row':        return { cols: 1, rows: 2 };
+    case 'left-stack':  return { cols: 2, rows: 2 };
+    case 'right-stack': return { cols: 2, rows: 2 };
+    case '2x2':         return { cols: 2, rows: 2 };
+    case '3col':        return { cols: 3, rows: 1 };
+    default:            return { cols: 2, rows: 1 };
+  }
+}
+
+function canvasTemplateKey(canvasId: string) {
+  return `canvas-template-${canvasId}`;
+}
+
+function loadCanvasTemplate(canvasId: string, cols: number, rows: number): string {
+  try {
+    const saved = localStorage.getItem(canvasTemplateKey(canvasId));
+    if (saved && CANVAS_TEMPLATES.find((t) => t.id === saved)) return saved;
+  } catch { /* ignore */ }
+  return colsRowsToTemplateId(cols, rows);
+}
+
+function saveCanvasTemplate(canvasId: string, templateId: string) {
+  try { localStorage.setItem(canvasTemplateKey(canvasId), templateId); } catch { /* ignore */ }
+}
+
+function resetCanvasLayout(storageKey: string, templateId: string) {
+  try {
+    ['h', 'vl', 'vr'].forEach((s) => localStorage.removeItem(`cpg-${storageKey}-${templateId}-${s}`));
+  } catch { /* ignore */ }
 }
 
 function isValidProjectId(id: unknown): id is string {
@@ -505,6 +541,8 @@ export default function SessionTerminalPage() {
   const [canvasCreating, setCanvasCreating] = useState(false);
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('2col');
+  const [canvasResetKey, setCanvasResetKey] = useState(0);
   const [, setCanvasDataLoading] = useState(false);
   type PickerResolver = (projectId: string | null) => void;
   const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
@@ -605,6 +643,13 @@ export default function SessionTerminalPage() {
     else setCanvasData(null);
   }, [selectedCanvasId, fetchCanvasData]);
 
+  // Sync templateId from localStorage (or derive from cols/rows) when canvas loads
+  useEffect(() => {
+    if (canvasData) {
+      setSelectedTemplateId(loadCanvasTemplate(canvasData.id, canvasData.cols, canvasData.rows));
+    }
+  }, [canvasData?.id]);
+
   /* ── Canvas: slot management ── */
   const handleAssignSlot = useCallback(
     async (slotIndex: number, assignSessionId: string) => {
@@ -653,6 +698,20 @@ export default function SessionTerminalPage() {
       }
     },
     [selectedCanvasId],
+  );
+
+  /* ── Canvas: template change ── */
+  const handleTemplateChange = useCallback(
+    async (templateId: string) => {
+      if (!canvasData) return;
+      saveCanvasTemplate(canvasData.id, templateId);
+      setSelectedTemplateId(templateId);
+      const { cols, rows } = templateIdToColsRows(templateId);
+      if (cols !== canvasData.cols || rows !== canvasData.rows) {
+        await handleCanvasLayoutChange(cols, rows);
+      }
+    },
+    [canvasData, handleCanvasLayoutChange],
   );
 
   /* ── Canvas: session creation (used by CanvasGrid/CanvasMobile) ── */
@@ -813,54 +872,29 @@ export default function SessionTerminalPage() {
         {/* Right: mode-specific actions */}
         <div className="flex items-center gap-[6px] shrink-0 ml-[8px]">
           {showCanvas && selectedCanvasId && canvasData ? (
-            /* Canvas embed: layout presets (desktop) + New Session */
+            /* Canvas embed: template picker + reset + New Session */
             <>
               {!isMobile && (
                 <>
-                  {/* Single-row group: max vertical space */}
-                  {[
-                    { cols: 1, rows: 1, label: '1×1' },
-                    { cols: 2, rows: 1, label: '2×1' },
-                    { cols: 3, rows: 1, label: '3×1' },
-                    { cols: 4, rows: 1, label: '4×1' },
-                  ].map((opt) => {
-                    const active = canvasData.cols === opt.cols && canvasData.rows === opt.rows;
-                    return (
-                      <button
-                        key={opt.label}
-                        onClick={() => handleCanvasLayoutChange(opt.cols, opt.rows)}
-                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
-                          active
-                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                  <div className="h-[14px] w-px bg-white/[0.08]" />
-                  {/* Two-row group: growing columns */}
-                  {[
-                    { cols: 2, rows: 2, label: '2×2' },
-                    { cols: 3, rows: 2, label: '3×2' },
-                    { cols: 4, rows: 2, label: '4×2' },
-                  ].map((opt) => {
-                    const active = canvasData.cols === opt.cols && canvasData.rows === opt.rows;
-                    return (
-                      <button
-                        key={opt.label}
-                        onClick={() => handleCanvasLayoutChange(opt.cols, opt.rows)}
-                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
-                          active
-                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
+                  <CanvasToolbar
+                    templateId={selectedTemplateId}
+                    onTemplateChange={handleTemplateChange}
+                  />
+                  {/* Reset layout sizes */}
+                  <button
+                    onClick={() => {
+                      resetCanvasLayout(canvasData.id, selectedTemplateId);
+                      setCanvasResetKey((k) => k + 1);
+                    }}
+                    title="Restaurar tamanhos iguais"
+                    className="flex items-center justify-center size-[26px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M1.5 6A4.5 4.5 0 0 1 10 3.2M10.5 6A4.5 4.5 0 0 1 2 8.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M8.5 3l1.5.2-.2 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3.5 9l-1.5-.2.2-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                   <div className="mx-[2px] h-[16px] w-px bg-white/[0.08]" />
                 </>
               )}
@@ -1049,13 +1083,12 @@ export default function SessionTerminalPage() {
                 />
               ) : (
                 <CanvasGrid
-                  templateId={colsRowsToTemplateId(canvasData.cols, canvasData.rows)}
+                  key={`${canvasData.id}-${selectedTemplateId}-${canvasResetKey}`}
+                  templateId={selectedTemplateId}
                   storageKey={canvasData.id}
                   slots={(() => {
                     const liveIds = new Set(sessions.map((s) => s.sessionId));
-                    const templateSlots = getTemplate(
-                      colsRowsToTemplateId(canvasData.cols, canvasData.rows),
-                    ).slots;
+                    const templateSlots = getTemplate(selectedTemplateId).slots;
                     const rec: Record<string, string | null> = {};
                     templateSlots.forEach((slotId, i) => {
                       const sid = canvasData.slots[i] ?? null;
