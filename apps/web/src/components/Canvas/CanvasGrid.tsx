@@ -5,6 +5,8 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -55,7 +57,10 @@ function saveLayout(key: string, layout: Layout, onUserResized?: () => void): vo
 
 function VSep() {
   return (
-    <Separator className="flex items-center justify-center cursor-col-resize group/vsep" style={{ width: '8px', flexShrink: 0 }}>
+    <Separator
+      className="flex items-center justify-center cursor-col-resize group/vsep"
+      style={{ width: '8px', flexShrink: 0 }}
+    >
       <div className="w-[2px] h-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/vsep:bg-[#b3e502]/50" />
     </Separator>
   );
@@ -63,39 +68,37 @@ function VSep() {
 
 function HSep() {
   return (
-    <Separator className="flex items-center justify-center cursor-row-resize group/hsep" style={{ height: '8px', flexShrink: 0 }}>
+    <Separator
+      className="flex items-center justify-center cursor-row-resize group/hsep"
+      style={{ height: '8px', flexShrink: 0 }}
+    >
       <div className="h-[2px] w-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/hsep:bg-[#b3e502]/50" />
     </Separator>
   );
 }
 
-/** Collapsible Panel wrapper — collapses imperatively when slot is empty */
+/** Panel that collapses imperatively when slot becomes empty */
 function SlotPanel({
   id,
-  slotId,
   hasSession,
   defaultSize,
   minSize = 10,
   children,
 }: {
   id: string;
-  slotId: string;
   hasSession: boolean;
   defaultSize: number;
   minSize?: number;
   children: React.ReactNode;
 }) {
   const ref = useRef<PanelImperativeHandle | null>(null);
-  const prevHasSession = useRef(hasSession);
+  const prev = useRef(hasSession);
 
   useEffect(() => {
-    if (prevHasSession.current === hasSession) return;
-    prevHasSession.current = hasSession;
-    if (!hasSession) {
-      ref.current?.collapse();
-    } else {
-      ref.current?.expand();
-    }
+    if (prev.current === hasSession) return;
+    prev.current = hasSession;
+    if (!hasSession) ref.current?.collapse();
+    else ref.current?.expand();
   }, [hasSession]);
 
   return (
@@ -107,10 +110,83 @@ function SlotPanel({
       defaultSize={hasSession ? defaultSize : 0}
       minSize={minSize}
       style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-      data-slot={slotId}
     >
       {children}
     </Panel>
+  );
+}
+
+/** Wraps CanvasSlot with dnd-kit hooks. Must be inside DndContext. */
+function DndSlot({
+  slotId,
+  slotIndex,
+  sessionId,
+  sessionName,
+  sessionStatus,
+  sessionProjectName,
+  isFocused,
+  availableSessions,
+  fontSize,
+  onFocus,
+  onAssign,
+  onRemove,
+  onKill,
+  onCreateSession,
+  onRename,
+  theme,
+  activeDragSlot,
+}: {
+  slotId: string;
+  slotIndex: number;
+  sessionId: string | null;
+  sessionName: string | null;
+  sessionStatus: string | null;
+  sessionProjectName?: string | null;
+  isFocused: boolean;
+  availableSessions: AvailableSession[];
+  fontSize?: number;
+  onFocus: () => void;
+  onAssign: (sessionId: string) => void;
+  onRemove: () => void;
+  onKill?: () => Promise<void>;
+  onCreateSession?: () => Promise<string | null>;
+  onRename?: (name: string) => Promise<void>;
+  theme?: ITheme;
+  activeDragSlot: string | null;
+}) {
+  const isDragging = activeDragSlot === slotId;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+  } = useDraggable({ id: slotId, disabled: !sessionId });
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: slotId });
+
+  return (
+    <CanvasSlot
+      slotIndex={slotIndex}
+      sessionId={isDragging ? null : sessionId}
+      sessionName={sessionName}
+      sessionStatus={sessionStatus}
+      sessionProjectName={sessionProjectName}
+      isFocused={isFocused}
+      availableSessions={availableSessions}
+      fontSize={fontSize}
+      onFocus={onFocus}
+      onAssignSession={(_idx, sid) => onAssign(sid)}
+      onRemoveSession={() => onRemove()}
+      onKillSession={onKill}
+      onCreateSession={onCreateSession}
+      onRename={onRename}
+      theme={theme}
+      isDragging={isDragging}
+      isOver={isOver}
+      containerRef={setDropRef}
+      headerRef={sessionId ? setDragRef : undefined}
+      headerDragProps={sessionId ? { ...attributes, ...listeners } : undefined}
+    />
   );
 }
 
@@ -129,7 +205,7 @@ export function CanvasGrid({
   theme,
 }: CanvasGridProps) {
   const [focusedSlot, setFocusedSlot] = useState<string | null>(null);
-  const [dragSlotId, setDragSlotId] = useState<string | null>(null);
+  const [activeDragSlot, setActiveDragSlot] = useState<string | null>(null);
   const save = (key: string, layout: Layout) => saveLayout(key, layout, onUserResized);
 
   const sessionMap = useMemo(() => new Map(sessions.map((s) => [s.sessionId, s])), [sessions]);
@@ -147,37 +223,28 @@ export function CanvasGrid({
     [sessions, assignedIds],
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-  const dragSessionId = dragSlotId ? (slots[dragSlotId] ?? null) : null;
-  const dragSession = dragSessionId ? sessionMap.get(dragSessionId) : null;
+  const activeDragSession = activeDragSlot ? (slots[activeDragSlot] ?? null) : null;
+  const activeDragSessionObj = activeDragSession ? sessionMap.get(activeDragSession) : null;
 
   function handleDragStart(event: DragStartEvent) {
-    setDragSlotId(String(event.active.id));
+    setActiveDragSlot(String(event.active.id));
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    setDragSlotId(null);
+    setActiveDragSlot(null);
     const fromSlot = String(event.active.id);
     const toSlot = event.over ? String(event.over.id) : null;
     if (!toSlot || fromSlot === toSlot) return;
-
     const fromSession = slots[fromSlot] ?? null;
     const toSession = slots[toSlot] ?? null;
     if (!fromSession) return;
-
-    // swap
     onAssign(toSlot, fromSession);
-    if (toSession) {
-      onAssign(fromSlot, toSession);
-    } else {
-      onRemove(fromSlot);
-    }
+    if (toSession) onAssign(fromSlot, toSession);
+    else onRemove(fromSlot);
   }
 
-  // Layout persistence keys
   const hKey = `cpg-${storageKey}-${templateId}-h`;
   const vlKey = `cpg-${storageKey}-${templateId}-vl`;
   const vrKey = `cpg-${storageKey}-${templateId}-vr`;
@@ -186,124 +253,100 @@ export function CanvasGrid({
   const vlLayout = useMemo(() => readLayout(vlKey), [vlKey]);
   const vrLayout = useMemo(() => readLayout(vrKey), [vrKey]);
 
-  const makeSlot = (slotId: string, slotIndex: number, defaultSize: number, minSize = 10) => {
+  const mkDndSlot = (slotId: string, slotIndex: number) => {
     const sessionId = slots[slotId] ?? null;
     const session = sessionId ? sessionMap.get(sessionId) : null;
-    const isDragging = dragSlotId === slotId;
     return (
-      <SlotPanel
-        id={`panel-${slotId}`}
+      <DndSlot
+        key={slotId}
         slotId={slotId}
-        hasSession={!!sessionId}
-        defaultSize={defaultSize}
-        minSize={minSize}
-      >
-        <CanvasSlot
-          key={slotId}
-          slotIndex={slotIndex}
-          sessionId={isDragging ? null : sessionId}
-          sessionName={session?.name ?? null}
-          sessionStatus={session?.status ?? null}
-          sessionProjectName={session?.projectName ?? null}
-          isFocused={focusedSlot === slotId}
-          availableSessions={availableSessions}
-          fontSize={fontSize}
-          onFocus={() => setFocusedSlot(slotId)}
-          onAssignSession={(_idx, sid) => onAssign(slotId, sid)}
-          onRemoveSession={() => onRemove(slotId)}
-          onKillSession={
-            onKill && sessionId
-              ? async () => {
-                  await onKill(sessionId);
-                  onRemove(slotId);
-                }
-              : undefined
-          }
-          onCreateSession={onCreateSession}
-          onRename={onRename && sessionId ? (name) => onRename(sessionId, name) : undefined}
-          theme={theme}
-          draggableId={sessionId ? slotId : undefined}
-          droppableId={slotId}
-        />
-      </SlotPanel>
+        slotIndex={slotIndex}
+        sessionId={sessionId}
+        sessionName={session?.name ?? null}
+        sessionStatus={session?.status ?? null}
+        sessionProjectName={session?.projectName ?? null}
+        isFocused={focusedSlot === slotId}
+        availableSessions={availableSessions}
+        fontSize={fontSize}
+        onFocus={() => setFocusedSlot(slotId)}
+        onAssign={(sid) => onAssign(slotId, sid)}
+        onRemove={() => onRemove(slotId)}
+        onKill={
+          onKill && sessionId
+            ? async () => { await onKill(sessionId); onRemove(slotId); }
+            : undefined
+        }
+        onCreateSession={onCreateSession}
+        onRename={onRename && sessionId ? (name) => onRename(sessionId, name) : undefined}
+        theme={theme}
+        activeDragSlot={activeDragSlot}
+      />
     );
   };
+
+  const mkPanel = (slotId: string, slotIndex: number, defaultSize: number, minSize = 10) => (
+    <SlotPanel
+      id={`panel-${slotId}`}
+      hasSession={!!(slots[slotId])}
+      defaultSize={defaultSize}
+      minSize={minSize}
+    >
+      {mkDndSlot(slotId, slotIndex)}
+    </SlotPanel>
+  );
 
   const renderTemplate = () => {
     switch (templateId) {
       case 'single':
         return (
-          <SlotPanel id="panel-a" slotId="a" hasSession={!!slots['a']} defaultSize={100} minSize={0}>
-            <CanvasSlot
-              key="a"
-              slotIndex={0}
-              sessionId={slots['a'] ?? null}
-              sessionName={slots['a'] ? (sessionMap.get(slots['a'])?.name ?? null) : null}
-              sessionStatus={slots['a'] ? (sessionMap.get(slots['a'])?.status ?? null) : null}
-              sessionProjectName={slots['a'] ? (sessionMap.get(slots['a'])?.projectName ?? null) : null}
-              isFocused={focusedSlot === 'a'}
-              availableSessions={availableSessions}
-              fontSize={fontSize}
-              onFocus={() => setFocusedSlot('a')}
-              onAssignSession={(_idx, sid) => onAssign('a', sid)}
-              onRemoveSession={() => onRemove('a')}
-              onKillSession={
-                onKill && slots['a']
-                  ? async () => { await onKill(slots['a']!); onRemove('a'); }
-                  : undefined
-              }
-              onCreateSession={onCreateSession}
-              onRename={onRename && slots['a'] ? (name) => onRename(slots['a']!, name) : undefined}
-              theme={theme}
-              droppableId="a"
-              draggableId={slots['a'] ? 'a' : undefined}
-            />
-          </SlotPanel>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {mkDndSlot('a', 0)}
+          </div>
         );
 
       case '2col':
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
-            {makeSlot('a', 0, 50, 15)}
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+            {mkPanel('a', 0, 50, 15)}
             <VSep />
-            {makeSlot('b', 1, 50, 15)}
+            {mkPanel('b', 1, 50, 15)}
           </Group>
         );
 
       case '2row':
         return (
-          <Group key={hKey} orientation="vertical" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
-            {makeSlot('a', 0, 50)}
+          <Group orientation="vertical" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+            {mkPanel('a', 0, 50)}
             <HSep />
-            {makeSlot('b', 1, 50)}
+            {mkPanel('b', 1, 50)}
           </Group>
         );
 
       case 'left-stack':
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
             <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group orientation="vertical" className="h-full" defaultLayout={vlLayout} onLayoutChanged={(l) => save(vlKey, l)}>
-                {makeSlot('a', 0, 50)}
+                {mkPanel('a', 0, 50)}
                 <HSep />
-                {makeSlot('b', 1, 50)}
+                {mkPanel('b', 1, 50)}
               </Group>
             </Panel>
             <VSep />
-            {makeSlot('c', 2, 50, 15)}
+            {mkPanel('c', 2, 50, 15)}
           </Group>
         );
 
       case 'right-stack':
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
-            {makeSlot('a', 0, 50, 15)}
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+            {mkPanel('a', 0, 50, 15)}
             <VSep />
             <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group orientation="vertical" className="h-full" defaultLayout={vrLayout} onLayoutChanged={(l) => save(vrKey, l)}>
-                {makeSlot('b', 1, 50)}
+                {mkPanel('b', 1, 50)}
                 <HSep />
-                {makeSlot('c', 2, 50)}
+                {mkPanel('c', 2, 50)}
               </Group>
             </Panel>
           </Group>
@@ -311,20 +354,20 @@ export function CanvasGrid({
 
       case '2x2':
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
             <Panel id="left" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group orientation="vertical" className="h-full" defaultLayout={vlLayout} onLayoutChanged={(l) => save(vlKey, l)}>
-                {makeSlot('a', 0, 50)}
+                {mkPanel('a', 0, 50)}
                 <HSep />
-                {makeSlot('b', 1, 50)}
+                {mkPanel('b', 1, 50)}
               </Group>
             </Panel>
             <VSep />
             <Panel id="right" defaultSize={50} minSize={15} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Group orientation="vertical" className="h-full" defaultLayout={vrLayout} onLayoutChanged={(l) => save(vrKey, l)}>
-                {makeSlot('c', 2, 50)}
+                {mkPanel('c', 2, 50)}
                 <HSep />
-                {makeSlot('d', 3, 50)}
+                {mkPanel('d', 3, 50)}
               </Group>
             </Panel>
           </Group>
@@ -332,21 +375,21 @@ export function CanvasGrid({
 
       case '3col':
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
-            {makeSlot('a', 0, 33, 15)}
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+            {mkPanel('a', 0, 33, 15)}
             <VSep />
-            {makeSlot('b', 1, 34, 15)}
+            {mkPanel('b', 1, 34, 15)}
             <VSep />
-            {makeSlot('c', 2, 33, 15)}
+            {mkPanel('c', 2, 33, 15)}
           </Group>
         );
 
       default:
         return (
-          <Group key={hKey} orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
-            {makeSlot('a', 0, 50, 15)}
+          <Group orientation="horizontal" className="h-full" defaultLayout={hLayout} onLayoutChanged={(l) => save(hKey, l)}>
+            {mkPanel('a', 0, 50, 15)}
             <VSep />
-            {makeSlot('b', 1, 50, 15)}
+            {mkPanel('b', 1, 50, 15)}
           </Group>
         );
     }
@@ -355,14 +398,14 @@ export function CanvasGrid({
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-[12px]" data-testid="canvas-grid">
-        <div className="flex flex-col flex-1 min-h-0 w-full" data-testid="canvas-grid-inner">
+        <div className="flex flex-col flex-1 min-h-0 w-full">
           {renderTemplate()}
         </div>
       </div>
       <DragOverlay>
-        {dragSession && (
+        {activeDragSessionObj && (
           <div className="rounded-[6px] border border-[#b3e502]/40 bg-[#0a0a0f]/90 px-[12px] py-[8px] text-[12px] text-[#b3e502] font-['JetBrains_Mono'] shadow-lg">
-            {dragSession.name}
+            {activeDragSessionObj.name}
           </div>
         )}
       </DragOverlay>
