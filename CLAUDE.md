@@ -106,6 +106,8 @@ crash, a worker self-heal restart, and a server restart. See `apps/server/src/pt
 
 **Deployment prerequisite:** `tmux` (≥ 3.2 for `-e`; host has 3.4) must be on PATH, alongside `pty-sighup-exec` at `/usr/local/bin`. If tmux is absent the server logs a warning and sessions fall back to non-resilient behavior.
 
+**PTY backend (`PTY_BACKEND` env, default `node-pty`):** the manager talks to the worker through a `WorkerTransport` abstraction, selected in `getPtyManager()`. `node-pty` (default) uses the Node 18 worker + `pty-sighup-exec` (above). `control` uses **tmux control mode** (`tmux -C`, `apps/server/src/pty/control.ts`): one `tmux -C` client per session over stdin/stdout pipes — **no PTY, so no node-pty, no Node 18 worker, no `pty-sighup-exec`, no CPU-spin wedge** (the node-pty Linux `read()=EAGAIN` bug is structurally impossible). `%output` is octal-decoded inline; input → `send-keys -H <hex>`; resize → `refresh-client -C <c>x<r>`; `kill-session` still runs via `tmux.ts` (route layer). Validated by `docs/poc-control-mode-findings.md` (sub-ms echo, no fd leak). Same default tmux socket as node-pty, so reconcile/has-session/kill see both. **PtyManager/WS/routes/detector/reconcile/reattach are transport-agnostic and unchanged.** Flagged for instant rollback; node-pty stays until `control` soaks in prod (plan `docs/plan-tmux-control-mode.md` §4.6).
+
 ### Frontend (apps/web)
 
 **Routing:** `App.tsx` uses react-router-dom v7. Two layout branches:
