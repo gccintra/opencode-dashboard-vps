@@ -799,10 +799,10 @@ let _singleton: PtyManager | null = null;
  */
 export function getPtyManager(): PtyManager {
   if (!_singleton) {
-    // PTY_BACKEND selects the transport. `control` uses tmux control mode
+    // PTY_BACKEND selects the transport. `control` (default) uses tmux control mode
     // (no node-pty, no Node 18 worker, no PTY → no CPU-spin wedge); `node-pty`
-    // (default) keeps the legacy worker. Flagged for instant rollback.
-    const backend = process.env.PTY_BACKEND ?? 'node-pty';
+    // keeps the legacy worker for rollback.
+    const backend = process.env.PTY_BACKEND ?? 'control';
     const transport =
       backend === 'control' ? new ControlWorkerTransport() : new BunWorkerTransport();
     console.error(`[pty-manager] PTY backend: ${backend}`);
