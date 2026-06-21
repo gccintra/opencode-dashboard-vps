@@ -38,6 +38,7 @@ import {
   handleMessage,
   startIpcLoop,
   resetGlobalState,
+  createCpuWatchdog,
   type HandleDeps,
   type PtySpawnFn,
 } from './index';
@@ -446,5 +447,113 @@ describe('startIpcLoop — end-to-end stdin → stdout', () => {
     await flushReadline();
 
     expect(responses).toEqual([{ type: 'list', sessions: [] }]);
+  });
+});
+
+// ── CPU-spin watchdog ──────────────────────────────────────────────
+
+describe('createCpuWatchdog', () => {
+  const SAMPLE_MS = 2000;
+  // 95% of one core over a 2000ms window = 0.95 * 2000 * 1000 micros.
+  const HOT_MICROS = Math.round(0.95 * SAMPLE_MS * 1000);
+  // 10% of one core — well below the 0.85 threshold.
+  const COOL_MICROS = Math.round(0.1 * SAMPLE_MS * 1000);
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /**
+   * Build watchdog deps where each sample reports a fixed CPU delta and byte
+   * count. `now`/`uptimeMs` advance deterministically so the grace period is
+   * always satisfied and elapsed === SAMPLE_MS every tick.
+   */
+  function makeDeps(opts: { micros: number; bytes: number }) {
+    let clock = 1_000_000;
+    const exit = vi.fn();
+    const cpuUsage = (prev?: NodeJS.CpuUsage): NodeJS.CpuUsage =>
+      prev ? { user: opts.micros, system: 0 } : { user: 0, system: 0 };
+    const deps = {
+      sampleMs: SAMPLE_MS,
+      minUptimeMs: 15_000,
+      strikesToExit: 3,
+      cpuUsage,
+      now: () => (clock += SAMPLE_MS),
+      uptimeMs: () => 100_000,
+      takeDataBytes: () => opts.bytes,
+      exit,
+      log: () => {},
+    };
+    return { deps, exit };
+  }
+
+  it('exits after sustained hot + quiet samples (spin detected)', () => {
+    const { deps, exit } = makeDeps({ micros: HOT_MICROS, bytes: 0 });
+    createCpuWatchdog(deps);
+
+    vi.advanceTimersByTime(SAMPLE_MS * 2); // 2 strikes — not yet
+    expect(exit).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(SAMPLE_MS); // 3rd strike → exit
+    expect(exit).toHaveBeenCalledWith(1);
+  });
+
+  it('does NOT exit when CPU is high but output is flowing (real work)', () => {
+    const { deps, exit } = makeDeps({ micros: HOT_MICROS, bytes: 1_000_000 });
+    createCpuWatchdog(deps);
+    vi.advanceTimersByTime(SAMPLE_MS * 5);
+    expect(exit).not.toHaveBeenCalled();
+  });
+
+  it('does NOT exit when CPU is low (idle)', () => {
+    const { deps, exit } = makeDeps({ micros: COOL_MICROS, bytes: 0 });
+    createCpuWatchdog(deps);
+    vi.advanceTimersByTime(SAMPLE_MS * 5);
+    expect(exit).not.toHaveBeenCalled();
+  });
+
+  it('resets strikes when a hot streak is interrupted by a cool sample', () => {
+    let micros = HOT_MICROS;
+    let clock = 1_000_000;
+    const exit = vi.fn();
+    createCpuWatchdog({
+      sampleMs: SAMPLE_MS,
+      minUptimeMs: 15_000,
+      strikesToExit: 3,
+      cpuUsage: (prev?: NodeJS.CpuUsage) =>
+        prev ? { user: micros, system: 0 } : { user: 0, system: 0 },
+      now: () => (clock += SAMPLE_MS),
+      uptimeMs: () => 100_000,
+      takeDataBytes: () => 0,
+      exit,
+      log: () => {},
+    });
+
+    vi.advanceTimersByTime(SAMPLE_MS * 2); // 2 hot strikes
+    micros = COOL_MICROS;
+    vi.advanceTimersByTime(SAMPLE_MS); // cool → reset
+    micros = HOT_MICROS;
+    vi.advanceTimersByTime(SAMPLE_MS * 2); // 2 hot again — still < 3
+    expect(exit).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(SAMPLE_MS); // 3rd consecutive → exit
+    expect(exit).toHaveBeenCalledWith(1);
+  });
+
+  it('honors the boot grace period (no exit before minUptimeMs)', () => {
+    let clock = 1_000_000;
+    const exit = vi.fn();
+    createCpuWatchdog({
+      sampleMs: SAMPLE_MS,
+      minUptimeMs: 15_000,
+      strikesToExit: 3,
+      cpuUsage: (prev?: NodeJS.CpuUsage) =>
+        prev ? { user: HOT_MICROS, system: 0 } : { user: 0, system: 0 },
+      now: () => (clock += SAMPLE_MS),
+      uptimeMs: () => 1_000, // always within grace
+      takeDataBytes: () => 0,
+      exit,
+      log: () => {},
+    });
+    vi.advanceTimersByTime(SAMPLE_MS * 10);
+    expect(exit).not.toHaveBeenCalled();
   });
 });
