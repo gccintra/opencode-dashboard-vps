@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tmux control-mode PoC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" />
+    <style>
+      html, body { margin: 0; height: 100%; background: #0a0a0f; }
+      #term { position: absolute; inset: 0; padding: 6px; }
+      #hud {
+        position: absolute; top: 4px; right: 8px; z-index: 10;
+        font: 11px JetBrains Mono, monospace; color: #af0; opacity: 0.7;
+        pointer-events: none; white-space: pre; text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="term"></div>
+    <div id="hud"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script>
+      const term = new Terminal({
+        fontFamily: "JetBrains Mono, monospace",
+        fontSize: 13,
+        cursorBlink: true,
+        allowProposedApi: true,
+        scrollback: 10000,
+      });
+      const fit = new FitAddon.FitAddon();
+      term.loadAddon(fit);
+      term.open(document.getElementById("term"));
+      fit.fit();
+
+      const hud = document.getElementById("hud");
+      const enc = new TextEncoder();
+      let lat = []; // latency samples (ms)
+
+      const ws = new WebSocket(`ws://${location.host}/ws`);
+      ws.binaryType = "arraybuffer";
+
+      function sendResize() {
+        const { cols, rows } = term;
+        if (ws.readyState === 1) ws.send(JSON.stringify({ resize: [cols, rows] }));
+      }
+
+      ws.onopen = () => { fit.fit(); sendResize(); hud.textContent = "connected"; };
+      ws.onmessage = (e) => {
+        if (typeof e.data === "string") {
+          try { const o = JSON.parse(e.data); if (o.type === "exit") hud.textContent = "exit: " + o.reason; } catch {}
+          return;
+        }
+        const bytes = new Uint8Array(e.data);
+        // crude latency: if we recently sent a key, measure to first output
+        if (pendingKeyAt) {
+          const dt = performance.now() - pendingKeyAt;
+          lat.push(dt); if (lat.length > 100) lat.shift();
+          pendingKeyAt = 0;
+          const sorted = [...lat].sort((a, b) => a - b);
+          const p = (q) => sorted[Math.floor(sorted.length * q)] | 0;
+          hud.textContent = `echo p50=${p(0.5)}ms p99=${p(0.99)}ms n=${lat.length}`;
+        }
+        term.write(bytes);
+      };
+      ws.onclose = () => { hud.textContent += " [closed]"; };
+
+      let pendingKeyAt = 0;
+      term.onData((data) => {
+        pendingKeyAt = performance.now();
+        ws.send(enc.encode(data));
+      });
+
+      let rt;
+      window.addEventListener("resize", () => {
+        clearTimeout(rt);
+        rt = setTimeout(() => { fit.fit(); sendResize(); }, 150);
+      });
+      term.onResize(() => sendResize());
+    </script>
+  </body>
+</html>
