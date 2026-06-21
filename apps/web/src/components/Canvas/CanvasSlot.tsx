@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { XTermTerminal } from '../Terminal';
 import type { XTermTerminalHandle } from '../Terminal';
 import { apiFetch } from '../../lib/api';
@@ -27,6 +28,8 @@ export interface CanvasSlotProps {
   onCreateSession?: () => Promise<string | null>;
   onRename?: (newName: string) => Promise<void>;
   theme?: ITheme;
+  draggableId?: string;
+  droppableId?: string;
 }
 
 function SlotHeader({
@@ -254,6 +257,8 @@ export function CanvasSlot({
   onCreateSession,
   onRename,
   theme,
+  draggableId,
+  droppableId,
 }: CanvasSlotProps) {
   const terminalRef = useRef<XTermTerminalHandle | null>(null);
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -308,32 +313,49 @@ export function CanvasSlot({
     [slotIndex, onFocus],
   );
 
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: draggableId ?? `drag-${slotIndex}`,
+    disabled: !draggableId,
+  });
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: droppableId ?? `drop-${slotIndex}`,
+    disabled: !droppableId,
+  });
+
   const borderStyle = sessionId
-    ? isFocused
+    ? isOver
       ? 'border-[#b3e502]'
-      : 'border-white/[0.07]'
-    : 'border-dashed border-[rgba(255,255,255,0.1)]';
+      : isFocused
+        ? 'border-[#b3e502]'
+        : 'border-white/[0.07]'
+    : isOver
+      ? 'border-[#b3e502] border-solid'
+      : 'border-dashed border-[rgba(255,255,255,0.1)]';
 
   return (
     <div
+      ref={setDropRef}
       className={`relative flex flex-col overflow-hidden rounded-[6px] border bg-[#0a0a0f] transition-all h-full ${borderStyle} ${
-        sessionId && !isFocused ? 'opacity-[0.95]' : ''
+        isDragging ? 'opacity-30' : sessionId && !isFocused ? 'opacity-[0.95]' : ''
       }`}
       onClick={sessionId ? handleFocus : undefined}
       data-testid={`canvas-slot-${slotIndex}`}
     >
       {sessionId ? (
         <>
-          <SlotHeader
-            sessionName={sessionName ?? 'Sessão'}
-            sessionStatus={sessionStatus}
-            projectName={sessionProjectName}
-            onRemove={handleRemove}
-            onKill={onKillSession}
-            onRename={onRename}
-            onReconnect={() => terminalRef.current?.reconnect()}
-            onFit={() => { terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
-          />
+          <div ref={draggableId ? setDragRef : undefined} {...(draggableId ? { ...attributes, ...listeners } : {})} style={{ cursor: draggableId ? 'grab' : undefined }}>
+            <SlotHeader
+              sessionName={sessionName ?? 'Sessão'}
+              sessionStatus={sessionStatus}
+              projectName={sessionProjectName}
+              onRemove={handleRemove}
+              onKill={onKillSession}
+              onRename={onRename}
+              onReconnect={() => terminalRef.current?.reconnect()}
+              onFit={() => { terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
+            />
+          </div>
           <div className="relative flex-1 min-h-0 overflow-hidden">
             <XTermTerminal
               key={sessionId}

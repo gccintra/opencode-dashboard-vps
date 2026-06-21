@@ -107,6 +107,7 @@ function colsRowsToTemplateId(cols: number, rows: number): string {
   if (cols === 1 && rows === 1) return 'single';
   if (cols === 1 && rows === 2) return '2row';
   if (cols === 2 && rows === 1) return '2col';
+  if (cols === 3 && rows === 1) return '3col';
   if (cols === 2 && rows === 2) return '2x2';
   return '2x2';
 }
@@ -879,12 +880,11 @@ export default function SessionTerminalPage() {
               {!isMobile && (
                 <>
                   {[
-                    { cols: 1, rows: 1, label: '1×1' },
-                    { cols: 2, rows: 1, label: '2×1' },
-                    { cols: 3, rows: 1, label: '3×1' },
-                    { cols: 4, rows: 1, label: '4×1' },
+                    { cols: 1, rows: 1, label: '1×1', templateId: 'single' },
+                    { cols: 2, rows: 1, label: '2×1', templateId: '2col' },
+                    { cols: 3, rows: 1, label: '3×1', templateId: '3col' },
                   ].map((opt) => {
-                    const active = !isCustomLayout && canvasData.cols === opt.cols && canvasData.rows === opt.rows && getTemplate(selectedTemplateId).slots.length <= opt.cols * opt.rows;
+                    const active = !isCustomLayout && selectedTemplateId === opt.templateId;
                     return (
                       <button
                         key={opt.label}
@@ -901,11 +901,11 @@ export default function SessionTerminalPage() {
                   })}
                   <div className="h-[14px] w-px bg-white/[0.08]" />
                   {[
-                    { cols: 2, rows: 2, label: '2×2' },
-                    { cols: 3, rows: 2, label: '3×2' },
-                    { cols: 4, rows: 2, label: '4×2' },
+                    { cols: 2, rows: 2, label: '2×2', templateId: '2x2' },
+                    { cols: 3, rows: 2, label: '3×2', templateId: '2x2' },
+                    { cols: 4, rows: 2, label: '4×2', templateId: '2x2' },
                   ].map((opt) => {
-                    const active = !isCustomLayout && canvasData.cols === opt.cols && canvasData.rows === opt.rows;
+                    const active = !isCustomLayout && selectedTemplateId === opt.templateId && canvasData.cols === opt.cols && canvasData.rows === opt.rows;
                     return (
                       <button
                         key={opt.label}
