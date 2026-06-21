@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development DATABASE_PATH=./data/opencode.db SERVER_PORT=3002 bun run --watch --env-file ../../.env src/index.ts",
+    "dev": "env -u SERVER_PORT -u DATABASE_PATH NODE_ENV=development bun run --watch --env-file ../../.env src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun && cp src/db/schema.sql dist/schema.sql",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
