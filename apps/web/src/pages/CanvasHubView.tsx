@@ -34,22 +34,24 @@ interface ProjectBrief {
 /* ── Constants ── */
 
 const DEAD_STATUSES = new Set(['exited', 'killed', 'finished']);
-const MAX_MOBILE_SLOTS = 6;
+const MAX_MOBILE_SLOTS = 8;
 
 const CANVAS_LAYOUTS = [
   { cols: 1, rows: 1, label: '1×1' },
-  { cols: 1, rows: 2, label: '1×2' },
   { cols: 2, rows: 1, label: '2×1' },
+  { cols: 3, rows: 1, label: '3×1' },
+  { cols: 4, rows: 1, label: '4×1' },
   { cols: 2, rows: 2, label: '2×2' },
-  { cols: 2, rows: 3, label: '2×3' },
+  { cols: 3, rows: 2, label: '3×2' },
+  { cols: 4, rows: 2, label: '4×2' },
 ];
 
 // Returns the smallest layout that fits at least `minSlots` slots
 function getAutoGrowLayout(minSlots: number): { cols: number; rows: number } {
-  if (minSlots <= 1) return { cols: 1, rows: 1 };
-  if (minSlots <= 2) return { cols: 1, rows: 2 };
+  if (minSlots <= 2) return { cols: 2, rows: 1 };
   if (minSlots <= 4) return { cols: 2, rows: 2 };
-  return { cols: 2, rows: 3 };
+  if (minSlots <= 6) return { cols: 3, rows: 2 };
+  return { cols: 4, rows: 2 };
 }
 
 const FONT_SIZE_MIN = 6;

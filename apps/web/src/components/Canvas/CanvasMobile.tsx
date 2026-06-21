@@ -46,7 +46,7 @@ interface CanvasMobileProps {
 /* ── Constants ── */
 
 const SLOT_COUNT = 3;
-const MAX_SLOTS = 6;
+const MAX_SLOTS = 8;
 const SLOTS_PER_GROUP = 3;
 const MOBILE_KEY_PREFIX = 'canvas-mobile-';
 
