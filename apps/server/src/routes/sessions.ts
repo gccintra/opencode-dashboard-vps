@@ -27,7 +27,13 @@ import { Elysia, t } from 'elysia';
 import { authGuard } from '../auth/middleware';
 import { getPtyManager } from '../pty/manager';
 import { detectStatus, getLastActiveAt } from '../pty/detector';
-import { SPAWN_WRAPPER, buildTmuxSpawnArgs, tmuxKillSession, tmuxListSessions } from '../pty/tmux';
+import {
+  SPAWN_WRAPPER,
+  buildTmuxSpawnArgs,
+  tmuxKillSession,
+  tmuxListSessions,
+  tmuxHasSession,
+} from '../pty/tmux';
 import { getActiveResourcesForProject } from './resources';
 import { getDb } from '../db/client';
 import { existsSync } from 'node:fs';
@@ -294,6 +300,74 @@ export async function reconcileTmuxSessions(): Promise<void> {
   console.log(
     `[sessions] tmux reconcile: re-adopted ${readopted}, killed ${orphansKilled} orphan(s)`,
   );
+}
+
+/** Resolve a session's working directory: project dir if valid, else /root. */
+function resolveSessionCwd(meta: SessionMeta): string {
+  if (!meta.projectId) return '/root';
+  try {
+    const project = getDb()
+      .query('SELECT directory FROM projects WHERE id = ?')
+      .get(meta.projectId) as { directory?: string } | null;
+    if (project?.directory && existsSync(project.directory)) return project.directory;
+  } catch {
+    /* fall back */
+  }
+  return '/root';
+}
+
+/**
+ * Ensure a session has a LIVE attach client, reviving it if its tmux session
+ * outlived the client (the "born dead" / stranded case: the attach client died
+ * — e.g. a resize EBADF or a worker SIGKILL — but claude/opencode is still
+ * running in the tmux daemon). This is the backbone of seamless recovery:
+ * the WS layer calls it on connect, so a stranded session is reattached and
+ * streams again with no user action.
+ *
+ * @returns true if the session is (now) attached and usable; false if it is
+ *          genuinely gone (no metadata, or no live tmux session).
+ */
+export async function ensureSessionAttached(sessionId: string): Promise<boolean> {
+  const manager = getPtyManager();
+  const status = manager.getSessionStatus(sessionId);
+  if (status === 'active' || status === 'pending') return true; // already attached
+
+  const meta = sessionMeta.get(sessionId);
+  if (!meta) return false; // unknown session
+  if (!(await tmuxHasSession(sessionId))) return false; // tmux gone → truly dead
+
+  // tmux is alive but there's no live attach client — reattach. spawnSession
+  // clears any stale 'exited' SessionState and re-runs `tmux new-session -A`,
+  // which idempotently attaches to the existing session (claude keeps running).
+  try {
+    await spawnWithRetry(() =>
+      manager.spawnSession(
+        sessionId,
+        resolveSessionCwd(meta),
+        SPAWN_WRAPPER,
+        buildTmuxSpawnArgs(sessionId, 120, 35),
+        undefined,
+        120,
+        35,
+      ),
+    );
+  } catch (err) {
+    // A concurrent revive may have already re-attached it — treat that as success.
+    if (manager.getSessionStatus(sessionId) === 'active') return true;
+    console.warn(
+      `[sessions] ensureSessionAttached failed for ${sessionId}:`,
+      (err as Error).message,
+    );
+    return false;
+  }
+  wireSessionExit(sessionId);
+  meta.status = 'active';
+  try {
+    getDb().run("UPDATE sessions SET status = 'active' WHERE id = ?", [sessionId]);
+  } catch {
+    /* non-fatal */
+  }
+  return true;
 }
 
 /**
