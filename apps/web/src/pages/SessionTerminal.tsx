@@ -13,6 +13,7 @@ import {
 } from '../components/Terminal';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
+import { getTemplate } from '../components/Canvas/canvasTemplates';
 import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 
@@ -100,6 +101,14 @@ function useDebouncedResize(sessionId: string | undefined) {
     },
     [sessionId],
   );
+}
+
+function colsRowsToTemplateId(cols: number, rows: number): string {
+  if (cols === 1 && rows === 1) return 'single';
+  if (cols === 1 && rows === 2) return '2row';
+  if (cols === 2 && rows === 1) return '2col';
+  if (cols === 2 && rows === 2) return '2x2';
+  return '2x2';
 }
 
 function isValidProjectId(id: unknown): id is string {
@@ -1040,23 +1049,29 @@ export default function SessionTerminalPage() {
                 />
               ) : (
                 <CanvasGrid
-                  cols={canvasData.cols}
-                  rows={canvasData.rows}
+                  templateId={colsRowsToTemplateId(canvasData.cols, canvasData.rows)}
+                  storageKey={canvasData.id}
                   slots={(() => {
                     const liveIds = new Set(sessions.map((s) => s.sessionId));
-                    const capacity = canvasData.cols * canvasData.rows;
-                    const rec: Record<number, string | null> = {};
-                    for (let i = 0; i < capacity; i++) {
+                    const templateSlots = getTemplate(
+                      colsRowsToTemplateId(canvasData.cols, canvasData.rows),
+                    ).slots;
+                    const rec: Record<string, string | null> = {};
+                    templateSlots.forEach((slotId, i) => {
                       const sid = canvasData.slots[i] ?? null;
-                      rec[i] = sid && liveIds.has(sid) ? sid : null;
-                    }
+                      rec[slotId] = sid && liveIds.has(sid) ? sid : null;
+                    });
                     return rec;
                   })()}
                   sessions={sessions}
                   fontSize={fontSize}
                   theme={getThemeById(themeId).xterm}
-                  onAssign={handleAssignSlot}
-                  onRemove={handleClearSlot}
+                  onAssign={(slotId, sid) =>
+                    handleAssignSlot(slotId.charCodeAt(0) - 97, sid)
+                  }
+                  onRemove={(slotId) =>
+                    handleClearSlot(slotId.charCodeAt(0) - 97)
+                  }
                   onKill={async (sid) => {
                     try {
                       await apiFetch(`/api/sessions/${sid}`, { method: 'DELETE' });
