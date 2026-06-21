@@ -79,12 +79,39 @@ const SHUTDOWN_GRACE_MS = 2000;
 type ReadableByteStream = ReadableStream<Uint8Array>;
 type WritableByteSink = Bun.FileSink;
 
+/** USER_HZ — clock ticks per second for /proc/<pid>/stat utime/stime. Always 100 on Linux. */
+const USER_HZ = 100;
+
+/**
+ * Read a process's cumulative CPU time (utime + stime, all threads) from
+ * /proc/<pid>/stat, in clock ticks. Returns null if unreadable. The `comm`
+ * field (index 2) can contain spaces and parens, so we slice after the LAST
+ * ')' and index the remaining whitespace-separated fields: rest[0] = state
+ * (field 3), so utime (field 14) = rest[11] and stime (field 15) = rest[12].
+ */
+function readProcCpuTicks(pid: number): number | null {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    const afterComm = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    const utime = parseInt(afterComm[11], 10);
+    const stime = parseInt(afterComm[12], 10);
+    if (Number.isNaN(utime) || Number.isNaN(stime)) return null;
+    return utime + stime;
+  } catch {
+    return null;
+  }
+}
+
 export class BunWorkerTransport implements WorkerTransport {
   private proc: Bun.Subprocess | null = null;
   private messageCb: ((msg: ServerMessage) => void) | null = null;
   private exitCb: ((code: number | null) => void) | null = null;
   private buf = '';
   private started = false;
+  /** Output bytes received from the worker since the last CPU-monitor sample. */
+  private bytesSinceSample = 0;
+  /** Server-side CPU-spin monitor (see {@link startCpuMonitor}). */
+  private cpuMonitor: ReturnType<typeof setInterval> | null = null;
 
   start(): void {
     if (this.started) return;
@@ -134,6 +161,12 @@ export class BunWorkerTransport implements WorkerTransport {
     // Stream worker stdout → JSON line parser.
     void this.readStdoutLoop(proc);
 
+    // Watch for the node-pty CPU busy-loop from OUTSIDE the worker. The
+    // worker's own JS watchdog cannot fire once libuv spins in a tight C read()
+    // loop (timers and SIGTERM are both starved), so the Bun server — whose
+    // event loop is unaffected — force-kills the wedged worker with SIGKILL.
+    this.startCpuMonitor(proc);
+
     // Surface worker exit to the manager. Reset state so start() can
     // respawn the worker when ensureStarted() is called on next request.
     void this.proc.exited
@@ -172,6 +205,87 @@ export class BunWorkerTransport implements WorkerTransport {
   }
 
   /**
+   * Server-side CPU-spin watchdog. Samples the worker's /proc CPU time every
+   * few seconds; if it pegs ~a full core while emitting almost no output (the
+   * node-pty hung-up-fd busy-loop signature — the worker only marshals IPC and
+   * never legitimately pegs a core), the worker is SIGKILLed. SIGKILL cannot be
+   * ignored even by a process spinning in a C syscall loop, and the normal exit
+   * path (`exited` → handleProcExit → exitCb → manager worker-lost handler) then
+   * reattaches every tmux session onto a fresh worker with no data loss.
+   *
+   * This lives in the Bun server, NOT the worker: a fully pegged libuv loop in
+   * the worker can't run its own JS watchdog timer.
+   */
+  private startCpuMonitor(proc: Bun.Subprocess): void {
+    this.stopCpuMonitor();
+    const pid = proc.pid;
+    const SAMPLE_MS = 3000;
+    const CPU_THRESHOLD = 0.9; // fraction of one core
+    const MAX_BYTES = 256 * 1024; // output above this = real work, not a spin
+    const STRIKES_TO_KILL = 2; // ~6s sustained
+    const GRACE_MS = 10_000; // ignore the startup window
+
+    const startedAt = Date.now();
+    let lastTicks = readProcCpuTicks(pid);
+    let lastTs = Date.now();
+    let strikes = 0;
+    this.bytesSinceSample = 0;
+
+    this.cpuMonitor = setInterval(() => {
+      // Stop if this worker was superseded.
+      if (this.proc !== proc) {
+        this.stopCpuMonitor();
+        return;
+      }
+      const ticks = readProcCpuTicks(pid);
+      const ts = Date.now();
+      const bytes = this.bytesSinceSample;
+      this.bytesSinceSample = 0;
+      const elapsedMs = ts - lastTs;
+      const prevTicks = lastTicks;
+      lastTicks = ticks;
+      lastTs = ts;
+
+      if (ticks === null || prevTicks === null || elapsedMs <= 0) return;
+      if (ts - startedAt < GRACE_MS) return;
+
+      const cpuFrac = (ticks - prevTicks) / USER_HZ / (elapsedMs / 1000);
+      if (cpuFrac > CPU_THRESHOLD && bytes < MAX_BYTES) {
+        strikes += 1;
+        console.error(
+          `[pty-transport] worker hot+quiet ${strikes}/${STRIKES_TO_KILL} ` +
+            `cpu=${(cpuFrac * 100).toFixed(0)}% bytes=${bytes} pid=${pid}`,
+        );
+        if (strikes >= STRIKES_TO_KILL) {
+          console.error(
+            `[pty-transport] worker wedged (CPU spin, no output) — SIGKILL pid=${pid}; ` +
+              'tmux sessions survive and will be reattached',
+          );
+          this.stopCpuMonitor();
+          try {
+            process.kill(pid, 'SIGKILL');
+          } catch {
+            /* already dead */
+          }
+          // Do NOT respawn here: the `exited` promise → handleProcExit → exitCb
+          // → manager worker-lost handler drives the lossless reattach, which
+          // calls ensureStarted() and spawns a fresh worker.
+        }
+      } else {
+        strikes = 0;
+      }
+    }, SAMPLE_MS);
+    this.cpuMonitor.unref?.();
+  }
+
+  private stopCpuMonitor(): void {
+    if (this.cpuMonitor !== null) {
+      clearInterval(this.cpuMonitor);
+      this.cpuMonitor = null;
+    }
+  }
+
+  /**
    * Handle a worker process exit. Guarded by an identity check so a stale
    * exit (from a worker superseded by restart()) is ignored and never resets
    * the live worker's state.
@@ -181,6 +295,7 @@ export class BunWorkerTransport implements WorkerTransport {
       console.error(`[pty-transport] ignoring stale exit from superseded worker pid=${proc.pid}`);
       return;
     }
+    this.stopCpuMonitor();
     console.error(`[pty-transport] worker exited code=${code} pid=${proc.pid}`);
     try {
       unlinkSync(WORKER_PID_FILE);
@@ -217,6 +332,7 @@ export class BunWorkerTransport implements WorkerTransport {
 
   async shutdown(): Promise<void> {
     if (!this.proc) return;
+    this.stopCpuMonitor();
     const proc = this.proc;
     this.proc = null;
     this.started = false;
@@ -270,6 +386,7 @@ export class BunWorkerTransport implements WorkerTransport {
           console.error('[pty-transport] readStdoutLoop superseded, exiting');
           return;
         }
+        this.bytesSinceSample += value.byteLength;
         this.buf += decoder.decode(value, { stream: true });
         let nl: number;
         while ((nl = this.buf.indexOf('\n')) !== -1) {
