@@ -84,15 +84,27 @@ PTY output chunks are base64-encoded to survive the JSON-lines transport without
 
 ### Session Lifecycle
 
-Sessions are **volatile** — they live in memory only and reset on server restart. SQLite persists only `projects`, `tasks`, and `project_resources`.
+Sessions are **tmux-backed and resilient**: every session's real processes
+(bash/claude/opencode) run inside a `tmux` server (a daemon independent of both
+the Bun server and the Node pty-worker). The worker only runs a thin attach
+client (`tmux new-session -A`), so it — and the whole server — can be killed and
+respawned with **zero session loss**. Sessions therefore survive a worker
+crash, a worker self-heal restart, and a server restart. See `apps/server/src/pty/tmux.ts`.
 
-- `PtyManager` owns `Map<sessionId, SessionState>` (pid, ~10 KB circular buffer, 3 callback sets)
-- `pty-worker` owns `Map<sessionId, IPty>` (actual processes)
+- tmux sessions are named `alf_<sessionId>` (the `alf_` prefix avoids colliding with a human operator's own tmux sessions).
+- `PtyManager` owns `Map<sessionId, SessionState>` (pid of the **attach client**, ~50 KB circular buffer, 3 callback sets)
+- `pty-worker` owns `Map<sessionId, IPty>` (the attach clients, NOT the real processes — those live in the tmux daemon)
 - Status is detected at 1 Hz via regex on the buffer: `waiting` (prompt detected), `active` (otherwise), `finished` (exit event)
-- Closing the browser tab does NOT kill the PTY — only `DELETE /api/sessions/:id` does
-- On disconnect, only the WS callbacks are removed from the session's Sets; the PTY keeps running
+- Closing the browser tab does NOT kill anything — only `DELETE /api/sessions/:id` does (it runs `tmux kill-session` **then** kills the attach client)
+- On disconnect, only the WS callbacks are removed from the session's Sets; the attach client keeps running
 
-The spawn command is `bash -c 'opencode; exec bash'` — if `opencode` isn't in PATH, the session falls back to a plain bash shell.
+**Spawn:** the worker runs `pty-sighup-exec tmux -f <tmux.conf> new-session -A -s alf_<id> -x <cols> -y <rows> '<innerCmd>'`. `-A` is idempotent (create-if-absent / attach-if-present), so the **same args** serve both the initial spawn and every reattach. `<innerCmd>` is built by `buildCliCommand()` and ends with `exec zsh 2>&1 || exec bash`, so the session drops to a shell (instead of dying) when the CLI exits. Per-session env (`OPENCODE_ACTIVE_*`) is injected with tmux `-e KEY=VAL` because a new-session created in an already-running tmux server inherits the **server's** env, not the client's. The transparent tmux config lives in `apps/pty-worker/tmux.conf` (status bar off, `prefix None`, `escape-time 0` — **non-negotiable for key latency**, truecolor, mouse off).
+
+**Worker death → reattach:** `PtyManager.setWorkerLostHandler` (wired in `index.ts`) re-attaches every session whose `tmux has-session` still passes (via `reattachSession`, which reuses the existing `SessionState` so the live WS keeps streaming with no client reconnect) and marks the rest exited. Because reattach is lossless, the self-heal worker `restart()` is now safe — there is no "restart vs. lose sessions" dilemma.
+
+**Boot reconcile:** on startup `reconcileTmuxSessions()` re-adopts live `alf_` tmux sessions that have known metadata (spawns a fresh attach client, flips status back to `active`) and reaps orphan tmux sessions with no metadata.
+
+**Deployment prerequisite:** `tmux` (≥ 3.2 for `-e`; host has 3.4) must be on PATH, alongside `pty-sighup-exec` at `/usr/local/bin`. If tmux is absent the server logs a warning and sessions fall back to non-resilient behavior.
 
 ### Frontend (apps/web)
 
