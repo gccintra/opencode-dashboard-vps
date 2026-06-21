@@ -24,6 +24,14 @@ import { existsSync } from 'node:fs';
 /** Prefix for every ALF-managed tmux session, to avoid collisions. */
 export const TMUX_PREFIX = 'alf_';
 
+/**
+ * Optional custom tmux socket path from env. When set, every tmux command
+ * uses `-S <path>` so different server instances (prod / dev / worktree)
+ * maintain fully isolated session namespaces and cannot reap each other's
+ * sessions during boot reconcile.
+ */
+export const TMUX_SOCKET_PATH: string | undefined = process.env.TMUX_SOCKET_PATH || undefined;
+
 /** The binary that wraps tmux to neutralize the SIGHUP race (see sessions.ts). */
 export const SPAWN_WRAPPER = 'pty-sighup-exec';
 
@@ -79,8 +87,10 @@ export function buildTmuxSpawnArgs(
   innerCmd?: string,
   env?: Record<string, string>,
 ): string[] {
+  const socketArgs = TMUX_SOCKET_PATH ? ['-S', TMUX_SOCKET_PATH] : [];
   const args = [
     'tmux',
+    ...socketArgs,
     '-f',
     TMUX_CONF_PATH,
     'new-session',
@@ -104,8 +114,9 @@ export function buildTmuxSpawnArgs(
 
 /** Run a tmux subcommand. Resolves with stdout; rejects on non-zero exit. */
 function runTmux(args: string[]): Promise<string> {
+  const socketArgs = TMUX_SOCKET_PATH ? ['-S', TMUX_SOCKET_PATH] : [];
   return new Promise((resolvePromise, reject) => {
-    execFile('tmux', args, { timeout: 5000 }, (err, stdout) => {
+    execFile('tmux', [...socketArgs, ...args], { timeout: 5000 }, (err, stdout) => {
       if (err) reject(err);
       else resolvePromise(stdout);
     });

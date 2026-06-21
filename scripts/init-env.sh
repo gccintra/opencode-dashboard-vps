@@ -52,12 +52,23 @@ fi
 DB_PATH="$REPO_ROOT/apps/server/data/opencode.db"
 mkdir -p "$(dirname "$DB_PATH")"
 
-# copy template, override the three worktree-specific vars
+# derive a unique tmux socket name from the worktree directory name
+WT_SLUG=$(basename "$REPO_ROOT" | tr '[:upper:] +/' '[:lower:]---' | cut -c1-40)
+TMUX_SOCKET="/tmp/tmux-alf-${WT_SLUG}.sock"
+
+# copy template, override the worktree-specific vars
 sed \
   -e "s|^SERVER_PORT=.*|SERVER_PORT=$SERVER_PORT|" \
   -e "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" \
   -e "s|^DATABASE_PATH=.*|DATABASE_PATH=$DB_PATH|" \
+  -e "s|^TMUX_SOCKET_PATH=.*|TMUX_SOCKET_PATH=$TMUX_SOCKET|" \
   "$TEMPLATE_ENV" > "$ENV_FILE"
 
+# add TMUX_SOCKET_PATH if template didn't have it
+if ! grep -q '^TMUX_SOCKET_PATH=' "$ENV_FILE"; then
+  echo "TMUX_SOCKET_PATH=$TMUX_SOCKET" >> "$ENV_FILE"
+fi
+
 echo "[init-env] SERVER_PORT=$SERVER_PORT  WEB_PORT=$WEB_PORT"
-echo "[init-env] DB → $DB_PATH"
+echo "[init-env] DB  → $DB_PATH"
+echo "[init-env] tmux→ $TMUX_SOCKET"
