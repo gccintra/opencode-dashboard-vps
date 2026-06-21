@@ -6,7 +6,6 @@
   "description": "Isolated Node.js worker for node-pty PTYs (Bun-compatible via subprocess isolation).",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
