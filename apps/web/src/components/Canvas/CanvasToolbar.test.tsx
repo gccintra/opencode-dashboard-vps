@@ -2,49 +2,46 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CANVAS_TEMPLATES } from './canvasTemplates';
 
 describe('CanvasToolbar', () => {
-  it('renders all 5 layout buttons', () => {
-    render(<CanvasToolbar layout={{ cols: 2, rows: 2 }} onLayoutChange={vi.fn()} />);
-    expect(screen.getByTestId('layout-btn-1×1')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-btn-1×2')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-btn-2×1')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-btn-2×2')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-btn-2×3')).toBeInTheDocument();
+  it('renders all template buttons', () => {
+    render(<CanvasToolbar templateId="2col" onTemplateChange={vi.fn()} />);
+    for (const t of CANVAS_TEMPLATES) {
+      expect(screen.getByTestId(`layout-btn-${t.id}`)).toBeInTheDocument();
+    }
   });
 
-  it('marks active layout button with aria-pressed=true', () => {
-    render(<CanvasToolbar layout={{ cols: 2, rows: 2 }} onLayoutChange={vi.fn()} />);
-    expect(screen.getByTestId('layout-btn-2×2')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('layout-btn-1×1')).toHaveAttribute('aria-pressed', 'false');
+  it('marks active template button with aria-pressed=true', () => {
+    render(<CanvasToolbar templateId="2col" onTemplateChange={vi.fn()} />);
+    expect(screen.getByTestId('layout-btn-2col')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('layout-btn-single')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('calls onLayoutChange with correct dims when button is clicked', async () => {
+  it('calls onTemplateChange with correct id when button is clicked', async () => {
     const onChange = vi.fn();
-    render(<CanvasToolbar layout={{ cols: 2, rows: 2 }} onLayoutChange={onChange} />);
-
-    await userEvent.click(screen.getByTestId('layout-btn-1×2'));
-    expect(onChange).toHaveBeenCalledWith({ cols: 1, rows: 2 });
+    render(<CanvasToolbar templateId="2col" onTemplateChange={onChange} />);
+    await userEvent.click(screen.getByTestId('layout-btn-2x2'));
+    expect(onChange).toHaveBeenCalledWith('2x2');
   });
 
-  it('calls onLayoutChange with 2×3 when that button is clicked', async () => {
+  it('calls onTemplateChange with left-stack when that button is clicked', async () => {
     const onChange = vi.fn();
-    render(<CanvasToolbar layout={{ cols: 1, rows: 1 }} onLayoutChange={onChange} />);
-
-    await userEvent.click(screen.getByTestId('layout-btn-2×3'));
-    expect(onChange).toHaveBeenCalledWith({ cols: 2, rows: 3 });
+    render(<CanvasToolbar templateId="single" onTemplateChange={onChange} />);
+    await userEvent.click(screen.getByTestId('layout-btn-left-stack'));
+    expect(onChange).toHaveBeenCalledWith('left-stack');
   });
 
   it('buttons are keyboard-focusable', () => {
-    render(<CanvasToolbar layout={{ cols: 1, rows: 1 }} onLayoutChange={vi.fn()} />);
-    const btn = screen.getByTestId('layout-btn-2×2');
+    render(<CanvasToolbar templateId="single" onTemplateChange={vi.fn()} />);
+    const btn = screen.getByTestId('layout-btn-2x2');
     btn.focus();
     expect(document.activeElement).toBe(btn);
   });
 
   it('active button has highlighted styles', () => {
-    render(<CanvasToolbar layout={{ cols: 2, rows: 3 }} onLayoutChange={vi.fn()} />);
-    const active = screen.getByTestId('layout-btn-2×3');
+    render(<CanvasToolbar templateId="right-stack" onTemplateChange={vi.fn()} />);
+    const active = screen.getByTestId('layout-btn-right-stack');
     expect(active.className).toContain('text-[#b3e502]');
   });
 });

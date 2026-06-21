@@ -201,21 +201,36 @@ function wireSessionExit(sessionId: string): void {
  * @param attempt  thunk that performs one spawnSession call
  */
 async function spawnWithRetry(attempt: () => Promise<number>): Promise<number> {
-  try {
-    return await attempt();
-  } catch (err) {
-    const msg = (err as Error).message || '';
-    const transient =
-      msg.includes('worker exited') ||
-      msg.includes('spawn timeout') ||
-      msg.includes('manager shut down') ||
-      msg.includes('transport not started');
-    if (!transient) throw err;
-    console.warn(`[sessions] spawn raced a worker restart (${msg}); retrying once`);
-    // Give the transport a beat to respawn the worker before the second try.
-    await new Promise((r) => setTimeout(r, 500));
-    return await attempt();
+  // Backoff delays (ms) between successive retries. Long enough for the
+  // CPU-spin watchdog (2 × 1000ms samples) to detect, kill, and restart
+  // the worker before the next attempt lands.
+  const delays = [2000, 3000, 3000];
+  let lastErr: unknown;
+  for (let i = 0; i <= delays.length; i++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      const msg = (err as Error).message || '';
+      const transient =
+        msg.includes('worker exited') ||
+        msg.includes('spawn timeout') ||
+        msg.includes('manager shut down') ||
+        msg.includes('transport not started') ||
+        // tmux exits code=1 when spawned from a CPU-spinning worker (node-pty
+        // EAGAIN bug corrupts the PTY for new children). Treat as transient so
+        // we wait for the watchdog to kill+restart the worker before retrying.
+        msg.includes('process exited before spawn completed');
+      if (!transient) throw err;
+      lastErr = err;
+      if (i < delays.length) {
+        console.warn(
+          `[sessions] spawn raced a worker restart (${msg}); retrying in ${delays[i]}ms (attempt ${i + 1}/${delays.length})`,
+        );
+        await new Promise((r) => setTimeout(r, delays[i]));
+      }
+    }
   }
+  throw lastErr;
 }
 
 /**

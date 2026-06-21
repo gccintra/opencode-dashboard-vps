@@ -38,13 +38,25 @@ const MAX_MOBILE_SLOTS = 8;
 
 const CANVAS_LAYOUTS = [
   { cols: 1, rows: 1, label: '1×1' },
-  { cols: 2, rows: 1, label: '2×1' },
-  { cols: 3, rows: 1, label: '3×1' },
-  { cols: 4, rows: 1, label: '4×1' },
+  { cols: 2, rows: 1, label: '1×2' },
+  { cols: 3, rows: 1, label: '1×3' },
+  { cols: 4, rows: 1, label: '1×4' },
   { cols: 2, rows: 2, label: '2×2' },
-  { cols: 3, rows: 2, label: '3×2' },
-  { cols: 4, rows: 2, label: '4×2' },
+  { cols: 3, rows: 2, label: '2×3' },
+  { cols: 4, rows: 2, label: '2×4' },
 ];
+
+function colsRowsToTemplateId(cols: number, rows: number): string {
+  if (cols === 1 && rows === 1) return 'single';
+  if (cols === 1 && rows === 2) return '2row';
+  if (cols === 2 && rows === 1) return '2col';
+  if (cols === 3 && rows === 1) return '3col';
+  if (cols === 4 && rows === 1) return '4col';
+  if (cols === 2 && rows === 2) return '2x2';
+  if (cols === 3 && rows === 2) return '3x2';
+  if (cols === 4 && rows === 2) return '4x2';
+  return '2col';
+}
 
 // Returns the smallest layout that fits at least `minSlots` slots
 function getAutoGrowLayout(minSlots: number): { cols: number; rows: number } {
@@ -234,6 +246,7 @@ export default function CanvasHubViewPage() {
   const [projects, setProjects] = useState<ProjectBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [panelResetKey, setPanelResetKey] = useState(0);
 
   /* ── Fetch canvas ── */
   const fetchCanvas = useCallback(async () => {
@@ -372,15 +385,15 @@ export default function CanvasHubViewPage() {
     });
   }, [canvas, sessions]);
 
-  // Desktop slots: capacity-limited by current layout, dead sessions treated as null
-  const desktopSlotsRecord: Record<number, string | null> = useMemo(() => {
+  // Desktop slots: string-keyed for CanvasGrid ('a','b',...), dead sessions null
+  const desktopSlotsRecord: Record<string, string | null> = useMemo(() => {
     if (!canvas) return {};
     const liveIds = new Set(sessions.map((s) => s.sessionId));
     const capacity = canvas.cols * canvas.rows;
-    const rec: Record<number, string | null> = {};
+    const rec: Record<string, string | null> = {};
     for (let i = 0; i < capacity; i++) {
       const sid = canvas.slots[i] ?? null;
-      rec[i] = sid && liveIds.has(sid) ? sid : null;
+      rec[String.fromCharCode(97 + i)] = sid && liveIds.has(sid) ? sid : null;
     }
     return rec;
   }, [canvas, sessions]);
@@ -586,6 +599,17 @@ export default function CanvasHubViewPage() {
               );
             })}
           </div>
+          <div className="h-[14px] w-px bg-white/[0.08]" />
+          <button
+            onClick={() => setPanelResetKey((k) => k + 1)}
+            title="Restaurar tamanhos iguais"
+            className="flex items-center justify-center size-[27px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6a4 4 0 1 0 .8-2.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M2 2.5v2.5h2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -609,17 +633,18 @@ export default function CanvasHubViewPage() {
           />
         ) : (
           <CanvasGrid
-            cols={canvas.cols}
-            rows={canvas.rows}
+            templateId={colsRowsToTemplateId(canvas.cols, canvas.rows)}
             slots={desktopSlotsRecord}
+            storageKey={canvas.id}
             sessions={sessions}
             fontSize={fontSize}
             theme={getThemeById(themeId).xterm}
-            onAssign={handleAssignSlot}
-            onRemove={handleClearSlot}
+            onAssign={(slotId, sid) => handleAssignSlot(slotId.charCodeAt(0) - 97, sid)}
+            onRemove={(slotId) => handleClearSlot(slotId.charCodeAt(0) - 97)}
             onKill={handleKillSession}
             onCreateSession={handleCreateSession}
             onRename={handleRenameSession}
+            resetLayoutKey={panelResetKey}
           />
         )}
       </div>
