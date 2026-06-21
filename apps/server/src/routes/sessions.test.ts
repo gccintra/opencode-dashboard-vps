@@ -295,6 +295,37 @@ describe('sessions routes', () => {
       expect(mockManager.spawnSession.mock.calls[0]?.[3]?.[0]).toBe('tmux');
     });
 
+    it('retries once and succeeds when the first spawn races a worker restart', async () => {
+      // First attempt rejects with a transient worker-loss error; retry resolves.
+      mockManager.spawnSession
+        .mockRejectedValueOnce(new Error('worker exited unexpectedly (code=1)'))
+        .mockResolvedValueOnce(4321);
+
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
+      );
+
+      expect(res.status).toBe(201);
+      expect(mockManager.spawnSession).toHaveBeenCalledTimes(2);
+      // Both attempts use the same session id (idempotent tmux new-session -A).
+      const firstId = mockManager.spawnSession.mock.calls[0]?.[0];
+      const secondId = mockManager.spawnSession.mock.calls[1]?.[0];
+      expect(secondId).toBe(firstId);
+    });
+
+    it('does NOT retry a non-transient spawn failure', async () => {
+      mockManager.spawnSession.mockRejectedValue(new Error('spawn failed: opencode ENOENT'));
+
+      const token = await getToken();
+      const res = await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
+      );
+
+      expect(res.status).toBe(500);
+      expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
+    });
+
     it('returns 500 and rolls back metadata when both spawns fail', async () => {
       mockManager.spawnSession.mockRejectedValue(new Error('totally broken'));
 
