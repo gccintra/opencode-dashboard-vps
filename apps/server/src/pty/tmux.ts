@@ -32,6 +32,15 @@ export function tmuxName(sessionId: string): string {
   return `${TMUX_PREFIX}${sessionId}`;
 }
 
+/**
+ * Returns socket args `['-S', path]` if `TMUX_SOCKET_PATH` is set, else `[]`.
+ * Injected into every tmux invocation so dev and prod never share a socket.
+ */
+function socketArgs(): string[] {
+  const p = process.env.TMUX_SOCKET_PATH;
+  return p ? ['-S', p] : [];
+}
+
 /** Extract the session id from a tmux session name, or null if not ours. */
 export function sessionIdFromTmuxName(name: string): string | null {
   return name.startsWith(TMUX_PREFIX) ? name.slice(TMUX_PREFIX.length) : null;
@@ -81,6 +90,7 @@ export function buildTmuxSpawnArgs(
 ): string[] {
   const args = [
     'tmux',
+    ...socketArgs(),
     '-f',
     TMUX_CONF_PATH,
     'new-session',
@@ -105,7 +115,7 @@ export function buildTmuxSpawnArgs(
 /** Run a tmux subcommand. Resolves with stdout; rejects on non-zero exit. */
 function runTmux(args: string[]): Promise<string> {
   return new Promise((resolvePromise, reject) => {
-    execFile('tmux', args, { timeout: 5000 }, (err, stdout) => {
+    execFile('tmux', [...socketArgs(), ...args], { timeout: 5000 }, (err, stdout) => {
       if (err) reject(err);
       else resolvePromise(stdout);
     });
