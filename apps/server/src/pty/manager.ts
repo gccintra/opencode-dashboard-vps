@@ -46,6 +46,7 @@ import type {
 import type { WorkerTransport } from './transport';
 import { InMemoryWorkerTransport } from './transport.memory';
 import { BunWorkerTransport } from './transport.bun';
+import { ControlWorkerTransport } from './control';
 import { detectStatus } from './detector';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -798,7 +799,14 @@ let _singleton: PtyManager | null = null;
  */
 export function getPtyManager(): PtyManager {
   if (!_singleton) {
-    _singleton = new PtyManager({ transport: new BunWorkerTransport() });
+    // PTY_BACKEND selects the transport. `control` uses tmux control mode
+    // (no node-pty, no Node 18 worker, no PTY → no CPU-spin wedge); `node-pty`
+    // (default) keeps the legacy worker. Flagged for instant rollback.
+    const backend = process.env.PTY_BACKEND ?? 'node-pty';
+    const transport =
+      backend === 'control' ? new ControlWorkerTransport() : new BunWorkerTransport();
+    console.error(`[pty-manager] PTY backend: ${backend}`);
+    _singleton = new PtyManager({ transport });
   }
   return _singleton;
 }
