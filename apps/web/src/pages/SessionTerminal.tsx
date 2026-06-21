@@ -108,6 +108,18 @@ function isValidProjectId(id: unknown): id is string {
   );
 }
 
+function colsRowsToTemplateId(cols: number, rows: number): string {
+  if (cols === 1 && rows === 1) return 'single';
+  if (cols === 1 && rows === 2) return '2row';
+  if (cols === 2 && rows === 1) return '2col';
+  if (cols === 3 && rows === 1) return '3col';
+  if (cols === 4 && rows === 1) return '4col';
+  if (cols === 2 && rows === 2) return '2x2';
+  if (cols === 3 && rows === 2) return '3x2';
+  if (cols === 4 && rows === 2) return '4x2';
+  return '2col';
+}
+
 function estimateDims() {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
   const h = typeof window !== 'undefined' ? window.innerHeight : 768;
@@ -194,7 +206,7 @@ function SessionRail({
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
-              d="M4 2L8 6L4 10"
+              d="M8 2L4 6L8 10"
               stroke="currentColor"
               strokeWidth="1.4"
               strokeLinecap="round"
@@ -497,6 +509,7 @@ export default function SessionTerminalPage() {
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   const [, setCanvasDataLoading] = useState(false);
+  const [panelResetKey, setPanelResetKey] = useState(0);
   type PickerResolver = (projectId: string | null) => void;
   const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
   const canvasMobileRef = useRef<CanvasMobileHandle | null>(null);
@@ -699,11 +712,19 @@ export default function SessionTerminalPage() {
 
   return (
     <div
-      className="flex flex-col overflow-hidden bg-[#0a0a0f]"
+      className="relative flex flex-col overflow-hidden bg-[#0a0a0f]"
       style={{ height: `${viewportHeight}px` }}
     >
+      {/* Aurora Glass atmosphere */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="kb-aurora" style={{ top: '-180px', left: '-120px', width: 620, height: 620, opacity: 0.5, background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-220px', left: '38%', width: 680, height: 680, opacity: 0.4, animationDelay: '-7s', background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.38, animationDelay: '-13s', background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)' }} />
+        <div className="kb-grid" />
+      </div>
+
       {/* ══ Header — adapts to mode: terminal / canvas-hub / canvas-embed ══ */}
-      <header className="flex shrink-0 items-center justify-between gap-[8px] border-b border-white/[0.06] bg-[#0a0a0f]/80 px-[12px] py-[10px] backdrop-blur-md sm:px-[18px]">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[8px] border-b border-white/[0.06] bg-[#0a0a0f]/80 px-[12px] py-[10px] backdrop-blur-md sm:px-[18px]">
         {/* Left: back + rail toggle + mode-specific breadcrumb */}
         <div className="flex min-w-0 items-center gap-[8px]">
           <button
@@ -811,9 +832,9 @@ export default function SessionTerminalPage() {
                   {/* Single-row group: max vertical space */}
                   {[
                     { cols: 1, rows: 1, label: '1×1' },
-                    { cols: 2, rows: 1, label: '2×1' },
-                    { cols: 3, rows: 1, label: '3×1' },
-                    { cols: 4, rows: 1, label: '4×1' },
+                    { cols: 2, rows: 1, label: '1×2' },
+                    { cols: 3, rows: 1, label: '1×3' },
+                    { cols: 4, rows: 1, label: '1×4' },
                   ].map((opt) => {
                     const active = canvasData.cols === opt.cols && canvasData.rows === opt.rows;
                     return (
@@ -834,8 +855,8 @@ export default function SessionTerminalPage() {
                   {/* Two-row group: growing columns */}
                   {[
                     { cols: 2, rows: 2, label: '2×2' },
-                    { cols: 3, rows: 2, label: '3×2' },
-                    { cols: 4, rows: 2, label: '4×2' },
+                    { cols: 3, rows: 2, label: '2×3' },
+                    { cols: 4, rows: 2, label: '2×4' },
                   ].map((opt) => {
                     const active = canvasData.cols === opt.cols && canvasData.rows === opt.rows;
                     return (
@@ -852,6 +873,16 @@ export default function SessionTerminalPage() {
                       </button>
                     );
                   })}
+                  <button
+                    onClick={() => setPanelResetKey((k) => k + 1)}
+                    title="Restaurar tamanhos iguais"
+                    className="flex items-center justify-center size-[27px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6a4 4 0 1 0 .8-2.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      <path d="M2 2.5v2.5h2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                   <div className="mx-[2px] h-[16px] w-px bg-white/[0.08]" />
                 </>
               )}
@@ -946,10 +977,10 @@ export default function SessionTerminalPage() {
       </header>
 
       {/* ══ Body: rail + terminal ══ */}
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
         {/* Desktop rail */}
         {railOpen && !isMobile && (
-          <aside className="w-[240px] shrink-0 border-r border-white/[0.06]">
+          <aside className="w-[240px] shrink-0 border-r border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-sm">
             <SessionRail
               groups={groups}
               activeSessionId={sessionId}
@@ -977,7 +1008,7 @@ export default function SessionTerminalPage() {
               className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm"
               onClick={() => persistRail(false)}
             />
-            <aside className="absolute inset-y-0 left-0 z-30 w-[260px] border-r border-white/[0.06] shadow-2xl">
+            <aside className="absolute inset-y-0 left-0 z-30 w-[260px] border-r border-white/[0.06] bg-[#0a0a0f] shadow-2xl">
               <SessionRail
                 groups={groups}
                 activeSessionId={sessionId}
@@ -1040,23 +1071,23 @@ export default function SessionTerminalPage() {
                 />
               ) : (
                 <CanvasGrid
-                  cols={canvasData.cols}
-                  rows={canvasData.rows}
+                  templateId={colsRowsToTemplateId(canvasData.cols, canvasData.rows)}
                   slots={(() => {
                     const liveIds = new Set(sessions.map((s) => s.sessionId));
                     const capacity = canvasData.cols * canvasData.rows;
-                    const rec: Record<number, string | null> = {};
+                    const rec: Record<string, string | null> = {};
                     for (let i = 0; i < capacity; i++) {
                       const sid = canvasData.slots[i] ?? null;
-                      rec[i] = sid && liveIds.has(sid) ? sid : null;
+                      rec[String.fromCharCode(97 + i)] = sid && liveIds.has(sid) ? sid : null;
                     }
                     return rec;
                   })()}
+                  storageKey={canvasData.id}
                   sessions={sessions}
                   fontSize={fontSize}
                   theme={getThemeById(themeId).xterm}
-                  onAssign={handleAssignSlot}
-                  onRemove={handleClearSlot}
+                  onAssign={(slotId, sid) => handleAssignSlot(slotId.charCodeAt(0) - 97, sid)}
+                  onRemove={(slotId) => handleClearSlot(slotId.charCodeAt(0) - 97)}
                   onKill={async (sid) => {
                     try {
                       await apiFetch(`/api/sessions/${sid}`, { method: 'DELETE' });
@@ -1067,13 +1098,14 @@ export default function SessionTerminalPage() {
                   }}
                   onCreateSession={handleCanvasCreateSession}
                   onRename={async (sid, name) => handleRename(sid, name)}
+                  resetLayoutKey={panelResetKey}
                 />
               )}
             </div>
           </div>
         ) : showCanvas ? (
           /* ══ Canvas hub/list ══ */
-          <div className="relative min-w-0 flex-1 overflow-hidden overflow-y-auto bg-[#0a0a0f]">
+          <div className="relative min-w-0 flex-1 overflow-hidden overflow-y-auto">
             {/* Canvas list */}
             <div className="p-[16px]">
               {canvasesLoading ? (
@@ -1149,6 +1181,7 @@ export default function SessionTerminalPage() {
       </div>
 
       {/* ══ Standard bottom bar ══ */}
+      <div className="relative z-10 shrink-0">
       <TerminalStatusBar
         connectionStatus={connStatus}
         sessionCreatedAt={activeSession?.createdAt ?? null}
@@ -1182,6 +1215,7 @@ export default function SessionTerminalPage() {
           ) : undefined
         }
       />
+      </div>
 
       {/* ══ Project Picker Modal ══ */}
       {showProjectPicker && (

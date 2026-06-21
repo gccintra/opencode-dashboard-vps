@@ -54,14 +54,17 @@ import { useTerminalSocket, type ConnectionError } from '../../hooks/useTerminal
 
 // localStorage key holding the most recent measured cols×rows for this device.
 // Sent on WS connect so the server can fire the TUI launch before the client
-// has finished measuring. Device-scoped (not session-scoped) because terminal
-// size is a function of screen + font, which is stable across sessions.
-const TERM_DIMS_KEY = 'term_last_dims';
+// has finished measuring. Keyed per-session so each panel slot restores its own
+// last-measured size. A global key caused wrong pre-resize when switching from a
+// large fullscreen terminal to smaller canvas slots (the large stored dims were
+// sent to the server, which resized the PTY and garbled the TUI until SIGWINCH
+// with the correct size arrived ~120ms later — worse when TUI was busy).
+function termDimsKey(sessionId: string) { return `term_last_dims_v2_${sessionId}`; }
 
-/** Read the device's last-measured terminal dims, or null if none/invalid. */
-function readLastTermDims(): { cols: number; rows: number } | null {
+/** Read the last-measured dims for a specific session, or null if none/invalid. */
+function readLastTermDims(sessionId: string): { cols: number; rows: number } | null {
   try {
-    const raw = localStorage.getItem(TERM_DIMS_KEY);
+    const raw = localStorage.getItem(termDimsKey(sessionId));
     if (!raw) return null;
     const d = JSON.parse(raw) as { cols?: unknown; rows?: unknown };
     if (typeof d.cols === 'number' && typeof d.rows === 'number' && d.cols > 0 && d.rows > 0) {
@@ -73,11 +76,11 @@ function readLastTermDims(): { cols: number; rows: number } | null {
   return null;
 }
 
-/** Persist the latest measured terminal dims for the next connect. */
-function writeLastTermDims(cols: number, rows: number): void {
+/** Persist the latest measured dims for a specific session. */
+function writeLastTermDims(sessionId: string, cols: number, rows: number): void {
   if (cols <= 0 || rows <= 0) return;
   try {
-    localStorage.setItem(TERM_DIMS_KEY, JSON.stringify({ cols, rows }));
+    localStorage.setItem(termDimsKey(sessionId), JSON.stringify({ cols, rows }));
   } catch {
     /* storage full / disabled — non-fatal */
   }
@@ -590,12 +593,11 @@ export const XTermTerminal = memo(
     const terminalRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const lastSentDims = useRef<{ cols: number; rows: number } | null>(null);
-    // Pass the device's last-measured terminal size on connect so the server can
-    // fire the TUI launch immediately (overlapping boot with our font/render
-    // init). Keyed per-device, not per-session: dims depend on screen/font, which
-    // are stable across the volatile sessions on one device. Read fresh on every
-    // (re)connect via the hook's connectDims callback. See readLastTermDims().
-    const socket = useTerminalSocket(sessionId, { connectDims: readLastTermDims });
+    // Pass the session's last-measured size on connect so the server can fire the
+    // TUI launch immediately (overlapping boot with font/render init). Per-session
+    // key avoids wrong pre-resize when multiple canvas slots have different sizes.
+    // Read fresh on every (re)connect via the hook's connectDims callback.
+    const socket = useTerminalSocket(sessionId, { connectDims: () => readLastTermDims(sessionId) });
 
     const sendKey = useCallback(
       (seq: string) => {
@@ -1277,7 +1279,7 @@ export const XTermTerminal = memo(
             socket.send(JSON.stringify({ type: 'resize', cols, rows }));
             // Cache the authoritative measured size for the next connect's
             // early-launch path (see readLastTermDims / connectDims).
-            writeLastTermDims(cols, rows);
+            writeLastTermDims(sessionId, cols, rows);
             onResizeRef.current?.(cols, rows);
           };
 
