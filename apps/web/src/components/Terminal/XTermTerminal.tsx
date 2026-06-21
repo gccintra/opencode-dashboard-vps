@@ -902,12 +902,12 @@ export const XTermTerminal = memo(
             fontWeight: '400',
             fontWeightBold: '700',
             theme: theme ?? TERMINAL_THEME,
-            // 0 is correct for TUI apps (opencode/Claude Code use the alternate
-            // screen + manage their own scroll). It also makes FitAddon use
-            // scrollbarWidth=0, so cols fill the full container width — a non-zero
-            // scrollback makes FitAddon subtract a scrollbar gutter, leaving an
-            // empty vertical strip on the right.
-            scrollback: 0,
+            // TUI apps (opencode/Claude Code) use alternate screen so scrollback
+            // is irrelevant for them. For bare shell sessions, 5000 lines of
+            // scrollback lets the user scroll with the mouse wheel. The
+            // scrollbar gutter is suppressed by `overflow-y: hidden` in
+            // index.css, so FitAddon still fills the full container width.
+            scrollback: 5000,
             convertEol: false,
             allowProposedApi: true,
             // false: Option/Alt produces the actual character (e.g. Option+Q = \
