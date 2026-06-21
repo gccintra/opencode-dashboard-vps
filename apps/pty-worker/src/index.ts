@@ -58,11 +58,28 @@ const sessions = new Map<string, IPty>();
 /** Log PATH once at startup so we can verify pty-sighup-exec is reachable. */
 process.stderr.write(`[pty-worker] START PATH=${process.env.PATH}\n`);
 
+/**
+ * Rolling count of PTY output bytes emitted since the last watchdog sample.
+ * The CPU-spin watchdog reads (and resets) this to distinguish a pathological
+ * busy-loop (high CPU, ~no output) from legitimate heavy output (high CPU
+ * because we're base64-encoding and flushing megabytes). See {@link createCpuWatchdog}.
+ */
+let dataBytesEmitted = 0;
+
+/** Read and reset the emitted-bytes counter (watchdog use). */
+export function takeDataBytesEmitted(): number {
+  const n = dataBytesEmitted;
+  dataBytesEmitted = 0;
+  return n;
+}
+
 /** Default response writer: one JSON line + `\n` to stdout. */
 export function writeResponse(msg: ServerMessage): void {
   const line = JSON.stringify(msg) + '\n';
   const ok = process.stdout.write(line);
-  if (msg.type === 'exit') {
+  if (msg.type === 'data') {
+    dataBytesEmitted += msg.chunk.length;
+  } else if (msg.type === 'exit') {
     process.stderr.write(`[pty-worker] WRITE_EXIT id=${msg.id} code=${msg.code} flushed=${ok}\n`);
   }
 }
@@ -206,6 +223,15 @@ function handleSpawn(
     process.stderr.write(
       `[pty-worker] EXIT id=${msg.id} code=${exitCode} signal=${exitSignal} mapSize=${map.size} aliveMs=${aliveMs}\n`,
     );
+    // Force-tear down the master fd on natural exit too. node-pty's internal
+    // post-exit destroy can miss (its socket 'error' handler returns early on
+    // EAGAIN without closing), leaving a hung-up master fd that libuv busy-loops
+    // on at ~100% CPU. Explicit destroy() removes it from the event loop.
+    try {
+      (proc as unknown as { destroy?: () => void }).destroy?.();
+    } catch {
+      /* best-effort */
+    }
     write({ type: 'exit', id: msg.id, code });
   });
 
@@ -283,9 +309,17 @@ function handleKill(
       );
     }
     map.delete(msg.id);
-    // No destroy()/ref-holding dance: pty-sighup-exec makes the kernel SIGHUP
-    // queued by the closing master fd harmless, and node-pty closes the master
-    // fd itself once the process dies.
+    // Force-tear down the master fd. node-pty's kill() only signals the child;
+    // it does NOT close the master ReadStream/WriteStream. On Linux a master fd
+    // left open against a hung-up slave gets stuck reporting EPOLLIN|EPOLLHUP,
+    // so libuv busy-loops on it forever (read() => EAGAIN) at ~100% CPU. destroy()
+    // closes both streams so the fd is removed from the event loop. Cast: destroy()
+    // exists on UnixTerminal but is not on the public IPty type.
+    try {
+      (proc as unknown as { destroy?: () => void }).destroy?.();
+    } catch {
+      /* best-effort */
+    }
   }
   write({ type: 'killed', id: msg.id });
 }
@@ -359,6 +393,101 @@ export function startIpcLoop(opts: {
   });
 }
 
+// ── CPU-spin watchdog ──────────────────────────────────────────────
+
+export interface CpuWatchdogDeps {
+  /** Sampling interval in ms. Default 2000. */
+  sampleMs?: number;
+  /** Fraction of one core (0..1) above which a sample counts as "hot". Default 0.85. */
+  cpuThreshold?: number;
+  /** If at least this many output bytes were emitted in a hot sample, it's real work, not a spin. Default 256 KB. */
+  maxDataBytes?: number;
+  /** Consecutive hot+quiet samples before we conclude the worker is wedged. Default 3. */
+  strikesToExit?: number;
+  /** Grace period after boot before the watchdog may fire, in ms. Default 15000. */
+  minUptimeMs?: number;
+  /** Injectable cpu sampler (test). Defaults to process.cpuUsage. */
+  cpuUsage?: (prev?: NodeJS.CpuUsage) => NodeJS.CpuUsage;
+  /** Injectable clock (test). Defaults to Date.now. */
+  now?: () => number;
+  /** Injectable uptime in ms (test). Defaults to process.uptime()*1000. */
+  uptimeMs?: () => number;
+  /** Injectable byte-counter reader (test). Defaults to takeDataBytesEmitted. */
+  takeDataBytes?: () => number;
+  /** Injectable exit (test). Defaults to process.exit. */
+  exit?: (code: number) => void;
+  /** Injectable logger (test). Defaults to process.stderr.write. */
+  log?: (line: string) => void;
+}
+
+/**
+ * Watch for the node-pty Linux busy-loop: a hung-up master fd that libuv
+ * spins on forever (read() => EAGAIN) at ~100% CPU. The signature is
+ * unmistakable — sustained high CPU while emitting almost no output (the spin
+ * produces no `data` messages). The worker only marshals IPC, so it should
+ * NEVER legitimately peg a core; real heavy load shows up as emitted bytes.
+ *
+ * When detected, the worker exits. Because sessions are tmux-backed, the
+ * server's worker-lost handler re-attaches every live session onto a fresh
+ * worker with zero data loss — far more reliable than trying to find and close
+ * the leaked fd from JS (closed fds stuck in epoll can't be reached).
+ *
+ * @returns the interval timer (already unref'd) so callers/tests can clear it.
+ */
+export function createCpuWatchdog(deps: CpuWatchdogDeps = {}): ReturnType<typeof setInterval> {
+  const sampleMs = deps.sampleMs ?? 2000;
+  const cpuThreshold = deps.cpuThreshold ?? 0.85;
+  const maxDataBytes = deps.maxDataBytes ?? 256 * 1024;
+  const strikesToExit = deps.strikesToExit ?? 3;
+  const minUptimeMs = deps.minUptimeMs ?? 15_000;
+  const cpuUsage = deps.cpuUsage ?? ((prev?: NodeJS.CpuUsage) => process.cpuUsage(prev));
+  const now = deps.now ?? Date.now;
+  const uptimeMs = deps.uptimeMs ?? (() => process.uptime() * 1000);
+  const takeDataBytes = deps.takeDataBytes ?? takeDataBytesEmitted;
+  const exit = deps.exit ?? ((code: number) => process.exit(code));
+  const log = deps.log ?? ((line: string) => void process.stderr.write(line));
+
+  let lastCpu = cpuUsage();
+  let lastTs = now();
+  let strikes = 0;
+
+  const timer = setInterval(() => {
+    const ts = now();
+    const cpu = cpuUsage(lastCpu); // micros consumed since lastCpu
+    const elapsedMs = ts - lastTs;
+    lastCpu = cpuUsage();
+    lastTs = ts;
+    const bytes = takeDataBytes();
+
+    if (elapsedMs <= 0 || uptimeMs() < minUptimeMs) return;
+
+    // Fraction of a single core: cpu micros / wall micros.
+    const cpuFrac = (cpu.user + cpu.system) / (elapsedMs * 1000);
+    const hot = cpuFrac > cpuThreshold;
+    const quiet = bytes < maxDataBytes;
+
+    if (hot && quiet) {
+      strikes += 1;
+      log(
+        `[pty-worker] WATCHDOG hot+quiet sample ${strikes}/${strikesToExit} ` +
+          `cpu=${(cpuFrac * 100).toFixed(0)}% bytes=${bytes}\n`,
+      );
+      if (strikes >= strikesToExit) {
+        log(
+          '[pty-worker] WATCHDOG worker wedged (CPU spin, no output) — exiting; ' +
+            'tmux sessions survive and the server will reattach\n',
+        );
+        exit(1);
+      }
+    } else {
+      strikes = 0;
+    }
+  }, sampleMs);
+
+  timer.unref();
+  return timer;
+}
+
 // ── Entry point ────────────────────────────────────────────────────
 
 const ENTRY = process.argv[1];
@@ -397,4 +526,8 @@ if (ENTRY && import.meta.url === `file://${ENTRY}`) {
   // which would cause writeAfterFIN if stdout closes before stdin.
   const rl = createInterface({ input: process.stdin, terminal: false });
   startIpcLoop({ readline: rl });
+
+  // Self-heal the node-pty Linux busy-loop (hung-up master fd spun by libuv at
+  // ~100% CPU). Exiting lets the server reattach tmux-backed sessions losslessly.
+  createCpuWatchdog();
 }
