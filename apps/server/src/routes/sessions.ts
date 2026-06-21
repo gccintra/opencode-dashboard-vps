@@ -184,6 +184,35 @@ function wireSessionExit(sessionId: string): void {
 }
 
 /**
+ * Run a spawn, retrying once if the pty-worker was bouncing when the request
+ * landed. When the worker dies/restarts, the manager rejects every in-flight
+ * request (`worker exited unexpectedly`) and a spawn that raced the restart
+ * would otherwise become a "born dead" session. The worker respawns within a
+ * few hundred ms; `tmux new-session -A` is idempotent (re-attaches if the first
+ * attempt reached a now-dead worker, starts fresh otherwise), so the retry is
+ * safe and never duplicates a session.
+ *
+ * @param attempt  thunk that performs one spawnSession call
+ */
+async function spawnWithRetry(attempt: () => Promise<number>): Promise<number> {
+  try {
+    return await attempt();
+  } catch (err) {
+    const msg = (err as Error).message || '';
+    const transient =
+      msg.includes('worker exited') ||
+      msg.includes('spawn timeout') ||
+      msg.includes('manager shut down') ||
+      msg.includes('transport not started');
+    if (!transient) throw err;
+    console.warn(`[sessions] spawn raced a worker restart (${msg}); retrying once`);
+    // Give the transport a beat to respawn the worker before the second try.
+    await new Promise((r) => setTimeout(r, 500));
+    return await attempt();
+  }
+}
+
+/**
  * Reconcile in-memory/DB session metadata with the live tmux daemon at boot.
  *
  * tmux sessions outlive the server, so after a restart the processes are still
@@ -433,19 +462,32 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           const spawnCommand = SPAWN_WRAPPER;
           const spawnArgs = buildTmuxSpawnArgs(sessionId, cols, rows, initialCmd, extraEnv);
 
+          // Spawn with one retry. A spawn that lands while the pty-worker is
+          // bouncing (a tsx --watch reload in dev, or the CPU-spin self-heal
+          // restart) gets its in-flight request rejected by rejectAllPending,
+          // which would otherwise surface as a "born dead" session. The worker
+          // respawns within a few hundred ms; `tmux new-session -A` is
+          // idempotent, so a retry safely re-attaches if the first attempt did
+          // reach a now-dead worker, or starts fresh if it never did.
           try {
-            await manager.spawnSession(
-              sessionId,
-              directory,
-              spawnCommand,
-              spawnArgs,
-              extraEnv,
-              cols,
-              rows,
+            await spawnWithRetry(() =>
+              manager.spawnSession(
+                sessionId,
+                directory,
+                spawnCommand,
+                spawnArgs,
+                extraEnv,
+                cols,
+                rows,
+              ),
             );
           } catch (spawnErr) {
             sessionMeta.delete(sessionId);
             db.run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+            // Reap any orphan tmux session: `new-session -A` may have created
+            // the session in the daemon before the attach client died, which
+            // would otherwise leave a detached session running forever.
+            void tmuxKillSession(sessionId);
             set.status = 500;
             return {
               error: `Failed to spawn session: ${(spawnErr as Error).message}`,
@@ -714,6 +756,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           } catch {
             // non-fatal
           }
+          // Reap any orphan tmux session created before the attach client died.
+          void tmuxKillSession(sessionId);
           set.status = 500;
           return {
             error: `Failed to spawn emergency terminal: ${(err as Error).message}`,
