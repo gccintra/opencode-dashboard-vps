@@ -45,6 +45,21 @@ vi.mock('../pty/manager', () => ({
   resetPtyManager: vi.fn(),
 }));
 
+// Mock only the tmux ADMIN commands (which shell out via execFile) so tests
+// don't depend on a running tmux daemon. The pure arg builders
+// (buildTmuxSpawnArgs, SPAWN_WRAPPER, names) keep their real implementations
+// so spawn-arg assertions remain meaningful.
+vi.mock('../pty/tmux', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../pty/tmux')>();
+  return {
+    ...actual,
+    tmuxKillSession: vi.fn(async () => {}),
+    tmuxHasSession: vi.fn(async () => false),
+    tmuxListSessions: vi.fn(async () => []),
+    tmuxAvailable: vi.fn(async () => true),
+  };
+});
+
 // ── env save/restore ────────────────────────────────────────────────
 
 const OLD_ENV = { ...process.env };
@@ -181,7 +196,7 @@ describe('sessions routes', () => {
       expect(typeof session.createdAt).toBe('number');
     });
 
-    it('calls ptyManager.spawnSession with the project directory and the pty-sighup-exec bash wrapper', async () => {
+    it('calls ptyManager.spawnSession with the project directory and a pty-sighup-exec tmux attach', async () => {
       const token = await getToken();
       await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
@@ -192,9 +207,13 @@ describe('sessions routes', () => {
       expect(typeof sessionId).toBe('string');
       expect(sessionId.length).toBeGreaterThan(0);
       expect(cwd).toBe(join(testDir, 'project-dir'));
-      // Spawned via the pty-sighup-exec wrapper (SIG_IGN before exec bash).
+      // Spawned via the pty-sighup-exec wrapper (SIG_IGN before exec) running a
+      // tmux attach: `tmux -f <conf> new-session -A -s alf_<id> ...`.
       expect(command).toBe('pty-sighup-exec');
-      expect(args).toEqual(['bash']);
+      expect(args[0]).toBe('tmux');
+      expect(args).toContain('new-session');
+      expect(args).toContain('-A');
+      expect(args).toContain(`alf_${sessionId}`);
     });
 
     it('uses custom name from request body when provided', async () => {
@@ -273,7 +292,7 @@ describe('sessions routes', () => {
       expect(body.error).toContain('spawn failed');
       expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
       expect(mockManager.spawnSession.mock.calls[0]?.[2]).toBe('pty-sighup-exec');
-      expect(mockManager.spawnSession.mock.calls[0]?.[3]).toEqual(['bash']);
+      expect(mockManager.spawnSession.mock.calls[0]?.[3]?.[0]).toBe('tmux');
     });
 
     it('returns 500 and rolls back metadata when both spawns fail', async () => {
@@ -333,28 +352,30 @@ describe('sessions routes', () => {
       expect(typeof cb).toBe('function');
     });
 
-    it('auto-respawns the session when the exit callback fires within the SIGHUP window', async () => {
+    it('does NOT auto-respawn on exit — the exit callback just marks the session exited', async () => {
       const token = await getToken();
-      await app.handle(
+      const res = await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
       );
+      const created = (await res.json()) as { sessionId: string };
       expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
 
       const exitCb = mockManager.onSessionExit.mock.calls.at(-1)?.[1] as
         | ((code: number) => void)
         | undefined;
 
-      // A quick exit is treated as a SIGHUP-race victim: the session is
-      // re-spawned (after a 2s drain) under the same id rather than finished.
-      vi.useFakeTimers();
-      try {
-        exitCb?.(0);
-        await vi.advanceTimersByTimeAsync(2100);
-        expect(mockManager.spawnSession).toHaveBeenCalledTimes(2);
-      } finally {
-        vi.clearAllTimers();
-        vi.useRealTimers();
-      }
+      // Auto-respawn was removed (the SIGHUP race is solved at the source and
+      // tmux-backed sessions survive worker death via reattach, not respawn).
+      // A genuine exit must be reflected, not silently re-spawned.
+      exitCb?.(0);
+      expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
+
+      // GET should now report the session as finished.
+      const listRes = await app.handle(
+        authReq(token, `/api/projects/${projectId}/sessions`, { method: 'GET' }),
+      );
+      const sessions = (await listRes.json()) as Array<{ sessionId: string; status: string }>;
+      expect(sessions.find((s) => s.sessionId === created.sessionId)?.status).toBe('finished');
     });
   });
 
@@ -599,7 +620,14 @@ describe('sessions routes', () => {
   // ── POST /api/projects/:id/sessions — agentType ──────────────────
 
   describe('POST /api/projects/:id/sessions — agentType', () => {
-    it('writes opencode initialCmd when agentType is opencode', async () => {
+    // The CLI command is now embedded as the inner command of the tmux
+    // new-session (the last spawn arg), not written to the PTY afterward.
+    const innerCmd = (): string => {
+      const args = mockManager.spawnSession.mock.calls[0]?.[3] as string[];
+      return args[args.length - 1] ?? '';
+    };
+
+    it('embeds opencode initialCmd when agentType is opencode', async () => {
       const token = await getToken();
       await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, {
@@ -607,13 +635,12 @@ describe('sessions routes', () => {
           body: { agentType: 'opencode' },
         }),
       );
-      expect(mockManager.writeToSession).toHaveBeenCalledTimes(1);
-      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
-      expect(writtenCmd).toContain('opencode');
-      expect(writtenCmd).not.toContain('claude');
+      expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
+      expect(innerCmd()).toContain('opencode');
+      expect(innerCmd()).not.toContain('claude');
     });
 
-    it('writes claude initialCmd when agentType is claude', async () => {
+    it('embeds claude initialCmd when agentType is claude', async () => {
       const token = await getToken();
       await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, {
@@ -621,9 +648,8 @@ describe('sessions routes', () => {
           body: { agentType: 'claude' },
         }),
       );
-      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
-      expect(writtenCmd).toContain('claude');
-      expect(writtenCmd).not.toMatch(/^opencode/);
+      expect(innerCmd()).toContain('claude');
+      expect(innerCmd()).not.toMatch(/^opencode/);
     });
 
     it('defaults to claude initialCmd when agentType is not provided', async () => {
@@ -634,8 +660,7 @@ describe('sessions routes', () => {
           body: {},
         }),
       );
-      const writtenCmd = mockManager.writeToSession.mock.calls[0]?.[1] as string;
-      expect(writtenCmd).toContain('claude');
+      expect(innerCmd()).toContain('claude');
     });
 
     it('returns 201 with agentType opencode in request', async () => {

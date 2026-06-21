@@ -12,7 +12,8 @@ import { authRoutes } from './auth';
 import { projectsRoutes } from './routes/projects';
 import { harnessesRoutes } from './routes/harnesses';
 import { agentsRoutes } from './routes/agents';
-import { sessionsRoutes, loadSessionsFromDb } from './routes/sessions';
+import { sessionsRoutes, loadSessionsFromDb, reconcileTmuxSessions } from './routes/sessions';
+import { tmuxAvailable, tmuxHasSession } from './pty/tmux';
 import { resourcesRoutes } from './routes/resources';
 import { filesRoutes, filesBaseRoutes } from './routes/files';
 import { wsRoutes } from './ws/handler';
@@ -33,7 +34,9 @@ function isProduction(): boolean {
 // Reduce OOM-killer priority so SSH/DBus are killed before this process
 try {
   Bun.write('/proc/self/oom_score_adj', '-500');
-} catch { /* non-fatal: may lack permission in some environments */ }
+} catch {
+  /* non-fatal: may lack permission in some environments */
+}
 
 // Validate required environment variables before starting
 validateAuthEnv();
@@ -64,7 +67,9 @@ const webDistExists = isProduction() && existsSync(webDistPath);
 if (webDistExists) {
   console.log(`[server] serving static files from ${webDistPath}`);
 } else if (isProduction()) {
-  console.warn(`[server] production mode but web dist not found at ${webDistPath}. Run "bun run build:web" first.`);
+  console.warn(
+    `[server] production mode but web dist not found at ${webDistPath}. Run "bun run build:web" first.`,
+  );
 }
 
 function serveFile(filePath: string): Response {
@@ -88,19 +93,25 @@ function spaFallback(request: Request): Response | undefined {
   const relativePath = pathname.startsWith('/') ? pathname.slice(1) : pathname;
   const filePath = join(webDistPath, relativePath);
   if (existsSync(filePath)) {
-    try { return serveFile(filePath); } catch { /* fall through */ }
+    try {
+      return serveFile(filePath);
+    } catch {
+      /* fall through */
+    }
   }
   if (existsSync(join(webDistPath, 'index.html'))) return serveIndex();
   return undefined;
 }
 
 // ── App — onError registered FIRST so it applies to all plugins ──
-const app = new Elysia()
-  .onError(({ code, request, set }) => {
-    if (code !== 'NOT_FOUND') return;
-    const res = spaFallback(request);
-    if (res) { set.status = 200; return res; }
-  });
+const app = new Elysia().onError(({ code, request, set }) => {
+  if (code !== 'NOT_FOUND') return;
+  const res = spaFallback(request);
+  if (res) {
+    set.status = 200;
+    return res;
+  }
+});
 
 // Static file routes registered before API plugins so they take precedence.
 // Elysia's onError catches truly unmatched paths (SPA routes), but known
@@ -117,8 +128,12 @@ if (webDistExists) {
 
   // Root-level static files emitted by Vite/PWA plugin
   const rootStatics = [
-    'manifest.webmanifest', 'registerSW.js', 'sw.js',
-    'icon.svg', 'icon-192.png', 'icon-512.png',
+    'manifest.webmanifest',
+    'registerSW.js',
+    'sw.js',
+    'icon.svg',
+    'icon-192.png',
+    'icon-512.png',
   ];
   for (const filename of rootStatics) {
     const filePath = join(webDistPath, filename);
@@ -160,14 +175,20 @@ app.get('/api/status', () => {
   const dbPath = getDbPath();
   let walSizeBytes = 0;
   if (dbPath && dbPath !== ':memory:') {
-    try { walSizeBytes = statSync(dbPath + '-wal').size; } catch { /* wal file absent */ }
+    try {
+      walSizeBytes = statSync(dbPath + '-wal').size;
+    } catch {
+      /* wal file absent */
+    }
   }
 
   let sessionCount = 0;
   try {
     const row = getDb().query('SELECT COUNT(*) as count FROM sessions').get() as { count: number };
     sessionCount = row.count;
-  } catch { /* db not ready */ }
+  } catch {
+    /* db not ready */
+  }
 
   return {
     status: 'ok',
@@ -188,10 +209,54 @@ app.get('/api/status', () => {
   };
 });
 
+/**
+ * Worker-lost handler: when the pty-worker dies or is restarted (self-heal),
+ * the tmux daemon keeps every session's processes alive. Re-attach each
+ * session whose tmux session is still live (zero data loss — existing WS
+ * connections keep streaming) and mark the rest exited.
+ */
+function installWorkerReattach(): void {
+  const manager = getPtyManager();
+  manager.setWorkerLostHandler(() => {
+    void (async () => {
+      const ids = manager.getReattachableSessions();
+      if (ids.length === 0) return;
+      console.error(`[server] worker lost — reattaching ${ids.length} tmux session(s)`);
+      for (const id of ids) {
+        try {
+          if (await tmuxHasSession(id)) {
+            await manager.reattachSession(id);
+          } else {
+            manager.markSessionExited(id);
+          }
+        } catch (err) {
+          console.error(`[server] reattach failed for ${id}:`, (err as Error).message);
+          manager.markSessionExited(id);
+        }
+      }
+    })();
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
   getPtyManager().startStatusMonitor(1000);
+  installWorkerReattach();
   startGithubPolling();
+
+  // tmux-backed sessions survive a server restart. Verify tmux is reachable,
+  // then reconcile in-memory/DB metadata with the live daemon (re-adopt live
+  // sessions, reap orphans). Best-effort — never blocks startup.
+  void (async () => {
+    if (!(await tmuxAvailable())) {
+      console.warn(
+        '[server] tmux not available — sessions will NOT be resilient to worker/server restarts',
+      );
+      return;
+    }
+    await reconcileTmuxSessions();
+  })();
+
   // Signal PM2 that the process is ready (required when wait_ready: true)
   if (typeof process.send === 'function') process.send('ready');
 });

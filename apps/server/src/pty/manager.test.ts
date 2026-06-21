@@ -574,3 +574,94 @@ describe('InMemoryWorkerTransport — contract', () => {
     expect(cb).toHaveBeenCalledWith(137);
   });
 });
+
+// ── tmux reattach / worker-lost handler ────────────────────────────
+
+describe('PtyManager — tmux reattach', () => {
+  async function spawned(h: Harness, id = 's1', command = 'pty-sighup-exec', args = ['tmux']) {
+    const p = h.manager.spawnSession(id, '/p', command, args);
+    h.send({ type: 'spawned', id, pid: 1 });
+    await p;
+  }
+
+  it('default (no handler): a worker crash marks active sessions exited (code -1)', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let code: number | undefined;
+    h.manager.onSessionExit('s1', (c) => (code = c));
+    h.crash(1);
+    expect(code).toBe(-1);
+  });
+
+  it('with a handler: a worker crash delegates instead of marking exited', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let exited = false;
+    h.manager.onSessionExit('s1', () => (exited = true));
+    let handlerCalls = 0;
+    h.manager.setWorkerLostHandler(() => handlerCalls++);
+    h.crash(1);
+    expect(handlerCalls).toBe(1);
+    expect(exited).toBe(false);
+  });
+
+  it('getReattachableSessions returns only live (active/pending) sessions', async () => {
+    const h = makeHarness();
+    await spawned(h, 's1');
+    await spawned(h, 's2');
+    h.manager.markSessionExited('s2');
+    expect(h.manager.getReattachableSessions()).toEqual(['s1']);
+  });
+
+  it('reattachSession re-sends spawn with stored command/args and preserves buffer + callbacks', async () => {
+    const h = makeHarness();
+    await spawned(h, 's1', 'pty-sighup-exec', ['tmux', 'attach']);
+    // Accumulate buffer + register a data subscriber (simulates a live WS).
+    h.send({
+      type: 'data',
+      id: 's1',
+      chunk: Buffer.from('hello').toString('base64'),
+      encoding: 'base64',
+    });
+    const chunks: string[] = [];
+    h.manager.onSessionData('s1', (c) => chunks.push(c));
+
+    const p = h.manager.reattachSession('s1');
+    const last = h.sent().at(-1);
+    expect(last).toMatchObject({
+      type: 'spawn',
+      id: 's1',
+      command: 'pty-sighup-exec',
+      args: ['tmux', 'attach'],
+    });
+    h.send({ type: 'spawned', id: 's1', pid: 99 });
+    await expect(p).resolves.toBe(99);
+
+    // Buffer survived the reattach.
+    expect(h.manager.getSessionBuffer('s1')).toContain('hello');
+    // The pre-existing data callback is still wired — new output reaches it
+    // without a client reconnect.
+    h.send({
+      type: 'data',
+      id: 's1',
+      chunk: Buffer.from('world').toString('base64'),
+      encoding: 'base64',
+    });
+    expect(chunks.join('')).toContain('world');
+  });
+
+  it('reattachSession throws synchronously for an unknown session', () => {
+    const h = makeHarness();
+    expect(() => h.manager.reattachSession('nope')).toThrow(/session not found/);
+  });
+
+  it('markSessionExited fires exit callbacks exactly once (idempotent)', async () => {
+    const h = makeHarness();
+    await spawned(h);
+    let count = 0;
+    h.manager.onSessionExit('s1', () => count++);
+    h.manager.markSessionExited('s1');
+    h.manager.markSessionExited('s1');
+    expect(count).toBe(1);
+  });
+});
