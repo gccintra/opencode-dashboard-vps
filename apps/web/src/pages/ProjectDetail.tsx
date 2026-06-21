@@ -922,13 +922,6 @@ export default function ProjectDetailPage() {
               : null;
 
         if (resolvedId) {
-          const isMob = window.innerWidth < 640;
-          const dims = estimateTerminalDims(fontSizeRef.current, isMob);
-          apiFetch(`/api/sessions/${resolvedId}/resize`, {
-            method: 'POST',
-            body: JSON.stringify(dims),
-          }).catch(() => {});
-
           setActiveSessionId((prev) => prev ?? resolvedId);
           if (!urlSession || DEAD_STATUSES.has(urlSession.status)) {
             setSearchParams({ session: resolvedId }, { replace: true });
