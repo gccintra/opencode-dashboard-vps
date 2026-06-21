@@ -521,6 +521,7 @@ export default function SessionTerminalPage() {
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('2col');
+  const [canvasResetKey, setCanvasResetKey] = useState(0);
   const [, setCanvasDataLoading] = useState(false);
   type PickerResolver = (projectId: string | null) => void;
   const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
@@ -892,6 +893,25 @@ export default function SessionTerminalPage() {
                       </button>
                     );
                   })}
+                  <button
+                    onClick={() => {
+                      if (!canvasData) return;
+                      const sid = canvasData.id;
+                      const tid = selectedTemplateId;
+                      ['h', 'vl', 'vr'].forEach((s) =>
+                        localStorage.removeItem(`cpg-${sid}-${tid}-${s}`),
+                      );
+                      setCanvasResetKey((k) => k + 1);
+                    }}
+                    title="Restaurar tamanhos iguais"
+                    className="flex items-center justify-center size-[24px] rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 5a4 4 0 0 1 7.2-2.4M9 5a4 4 0 0 1-7.2 2.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                      <path d="M7.2 2.1l1 .5-.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2.8 7.9l-1-.5.5-1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                   <div className="mx-[2px] h-[16px] w-px bg-white/[0.08]" />
                 </>
               )}
@@ -1080,7 +1100,7 @@ export default function SessionTerminalPage() {
                 />
               ) : (
                 <CanvasGrid
-                  key={`${canvasData.id}-${selectedTemplateId}`}
+                  key={`${canvasData.id}-${selectedTemplateId}-${canvasResetKey}`}
                   templateId={selectedTemplateId}
                   storageKey={canvasData.id}
                   slots={(() => {
