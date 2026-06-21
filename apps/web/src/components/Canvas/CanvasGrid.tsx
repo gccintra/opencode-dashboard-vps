@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import type { Layout, PanelImperativeHandle } from 'react-resizable-panels';
+import type { Layout } from 'react-resizable-panels';
 import {
   DndContext,
   DragOverlay,
@@ -46,14 +46,6 @@ function readLayout(key: string): Layout | undefined {
   }
 }
 
-function persistLayout(key: string, layout: Layout): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(layout));
-  } catch {
-    // ignore quota errors
-  }
-}
-
 function VSep() {
   return (
     <Separator
@@ -73,53 +65,6 @@ function HSep() {
     >
       <div className="h-[2px] w-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/hsep:bg-[#b3e502]/50" />
     </Separator>
-  );
-}
-
-/** Panel that collapses imperatively when slot becomes empty (only if another slot has a session) */
-function SlotPanel({
-  id,
-  hasSession,
-  anySiblingHasSession,
-  defaultSize,
-  minSize = 10,
-  children,
-}: {
-  id: string;
-  hasSession: boolean;
-  anySiblingHasSession: boolean;
-  defaultSize: number;
-  minSize?: number;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<PanelImperativeHandle | null>(null);
-  const prev = useRef<boolean | null>(null);
-
-  useEffect(() => {
-    if (prev.current === null) {
-      prev.current = hasSession;
-      // only auto-collapse on mount when some other slot has content
-      if (!hasSession && anySiblingHasSession) ref.current?.collapse();
-      return;
-    }
-    if (prev.current === hasSession) return;
-    prev.current = hasSession;
-    if (!hasSession) ref.current?.collapse();
-    else ref.current?.expand();
-  }, [hasSession, anySiblingHasSession]);
-
-  return (
-    <Panel
-      id={id}
-      panelRef={ref}
-      collapsible
-      collapsedSize={0}
-      defaultSize={defaultSize}
-      minSize={minSize}
-      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-    >
-      {children}
-    </Panel>
   );
 }
 
@@ -163,11 +108,10 @@ function DndSlot({
 }) {
   const isDragging = activeDragSlot === slotId;
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-  } = useDraggable({ id: slotId, disabled: !sessionId });
+  const { attributes, listeners, setNodeRef: setDragRef } = useDraggable({
+    id: slotId,
+    disabled: !sessionId,
+  });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: slotId });
 
@@ -214,7 +158,7 @@ export function CanvasGrid({
   const [focusedSlot, setFocusedSlot] = useState<string | null>(null);
   const [activeDragSlot, setActiveDragSlot] = useState<string | null>(null);
 
-  // Ignore onLayoutChanged fired during initial mount (Groups emit it on first render)
+  // Ignore onLayoutChanged fired during initial Group mount
   const userInteractedRef = useRef(false);
   useEffect(() => {
     const id = setTimeout(() => { userInteractedRef.current = true; }, 300);
@@ -222,7 +166,7 @@ export function CanvasGrid({
   }, []);
 
   const save = (key: string, layout: Layout) => {
-    persistLayout(key, layout);
+    try { localStorage.setItem(key, JSON.stringify(layout)); } catch { /* ignore */ }
     if (userInteractedRef.current) onUserResized?.();
   };
 
@@ -271,7 +215,7 @@ export function CanvasGrid({
   const vlLayout = useMemo(() => readLayout(vlKey), [vlKey]);
   const vrLayout = useMemo(() => readLayout(vrKey), [vrKey]);
 
-  const mkDndSlot = (slotId: string, slotIndex: number) => {
+  const mkSlot = (slotId: string, slotIndex: number) => {
     const sessionId = slots[slotId] ?? null;
     const session = sessionId ? sessionMap.get(sessionId) : null;
     return (
@@ -302,18 +246,16 @@ export function CanvasGrid({
     );
   };
 
-  const anySlotHasSession = useMemo(() => Object.values(slots).some(Boolean), [slots]);
-
   const mkPanel = (slotId: string, slotIndex: number, defaultSize: number, minSize = 10) => (
-    <SlotPanel
+    <Panel
+      key={`panel-${slotId}`}
       id={`panel-${slotId}`}
-      hasSession={!!(slots[slotId])}
-      anySiblingHasSession={anySlotHasSession}
       defaultSize={defaultSize}
       minSize={minSize}
+      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
     >
-      {mkDndSlot(slotId, slotIndex)}
-    </SlotPanel>
+      {mkSlot(slotId, slotIndex)}
+    </Panel>
   );
 
   const renderTemplate = () => {
@@ -321,7 +263,7 @@ export function CanvasGrid({
       case 'single':
         return (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {mkDndSlot('a', 0)}
+            {mkSlot('a', 0)}
           </div>
         );
 
