@@ -17,6 +17,7 @@ import { tmuxAvailable, tmuxHasSession } from './pty/tmux';
 import { resourcesRoutes } from './routes/resources';
 import { filesRoutes, filesBaseRoutes } from './routes/files';
 import { wsRoutes } from './ws/handler';
+import { eventsWsRoutes } from './ws/events';
 import { getPtyManager } from './pty/manager';
 import { systemRoutes } from './routes/system';
 import { canvasesRoutes } from './routes/canvases';
@@ -166,6 +167,7 @@ app
   .use(filesBaseRoutes)
   .use(githubRoutes)
   .use(canvasesRoutes)
+  .use(eventsWsRoutes)
   .use(wsRoutes);
 
 // Observability — server metrics + db stats

@@ -37,6 +37,7 @@ import {
 import { getActiveResourcesForProject } from './resources';
 import { getDb } from '../db/client';
 import { existsSync } from 'node:fs';
+import { broadcastSessionEvent } from '../ws/events';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbRow = Record<string, any>;
@@ -185,6 +186,8 @@ function wireSessionExit(sessionId: string): void {
     } catch {
       /* non-fatal */
     }
+    // Notify every connected events client so lists update without polling.
+    broadcastSessionEvent({ action: 'exited', sessionId });
     void code;
   });
 }
@@ -593,8 +596,17 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           //    be reflected, not silently respawned.
           wireSessionExit(sessionId);
 
+          const createdMeta = sessionMeta.get(sessionId)!;
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({
+            action: 'created',
+            sessionId,
+            projectId: createdMeta.projectId,
+            name: createdMeta.name,
+          });
+
           set.status = 201;
-          return sessionMeta.get(sessionId)!;
+          return createdMeta;
         } catch (err) {
           set.status = 500;
           return { error: (err as Error).message };
@@ -701,6 +713,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
         } catch {
           // non-fatal
         }
+        // Notify every connected events client so lists update without polling.
+        broadcastSessionEvent({ action: 'renamed', sessionId, name: meta.name });
         return meta;
       },
       {
@@ -924,6 +938,11 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           }
         }
 
+        if (toRemove.length > 0) {
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({ action: 'cleared', projectId, count: toRemove.length });
+        }
+
         return { removed: toRemove.length };
       } catch (err) {
         set.status = 500;
@@ -951,6 +970,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           // lingering tmux session, then clean up the row.
           await tmuxKillSession(sessionId);
           getDb().run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({ action: 'closed', sessionId });
           return { success: true };
         }
 
@@ -981,6 +1002,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
         } catch {
           // non-fatal
         }
+        // Notify every connected events client so lists update without polling.
+        broadcastSessionEvent({ action: 'closed', sessionId });
         return { success: true };
       } catch (err) {
         set.status = 500;
