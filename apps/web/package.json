@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "SERVER_PORT=3002 WEB_PORT=5174 vite",
+    "dev": "vite",
     "build": "tsc -b && NODE_OPTIONS='--experimental-global-webcrypto' vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
