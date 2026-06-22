@@ -267,6 +267,30 @@ export function useTerminalSocket(
     ws.onmessage = (event: MessageEvent) => {
       if (terminatedRef.current) return;
 
+      // ── Prod diagnostic (black-screen bug) ──
+      // Enable in the browser console with: localStorage.alfWsDebug = '1'
+      // Logs every inbound frame so we can tell front-vs-backend when a fresh
+      // session renders black: frames arriving but screen black = frontend
+      // render bug; no frames = backend. Remove once the bug is pinned.
+      if (localStorage.getItem('alfWsDebug') === '1') {
+        const len =
+          event.data instanceof ArrayBuffer
+            ? event.data.byteLength
+            : typeof event.data === 'string'
+              ? event.data.length
+              : -1;
+        const preview =
+          typeof event.data === 'string'
+            ? event.data.slice(0, 60)
+            : event.data instanceof ArrayBuffer
+              ? Array.from(new Uint8Array(event.data).slice(0, 24))
+                  .map((b) => b.toString(16).padStart(2, '0'))
+                  .join(' ')
+              : '';
+        // eslint-disable-next-line no-console
+        console.log(`[alfWsDebug] ${sessionId.slice(0, 8)} frame ${len}b`, preview);
+      }
+
       // Binary frames (PTY output) → emit as Uint8Array directly
       if (event.data instanceof ArrayBuffer) {
         const binary = new Uint8Array(event.data);

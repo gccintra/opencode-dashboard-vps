@@ -1047,6 +1047,32 @@ export const XTermTerminal = memo(
             return true; // consumed — don't let xterm process it further
           });
 
+          // ── DECRQM (request mode) shim — works around an xterm.js v6 crash ──
+          // The TUI probes terminal capabilities with DECRQM: `CSI ? <n> $ p`
+          // (e.g. `CSI ? 2026 $ p` for synchronized output). xterm's built-in
+          // `requestMode` handler throws `ReferenceError: i is not defined` in
+          // the MINIFIED production bundle (the `ansi` param `i` gets mangled but
+          // a reference survives). The throw happens inside `_innerWrite`, which
+          // ABORTS the write mid-chunk — so every byte after the `$p` query in
+          // that chunk (i.e. the TUI's first full-screen paint) never renders →
+          // BLACK SCREEN on every fresh session. Dev (unminified) is unaffected,
+          // which is why this only bites in production.
+          //
+          // Registering our own handler first (xterm runs handlers last-registered
+          // -first) intercepts the sequence before the broken built-in runs. We
+          // reply with DECRPM value 0 ("mode not recognized") — spec-valid, so any
+          // TUI waiting on the reply unblocks immediately and simply skips the
+          // probed feature (e.g. falls back from synchronized output). Returning
+          // true marks it consumed so xterm's crashing handler never fires.
+          const replyDecrqm = (prefix: '' | '?') => (params: (number | number[])[]) => {
+            const first = params[0];
+            const mode = typeof first === 'number' ? first : 0;
+            socket.send(`\x1b[${prefix}${mode};0$y`);
+            return true;
+          };
+          terminal.parser.registerCsiHandler({ prefix: '?', intermediates: '$', final: 'p' }, replyDecrqm('?'));
+          terminal.parser.registerCsiHandler({ intermediates: '$', final: 'p' }, replyDecrqm(''));
+
           // ── Copy/paste wiring ──
           //
           // IMPORTANT: With mouse tracking enabled (?1002h), normal drag sends
