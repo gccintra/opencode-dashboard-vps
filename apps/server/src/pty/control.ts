@@ -82,14 +82,13 @@ export function unescapeOutput(buf: Uint8Array, start = 0): Uint8Array {
   return len === out.length ? out : out.subarray(0, len);
 }
 
+const HEX = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
+
 /** Space-separated lowercase hex for `send-keys -H`. */
 export function toSendKeysHex(data: Uint8Array): string {
-  let s = '';
-  for (let i = 0; i < data.length; i++) {
-    if (i) s += ' ';
-    s += data[i].toString(16).padStart(2, '0');
-  }
-  return s;
+  const parts = new Array<string>(data.length);
+  for (let i = 0; i < data.length; i++) parts[i] = HEX[data[i]];
+  return parts.join(' ');
 }
 
 interface ControlEvents {
@@ -377,7 +376,7 @@ export class ControlWorkerTransport implements WorkerTransport {
     const client = new ControlClient(id, {
       onSpawned: (pid) => this.emit({ type: 'spawned', id, pid }),
       onData: (raw) =>
-        this.emit({ type: 'data', id, chunk: Buffer.from(raw).toString('base64'), encoding: 'base64' }),
+        this.emit({ type: 'data', id, chunk: Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength).toString('binary') }),
       onExit: (code) => {
         this.clients.delete(id);
         this.emit({ type: 'exit', id, code });
