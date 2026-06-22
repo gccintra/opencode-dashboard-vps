@@ -57,28 +57,29 @@ const ASCII = new TextDecoder(); // parse the ASCII `%` control prefixes (utf-8 
  * literal backslash becomes `\\`. Everything else passes through literally.
  */
 export function unescapeOutput(buf: Uint8Array, start = 0): Uint8Array {
-  const out: number[] = [];
+  const out = new Uint8Array(buf.length - start); // upper bound; octal sequences shrink output
+  let len = 0;
   for (let i = start; i < buf.length; i++) {
     const b = buf[i];
     if (b !== BACKSLASH) {
-      out.push(b);
+      out[len++] = b;
       continue;
     }
     const n = buf[i + 1];
     if (n === BACKSLASH) {
-      out.push(BACKSLASH);
+      out[len++] = BACKSLASH;
       i += 1;
     } else if (n >= 0x30 && n <= 0x37) {
       const o1 = buf[i + 1] - 0x30;
       const o2 = buf[i + 2] - 0x30;
       const o3 = buf[i + 3] - 0x30;
-      out.push(((o1 << 6) | (o2 << 3) | o3) & 0xff);
+      out[len++] = ((o1 << 6) | (o2 << 3) | o3) & 0xff;
       i += 3;
     } else {
-      out.push(BACKSLASH);
+      out[len++] = BACKSLASH;
     }
   }
-  return Uint8Array.from(out);
+  return len === out.length ? out : out.subarray(0, len);
 }
 
 /** Space-separated lowercase hex for `send-keys -H`. */
@@ -293,6 +294,8 @@ export class ControlClient {
   }
 }
 
+const ENC = new TextEncoder();
+
 export class ControlWorkerTransport implements WorkerTransport {
   private readonly clients = new Map<string, ControlClient>();
   private messageCb: ((msg: ServerMessage) => void) | null = null;
@@ -327,7 +330,7 @@ export class ControlWorkerTransport implements WorkerTransport {
         this.handleSpawn(msg.id, msg.command, msg.args ?? [], msg.cwd);
         break;
       case 'write': {
-        this.clients.get(msg.id)?.write(new TextEncoder().encode(msg.data));
+        this.clients.get(msg.id)?.write(ENC.encode(msg.data));
         break;
       }
       case 'resize': {
