@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch, type ApiError } from '../lib/api';
+import { useSessionEvents } from './useSessionEvents';
 
 /* ── Types ── */
 
@@ -78,6 +79,10 @@ export function useSessions(): UseSessionsReturn {
   const fetchingRef = useRef(false);
   const initializedRef = useRef(false);
 
+  // Global session-events channel — replaces the old 10s HTTP poll. Any
+  // create/close/rename/clear/exit in any tab pushes here and we re-fetch.
+  const { onSessionEvent } = useSessionEvents();
+
   const fetchAll = useCallback(async () => {
     // Prevent concurrent fetches
     if (fetchingRef.current) return;
@@ -139,22 +144,26 @@ export function useSessions(): UseSessionsReturn {
   useEffect(() => {
     fetchAll();
 
-    // Poll every 10 s so the sidebar stays in sync with external changes
-    // (sessions created/closed from ProjectDetail, session exits, etc.).
-    const interval = setInterval(fetchAll, 10_000);
+    // Push-based sync: re-fetch whenever the server reports a session change.
+    // Replaces the old 10s HTTP poll (any create/close/rename/clear/exit in
+    // any tab arrives here in <1s).
+    const unsubscribe = onSessionEvent(() => {
+      fetchAll();
+    });
 
-    // Also respond immediately when any component dispatches the
-    // 'sessions-changed' custom event (create / close from ProjectDetail).
+    // Fallback safety net (deprecated, kept for 1 release): the in-page
+    // 'sessions-changed' custom event still triggers an immediate refresh in
+    // case the events WS is down during a local mutation (spec Risk #4).
     const handleChanged = () => {
       fetchAll();
     };
     window.addEventListener('sessions-changed', handleChanged);
 
     return () => {
-      clearInterval(interval);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handleChanged);
     };
-  }, [fetchAll]);
+  }, [fetchAll, onSessionEvent]);
 
   const refresh = useCallback(async () => {
     await fetchAll();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
+import { useSessionEvents } from '../hooks/useSessionEvents';
 
 /* ── Types ── */
 
@@ -391,6 +392,9 @@ export default function SessionsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const initialLoadDone = useRef(false);
 
+  // Global session-events channel — replaces the old 15s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
+
   /* ── Fetch ── */
   const fetchAll = useCallback(async (manual?: boolean) => {
     // Only show full loading skeleton on the first fetch; background polls
@@ -438,14 +442,16 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 15_000);
+    // Push-based sync: re-fetch on any server-reported session change (<1s).
+    const unsubscribe = onSessionEvent(() => fetchAll());
+    // Fallback safety net (deprecated, kept for 1 release) — spec Risk #4.
     const handleChanged = () => fetchAll();
     window.addEventListener('sessions-changed', handleChanged);
     return () => {
-      clearInterval(interval);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handleChanged);
     };
-  }, [fetchAll]);
+  }, [fetchAll, onSessionEvent]);
 
   /* ── Create session ── */
   const handleCreate = useCallback(

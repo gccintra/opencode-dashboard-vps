@@ -15,6 +15,7 @@ import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
+import { useSessionEvents } from '../hooks/useSessionEvents';
 
 /* ── Types ── */
 
@@ -352,6 +353,9 @@ export default function SessionTerminalPage() {
   const termRef = useRef<XTermTerminalHandle>(null);
   const handleResize = useDebouncedResize(sessionId);
 
+  // Global session-events channel — replaces the old 15s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
+
   /* ── Fetch all active sessions for the rail ── */
   const fetchAll = useCallback(async () => {
     try {
@@ -383,14 +387,16 @@ export default function SessionTerminalPage() {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 15_000);
+    // Push-based sync: re-fetch on any server-reported session change (<1s).
+    const unsubscribe = onSessionEvent(() => fetchAll());
+    // Fallback safety net (deprecated, kept for 1 release) — spec Risk #4.
     const handler = () => fetchAll();
     window.addEventListener('sessions-changed', handler);
     return () => {
-      clearInterval(id);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handler);
     };
-  }, [fetchAll]);
+  }, [fetchAll, onSessionEvent]);
 
   const persistRail = useCallback((open: boolean) => {
     setRailOpen(open);

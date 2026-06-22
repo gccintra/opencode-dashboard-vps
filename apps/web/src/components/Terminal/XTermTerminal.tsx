@@ -929,6 +929,44 @@ export const XTermTerminal = memo(
           // ── Step 3: Load addons ──
           const fitAddon = new FitAddon();
           terminal.loadAddon(fitAddon);
+
+          // ── Reclaim the right-edge scrollbar gutter ──
+          // xterm v6's FitAddon subtracts `overviewRuler.width || 14` px from the
+          // available width whenever scrollback > 0, reserving a gutter for the
+          // vertical scrollbar. We hide that scrollbar via CSS
+          // (`.xterm-viewport { overflow-y: hidden }`), so the reserved 14px is a
+          // dead strip the TUI never paints over — it shows xterm's own
+          // background (#1e1e2e), which reads as a visible border on the right
+          // because opencode controls its own (different) theme background.
+          // Override proposeDimensions with FitAddon's identical math but a
+          // scrollbar reserve of 0, so cols fill the full container width. This
+          // keeps `scrollback: 5000` (mouse-wheel scroll for bare shells) intact.
+          (fitAddon as unknown as { proposeDimensions: () => { cols: number; rows: number } | undefined }).proposeDimensions =
+            function () {
+              const el = terminal.element;
+              if (!el?.parentElement) return undefined;
+              const cell = (terminal as unknown as {
+                _core?: { _renderService?: { dimensions?: { css?: { cell?: { width: number; height: number } } } } };
+              })._core?._renderService?.dimensions?.css?.cell;
+              if (!cell || cell.width === 0 || cell.height === 0) return undefined;
+              const parentStyle = window.getComputedStyle(el.parentElement);
+              const elStyle = window.getComputedStyle(el);
+              const parentH = parseInt(parentStyle.getPropertyValue('height'));
+              const parentW = Math.max(0, parseInt(parentStyle.getPropertyValue('width')));
+              const availH =
+                parentH -
+                (parseInt(elStyle.getPropertyValue('padding-top')) +
+                  parseInt(elStyle.getPropertyValue('padding-bottom')));
+              const availW =
+                parentW -
+                (parseInt(elStyle.getPropertyValue('padding-right')) +
+                  parseInt(elStyle.getPropertyValue('padding-left')));
+              return {
+                cols: Math.max(2, Math.floor(availW / cell.width)),
+                rows: Math.max(1, Math.floor(availH / cell.height)),
+              };
+            };
+
           terminal.loadAddon(new WebLinksAddon());
 
           const unicode11 = new Unicode11Addon();

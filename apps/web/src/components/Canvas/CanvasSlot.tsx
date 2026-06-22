@@ -322,7 +322,7 @@ export function CanvasSlot({
     ? isOver
       ? 'border-[#b3e502]'
       : isFocused
-        ? 'border-[#b3e502]'
+        ? 'border-[rgba(179,229,2,0.35)]'
         : 'border-white/[0.07]'
     : isOver
       ? 'border-[#b3e502] border-solid'
@@ -355,7 +355,10 @@ export function CanvasSlot({
               onFit={() => { terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
             />
           </div>
-          <div className="relative flex-1 min-h-0 overflow-hidden">
+          <div
+            className="relative flex-1 min-h-0 overflow-hidden"
+            style={{ backgroundColor: theme?.background ?? '#1e1e2e' }}
+          >
             <XTermTerminal
               key={sessionId}
               ref={terminalRef}
