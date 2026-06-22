@@ -79,7 +79,10 @@ export function detectStatus(session: { status: SessionStatus; buffer: string })
   // Strip ANSI escape sequences first — they are non-visible control
   // codes that would break the prompt regex but don't affect what the
   // user actually sees.
-  const clean = stripAnsi(session.buffer ?? '');
+  // Prompts always appear at the tail — scan only the last 500 chars instead
+  // of the full 50 KB buffer. Cuts per-check allocation by ~100×.
+  const tail = (session.buffer ?? '').slice(-500);
+  const clean = stripAnsi(tail);
   if (OPENCODE_PROMPT_REGEX.test(clean)) {
     return 'waiting';
   }
