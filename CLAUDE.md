@@ -204,3 +204,9 @@ cd apps/web && bunx vitest run --coverage src/path/to/Component.test.tsx
 **Discovery:** All new harness tests pass (143/143). Server suite: 406/412 pass (6 pre-existing failures across sessions.test.ts and ws/handler.test.ts). Web suite: 399/489 pass (90 pre-existing failures across 9 files including ProjectDetail, Emergency, XTermTerminal, CodeEditor, FileTree, AppLayout, Sidebar, Sessions, Projects). No regressions introduced by harness feature.
 **Solution:** The ws/handler.test.ts failure was added to the documented pre-existing failures list. No code changes needed for the harness feature.
 **Source:** This task (test phase - full regression)
+
+### 2026-06-22 - Testing: Vitest Requires Node 22, Not Node 18
+**Context:** Running `bunx vitest run` in apps/server or apps/web.
+**Discovery:** Under the repo's default Node 18, vitest crashes with `crypto is not defined` as soon as Elysia is imported — Node 18 lacks the global `crypto` that Elysia (and the test setup) relies on. Node 22 has it.
+**Solution:** Run every vitest invocation with Node 22 on PATH, e.g. `PATH="/root/.nvm/versions/node/v22.22.3/bin:$PATH" bunx vitest run` (adjust the nvm path per machine). This is the test runner only — the pty-worker still needs Node 18 at runtime (node-pty ABI); do not change the worker's Node.
+**Source:** task-replace-sessions-polling-with-ws (test phase)

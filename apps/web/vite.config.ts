@@ -73,6 +73,11 @@ export default defineConfig(({ mode }) => {
         ws: true,
         changeOrigin: true,
       },
+      '/ws/events': {
+        target: `http://localhost:${serverPort}`,
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   };
