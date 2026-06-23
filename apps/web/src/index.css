@@ -1,6 +1,14 @@
 @import 'tailwindcss';
 
-/* ── Self-hosted Fonts (no external CDN dependency) ── */
+/* Full-screen app — body/html must never scroll; each screen manages its own
+   scroll containers. Without this, any 1px overflow makes the whole page scroll. */
+html,
+body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ── Self-hosted Fonts (no external CDN dependency) ──*/
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
