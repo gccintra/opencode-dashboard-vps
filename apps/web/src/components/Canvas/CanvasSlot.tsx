@@ -270,13 +270,16 @@ export function CanvasSlot({
   const latestDimsRef = useRef<{ cols: number; rows: number } | null>(null);
 
   // TUI sessions replay their buffer at the slot dimensions, but opencode may
-  // not process the first SIGWINCH while busy mid-task. Extra resize at 1.5s
-  // and 3s guarantees opencode re-renders once idle.
+  // not process the first SIGWINCH while busy mid-task. resize() also forces the
+  // renderer to re-measure its canvas (fixes the Canvas garble). The 500ms shot
+  // runs just after the 200ms panel CSS transition settles so the fix is near-
+  // instant on open; 1.5s/3s cover a busy/late-idle TUI.
   useEffect(() => {
     if (!sessionId) return;
+    const t0 = setTimeout(() => terminalRef.current?.resize(), 500);
     const t1 = setTimeout(() => terminalRef.current?.resize(), 1500);
     const t2 = setTimeout(() => terminalRef.current?.resize(), 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
   }, [sessionId]);
 
   const handleResize = useCallback(

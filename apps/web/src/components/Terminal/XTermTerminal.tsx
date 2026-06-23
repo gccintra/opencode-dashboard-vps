@@ -59,6 +59,11 @@ import { useTerminalSocket, type ConnectionError } from '../../hooks/useTerminal
 // large fullscreen terminal to smaller canvas slots (the large stored dims were
 // sent to the server, which resized the PTY and garbled the TUI until SIGWINCH
 // with the correct size arrived ~120ms later — worse when TUI was busy).
+// Monotonic per-instance counter used to give each terminal a unique trailing
+// `fontFamily` fallback so xterm's WebGL addon never shares one TextureAtlas
+// across Canvas slots. See the construction site for the why.
+let atlasIsoCounter = 0;
+
 function termDimsKey(sessionId: string) { return `term_last_dims_v2_${sessionId}`; }
 
 /** Read the last-measured dims for a specific session, or null if none/invalid. */
@@ -593,6 +598,15 @@ export const XTermTerminal = memo(
     const terminalRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const lastSentDims = useRef<{ cols: number; rows: number } | null>(null);
+    // Set inside the init effect. Forces the renderer to re-measure its canvas
+    // (local resize delta + repaint) so Canvas slots don't garble/black-out when
+    // a mid-transition fit froze the wrong size. Called by resize() + ResizeObserver.
+    const wiggleRef = useRef<(() => void) | null>(null);
+    // Light repaint (atlas rebuild + refresh, NO width change). Used by the
+    // warm-up / ResizeObserver path to un-black/un-freeze the WebGL canvas
+    // without thrashing the TUI's column layout (which the width round-trip in
+    // wiggleRef does — that one fires once, late, after the TUI has booted).
+    const repaintRef = useRef<(() => void) | null>(null);
     // Pass the session's last-measured size on connect so the server can fire the
     // TUI launch immediately (overlapping boot with font/render init). Per-session
     // key avoids wrong pre-resize when multiple canvas slots have different sizes.
@@ -700,24 +714,14 @@ export const XTermTerminal = memo(
           } catch {
             return;
           }
-          try {
-            term.refresh(0, term.rows - 1);
-          } catch {
-            /* disposed */
-          }
           lastSentDims.current = { cols: term.cols, rows: term.rows };
           onResizeRef.current?.(term.cols, term.rows);
-          // Second SIGWINCH after the debounce window clears. If opencode was
-          // busy during the first one (e.g., rendering its startup screen), the
-          // second guarantees a re-render at the correct viewport dimensions.
-          setTimeout(() => {
-            const f = fitAddonRef.current;
-            const t = terminalRef.current;
-            if (!f || !t) return;
-            try { f.fit(); } catch { return; }
-            lastSentDims.current = { cols: t.cols, rows: t.rows };
-            onResizeRef.current?.(t.cols, t.rows);
-          }, 400);
+          // Re-sync the renderer's canvas (atlas rebuild + repaint). fit() alone is
+          // a no-op when the canvas was frozen at the wrong size during a CSS
+          // transition, so the slot stays garbled/black until this runs. Light
+          // repaint only — the column reflow (width round-trip) is a one-shot fired
+          // post-boot, not on every warm-up tick (firing it mid-boot CREATES garble).
+          repaintRef.current?.();
         },
         focus: () => {
           const term = terminalRef.current;
@@ -900,7 +904,17 @@ export const XTermTerminal = memo(
             fontSize,
             lineHeight: 1.2,
             letterSpacing: 0,
-            fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+            // Per-terminal WebGL atlas isolation. xterm's WebGL addon SHARES one
+            // TextureAtlas across terminals whose render config is `configEquals`
+            // (compared exactly). All Canvas slots have identical font/theme, so
+            // they'd share ONE atlas — and any slot's `clearTextureAtlas()` (fired
+            // on boot / repaint / alt-screen enter, e.g. opening opencode) blanks
+            // the glyphs for ALL of them (the Canvas garble). `fontFamily` is one
+            // of the compared fields and is NOT normalized, so a UNIQUE trailing
+            // fallback family makes each config distinct → each terminal gets its
+            // OWN atlas. The bogus family never resolves (JetBrains Mono wins
+            // first), so rendering and char-metrics are byte-identical.
+            fontFamily: `'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace, 'alf-atlas-iso-${++atlasIsoCounter}'`,
             fontWeight: '400',
             fontWeightBold: '700',
             theme: theme ?? TERMINAL_THEME,
@@ -920,6 +934,10 @@ export const XTermTerminal = memo(
             drawBoldTextInBrightColors: true,
             customGlyphs: true,
             rescaleOverlappingGlyphs: true,
+            // NOTE: minimumContrastRatio can't be the atlas-isolation lever — xterm
+            // rounds it to 0.1 steps (`Math.round(10*x)/10`), so a tiny per-terminal
+            // epsilon collapses back to 1.0 and the atlas stays shared. Isolation is
+            // done via a unique `fontFamily` suffix above instead.
             minimumContrastRatio: 1,
             allowTransparency: false,
             /* Performance: logging disabled in production, info in dev */
@@ -998,6 +1016,9 @@ export const XTermTerminal = memo(
             if (!t) return;
             requestAnimationFrame(() => {
               if (rebuildAtlas) {
+                // Safe to clear: each terminal owns its OWN atlas now (unique
+                // `fontFamily` suffix at construction), so this only rebuilds
+                // THIS terminal's glyphs — never blanks a sibling's.
                 try { webglAddon?.clearTextureAtlas(); } catch { /* canvas fallback / disposed */ }
               }
               try { t.refresh(0, t.rows - 1); } catch { /* disposed */ }
@@ -1025,6 +1046,16 @@ export const XTermTerminal = memo(
 
           try {
             webglAddon = new WebglAddon();
+            // Browsers cap concurrent WebGL contexts (~16 in Chrome) and evict
+            // the least-recently-used one. With several Canvas slots a background
+            // terminal can lose its context and render garbage/black with no
+            // recovery. xterm's documented requirement: dispose the addon on loss
+            // so the terminal falls back to its DOM renderer. Cheap insurance.
+            webglAddon.onContextLoss(() => {
+              try { webglAddon?.dispose(); } catch { /* already disposed */ }
+              webglAddon = null;
+              forceRepaint(false); // re-stamp glyphs via the DOM renderer
+            });
             terminal.loadAddon(webglAddon);
             // WebGL shaders compile asynchronously (~300ms cold-start). Force a
             // real frame once they're warm so the TUI appears without a keypress.
@@ -1364,6 +1395,54 @@ export const XTermTerminal = memo(
             lastSentDims.current = { cols, rows };
             sendResize(cols, rows);
           };
+
+          // Force the renderer (WebGL/Canvas) to re-measure its backing store.
+          //
+          // On Canvas open / add-slot, fit() runs DURING the panel's CSS
+          // transition, sizing the renderer canvas to a transient dimension. A
+          // later fit() at the correct size is a no-op when cols/rows are
+          // unchanged, so xterm never fires onResize → the canvas stays stale →
+          // garbled glyphs / broken layout, fixed previously only by a manual
+          // WINDOW resize. A local resize delta (rows-1 → rows) guarantees
+          // onResize fires → the addon re-syncs. The forceRepaint(true) after is
+          // essential: the resize re-inits the WebGL canvas (cleared to BLACK)
+          // and a plain refresh() no-ops on a cold context, so without the atlas
+          // rebuild the slot stays black until a real frame.
+          //
+          // `wiggling` suppresses the ResizeObserver for the duration so the
+          // canvas box-change this causes can't feed back into another wiggle.
+          // Bounded (warm-up timers + one ResizeObserver settle), never a loop.
+          let wiggling = false;
+          // Mode-B guard (stuck pane): a slot whose first ResizeObserver read
+          // landed mid-panel-transition can freeze tmux at a wrong size with no
+          // later box-change to correct it (only a manual window resize does =
+          // the user's tell). Force a SIGWINCH at the CURRENT measured size by
+          // sending a dedup-busting resize pair (rows-1 → rows) over the WS. No
+          // CSS box change, no atlas churn — just a clean re-sync of the PTY, so
+          // it's safe to fire on every settle (and once after boot below).
+          const forceWiggle = () => {
+            if (wiggling) return;
+            const cols = terminal.cols;
+            const rows = terminal.rows;
+            if (cols <= 2 || rows <= 1) return;
+            wiggling = true;
+            sendResize(cols, rows - 1);
+            setTimeout(() => {
+              const c = terminal.cols, r = terminal.rows;
+              sendResize(c, r);
+              lastSentDims.current = { cols: c, rows: r };
+              wiggling = false;
+            }, 80);
+          };
+          wiggleRef.current = forceWiggle;
+          repaintRef.current = () => forceRepaint(true);
+
+          // After boot, fire one corrective re-sync to clear any boot-time size
+          // mismatch (the slot may have been SIGWINCH'd at the un-settled
+          // full-window size before the grid split it).
+          setTimeout(() => {
+            wiggleRef.current?.();
+          }, 2600);
 
           // Buffer flush: drains pendingData AFTER a successful fit so the TUI
           // is rendered at the correct cols×rows, not at xterm's default 80×24.
@@ -1730,15 +1809,23 @@ export const XTermTerminal = memo(
           const onDataDisposable = terminal.onData((data) => socket.send(data));
 
           // ── Step 6: ResizeObserver (debounced to prevent fit→resize→fit loops) ──
-          // Use a time-based debounce (150ms) instead of RAF so intermediate
+          // Use a time-based debounce (300ms) instead of RAF so intermediate
           // layout sizes during tab switches are never sent to the backend PTY.
+          // 300ms honors CLAUDE.md "fit only ≥300ms after a layout change" (200ms
+          // CSS transition + buffer). notifyResizeIfChanged sends the genuine new
+          // cols/rows; forceWiggle then re-syncs the PTY (dedup-busting SIGWINCH)
+          // so an EXISTING booted slot whose size changed (a sibling was added)
+          // re-renders clean instead of keeping a stale frozen size. forceWiggle
+          // no-ops until the slot itself has booted. `wiggling` guards re-entry.
           let resizeTimerId: ReturnType<typeof setTimeout> | null = null;
           const debouncedResize = () => {
+            if (wiggling) return;
             if (resizeTimerId !== null) clearTimeout(resizeTimerId);
             resizeTimerId = setTimeout(() => {
               resizeTimerId = null;
               notifyResizeIfChanged();
-            }, 150);
+              forceWiggle();
+            }, 300);
           };
           const resizeObserver = new ResizeObserver(debouncedResize);
           resizeObserver.observe(container);
