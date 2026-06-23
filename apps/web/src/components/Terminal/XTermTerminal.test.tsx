@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
-import { XTermTerminal } from './XTermTerminal';
+import { createRef } from 'react';
+import { XTermTerminal, type XTermTerminalHandle } from './XTermTerminal';
 import { Terminal } from '@xterm/xterm';
 
 /* ── Mocks ── */
@@ -393,7 +394,7 @@ describe('XTermTerminal', () => {
     expect(first).not.toHaveBeenCalled();
   });
 
-  /* ── Canvas garble fix: 300ms debounce + dedup-busting wiggle ── */
+  /* ── Canvas garble fix: 300ms ResizeObserver debounce + resync() wiggle ── */
 
   // Pull the {type:'resize'} SIGWINCH messages out of the WS send mock.
   function resizeMessages(ws: MockWSInstance): Array<{ type: string; cols: number; rows: number }> {
@@ -418,11 +419,10 @@ describe('XTermTerminal', () => {
     await flushOpen();
     const ws = wsInstances[0];
 
-    // The wiggle's rows-1 frame (23 here) is emitted ONLY by the debounced
-    // resize callback — a clean signal that the debounce has fired (unlike
-    // fit(), which the visibility poll also calls).
-    mockTerminal.cols = 80;
-    mockTerminal.rows = 24;
+    // A genuine new size is sent ONLY after the 300ms debounce settles. flushOpen
+    // already sent 80x24, so 100x30 is a real change notifyResizeIfChanged emits.
+    mockTerminal.cols = 100;
+    mockTerminal.rows = 30;
     ws.send.mockClear();
     act(() => {
       fireResize();
@@ -430,37 +430,38 @@ describe('XTermTerminal', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(250);
     });
-    expect(resizeMessages(ws).some((m) => m.rows === 23)).toBe(false);
+    expect(resizeMessages(ws).some((m) => m.cols === 100 && m.rows === 30)).toBe(false);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100); // total 350ms > 300ms debounce
     });
-    expect(resizeMessages(ws).some((m) => m.rows === 23)).toBe(true);
+    expect(resizeMessages(ws).some((m) => m.cols === 100 && m.rows === 30)).toBe(true);
   });
 
-  it('wiggle sends a SIGWINCH (rows-1 → rows) even when cols/rows are unchanged (busts dedup)', async () => {
-    render(<XTermTerminal sessionId="s1" />);
+  it('resize() forces a SIGWINCH (rows-1 → rows) even when cols/rows are unchanged (busts dedup)', async () => {
+    const ref = createRef<XTermTerminalHandle>();
+    render(<XTermTerminal ref={ref} sessionId="s1" />);
     await flushOpen();
     const ws = wsInstances[0];
 
     mockTerminal.cols = 120;
     mockTerminal.rows = 40;
-    // First settle establishes lastSentDims = 120x40.
+    // First resync establishes lastSentDims = 120x40.
     act(() => {
-      fireResize();
+      ref.current?.resize();
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(100);
     });
 
     ws.send.mockClear();
-    // Second settle at the SAME size: notifyResizeIfChanged dedups (no send),
-    // but the wiggle must still force a fresh SIGWINCH.
+    // Second resync at the SAME size: notifyResizeIfChanged dedups (no send),
+    // but forceWiggle must still emit a fresh dedup-busting SIGWINCH pair.
     act(() => {
-      fireResize();
+      ref.current?.resize();
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(100);
     });
 
     const msgs = resizeMessages(ws);
@@ -468,7 +469,7 @@ describe('XTermTerminal', () => {
     expect(msgs).toContainEqual({ type: 'resize', cols: 120, rows: 40 });
   });
 
-  it('fires the corrective wiggle once per settle, not per repeated resize event', async () => {
+  it('collapses rapid ResizeObserver events into a single resize send (no per-event wiggle)', async () => {
     render(<XTermTerminal sessionId="s1" />);
     await flushOpen();
     const ws = wsInstances[0];
@@ -486,9 +487,11 @@ describe('XTermTerminal', () => {
       await vi.advanceTimersByTimeAsync(400);
     });
 
-    // rows-1 (29) is the wiggle's signature first frame — exactly one settle.
-    const wiggleStarts = resizeMessages(ws).filter((m) => m.cols === 100 && m.rows === 29);
-    expect(wiggleStarts).toHaveLength(1);
+    // Exactly one send of the new size — and NO wiggle (rows-1) frame, since the
+    // ResizeObserver path no longer fires forceWiggle.
+    const sends = resizeMessages(ws).filter((m) => m.cols === 100 && m.rows === 30);
+    expect(sends).toHaveLength(1);
+    expect(resizeMessages(ws).some((m) => m.rows === 29)).toBe(false);
   });
 
   it('uses fontSize=14 by default when no prop is passed', () => {
