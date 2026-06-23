@@ -11,9 +11,27 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from '@dnd-kit/core';
 import { CanvasSlot, type AvailableSession } from './CanvasSlot';
 import type { ITheme } from '@xterm/xterm';
+
+// Center the drag overlay on the cursor (canonical @dnd-kit/modifiers logic,
+// inlined — we only depend on @dnd-kit/core). Without it the overlay anchors at
+// the dragged header's origin (top-left of the slot), so the card appears far
+// from the pointer. clientX/Y and getBoundingClientRect are both viewport
+// coords, so this is correct regardless of ancestor layout.
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (draggingNodeRect && activatorEvent) {
+    const ev = activatorEvent as PointerEvent;
+    return {
+      ...transform,
+      x: transform.x + ev.clientX - draggingNodeRect.left - draggingNodeRect.width / 2,
+      y: transform.y + ev.clientY - draggingNodeRect.top - draggingNodeRect.height / 2,
+    };
+  }
+  return transform;
+};
 
 interface Session {
   sessionId: string;
@@ -216,46 +234,14 @@ export function CanvasGrid({
   const activeDragSession = activeDragSlot ? (localSlots[activeDragSlot] ?? null) : null;
   const activeDragSessionObj = activeDragSession ? sessionMap.get(activeDragSession) : null;
 
-  const [dragSnapshot, setDragSnapshot] = useState<{ src: string; w: number; h: number } | null>(null);
-
-  function captureSlotSnapshot(slotId: string): { src: string; w: number; h: number } | null {
-    const idx = slotId.charCodeAt(0) - 97;
-    const slotEl = document.querySelector(`[data-testid="canvas-slot-${idx}"]`);
-    if (!slotEl) return null;
-    const rect = slotEl.getBoundingClientRect();
-    const canvases = Array.from(slotEl.querySelectorAll('canvas')) as HTMLCanvasElement[];
-    if (!canvases.length) return null;
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    const composite = document.createElement('canvas');
-    composite.width = w;
-    composite.height = h;
-    const ctx = composite.getContext('2d');
-    if (!ctx) return null;
-    ctx.fillStyle = '#0a0a0f';
-    ctx.fillRect(0, 0, w, h);
-    for (const c of canvases) {
-      try { ctx.drawImage(c, 0, 0, w, h); } catch {}
-    }
-    try {
-      return { src: composite.toDataURL('image/png'), w: rect.width, h: rect.height };
-    } catch {
-      return null;
-    }
-  }
-
   function handleDragStart(event: DragStartEvent) {
     isDraggingRef.current = true;
-    const slotId = String(event.active.id);
-    setActiveDragSlot(slotId);
-    setDragSnapshot(captureSlotSnapshot(slotId));
+    setActiveDragSlot(String(event.active.id));
   }
 
   function handleDragEnd(event: DragEndEvent) {
     isDraggingRef.current = false;
     setActiveDragSlot(null);
-    setDragSnapshot(null);
     const fromSlot = String(event.active.id);
     const toSlot = event.over ? String(event.over.id) : null;
     if (!toSlot || fromSlot === toSlot) return;
@@ -499,44 +485,30 @@ export function CanvasGrid({
           {renderTemplate()}
         </div>
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {activeDragSlot && (
           <div
-            style={{
-              transform: 'rotate(2deg) scale(1.04)',
-              willChange: 'transform',
-              width: dragSnapshot ? Math.min(dragSnapshot.w, 320) : 220,
-              height: dragSnapshot
-                ? Math.round(Math.min(dragSnapshot.w, 320) / dragSnapshot.w * dragSnapshot.h)
-                : 'auto',
-              overflow: 'hidden',
-            }}
-            className="rounded-[8px] border border-[#b3e502]/25 pointer-events-none shadow-[0_28px_64px_-12px_rgba(0,0,0,0.9),0_0_0_1px_rgba(179,229,2,0.10)] opacity-95"
+            style={{ transform: 'rotate(2deg) scale(1.04)', willChange: 'transform', width: 220 }}
+            className="rounded-[8px] border border-[#b3e502]/25 pointer-events-none overflow-hidden shadow-[0_28px_64px_-12px_rgba(0,0,0,0.9),0_0_0_1px_rgba(179,229,2,0.10)] opacity-95"
           >
-            {dragSnapshot ? (
-              <img
-                src={dragSnapshot.src}
-                style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
-                alt=""
+            {/* Clean labeled card — never a snapshot of the live terminal. The
+                WebGL canvas can't be reliably drawImage'd (cleared buffer) and
+                rendered as garbled glyphs / mis-sized; a compact card also tracks
+                the pointer correctly instead of anchoring oversized in a corner. */}
+            <div className="bg-[#111118] w-full flex items-center gap-[7px] min-w-0 p-[10px]">
+              <span
+                className="inline-block size-[7px] shrink-0 rounded-full"
+                style={{
+                  backgroundColor:
+                    activeDragSessionObj?.status === 'active' ? '#b3e502'
+                    : activeDragSessionObj?.status === 'waiting' ? '#4ade80'
+                    : '#5a626c',
+                }}
               />
-            ) : (
-              <div className="bg-[#111118] w-full h-full flex flex-col gap-[6px] p-[10px]">
-                <div className="flex items-center gap-[7px] min-w-0">
-                  <span
-                    className="inline-block size-[7px] shrink-0 rounded-full"
-                    style={{
-                      backgroundColor:
-                        activeDragSessionObj?.status === 'active' ? '#b3e502'
-                        : activeDragSessionObj?.status === 'waiting' ? '#4ade80'
-                        : '#5a626c',
-                    }}
-                  />
-                  <span className="truncate font-['JetBrains_Mono'] text-[12px] font-medium text-[#f0f0f0]">
-                    {activeDragSessionObj?.name ?? ''}
-                  </span>
-                </div>
-              </div>
-            )}
+              <span className="truncate font-['JetBrains_Mono'] text-[12px] font-medium text-[#f0f0f0]">
+                {activeDragSessionObj?.name ?? ''}
+              </span>
+            </div>
           </div>
         )}
       </DragOverlay>

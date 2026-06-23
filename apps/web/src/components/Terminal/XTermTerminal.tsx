@@ -598,15 +598,12 @@ export const XTermTerminal = memo(
     const terminalRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const lastSentDims = useRef<{ cols: number; rows: number } | null>(null);
-    // Set inside the init effect. Forces the renderer to re-measure its canvas
-    // (local resize delta + repaint) so Canvas slots don't garble/black-out when
-    // a mid-transition fit froze the wrong size. Called by resize() + ResizeObserver.
-    const wiggleRef = useRef<(() => void) | null>(null);
-    // Light repaint (atlas rebuild + refresh, NO width change). Used by the
-    // warm-up / ResizeObserver path to un-black/un-freeze the WebGL canvas
-    // without thrashing the TUI's column layout (which the width round-trip in
-    // wiggleRef does — that one fires once, late, after the TUI has booted).
-    const repaintRef = useRef<(() => void) | null>(null);
+    // Set inside the init effect. ONE corrective re-sync: re-fit the container,
+    // force a clean SIGWINCH to the PTY (dedup-busting), and rebuild THIS
+    // terminal's WebGL atlas. Fixes a Canvas slot that froze at a stale size or
+    // blanked its glyphs during a CSS panel transition. Called by the imperative
+    // resize() handle (Fit button + CanvasSlot warm-up timers).
+    const resyncRef = useRef<(() => void) | null>(null);
     // Pass the session's last-measured size on connect so the server can fire the
     // TUI launch immediately (overlapping boot with font/render init). Per-session
     // key avoids wrong pre-resize when multiple canvas slots have different sizes.
@@ -704,25 +701,9 @@ export const XTermTerminal = memo(
       ref,
       () => ({
         reconnect: () => socket.reconnect(),
-        resize: () => {
-          const container = containerRef.current;
-          const fit = fitAddonRef.current;
-          const term = terminalRef.current;
-          if (!container || !fit || !term || container.clientWidth === 0) return;
-          try {
-            fit.fit();
-          } catch {
-            return;
-          }
-          lastSentDims.current = { cols: term.cols, rows: term.rows };
-          onResizeRef.current?.(term.cols, term.rows);
-          // Re-sync the renderer's canvas (atlas rebuild + repaint). fit() alone is
-          // a no-op when the canvas was frozen at the wrong size during a CSS
-          // transition, so the slot stays garbled/black until this runs. Light
-          // repaint only — the column reflow (width round-trip) is a one-shot fired
-          // post-boot, not on every warm-up tick (firing it mid-boot CREATES garble).
-          repaintRef.current?.();
-        },
+        // Single corrective re-sync (fit + dedup-busting SIGWINCH + atlas
+        // rebuild). Defined in the init effect where fit/socket are in scope.
+        resize: () => resyncRef.current?.(),
         focus: () => {
           const term = terminalRef.current;
           if (term) {
@@ -1396,34 +1377,15 @@ export const XTermTerminal = memo(
             sendResize(cols, rows);
           };
 
-          // Force the renderer (WebGL/Canvas) to re-measure its backing store.
-          //
-          // On Canvas open / add-slot, fit() runs DURING the panel's CSS
-          // transition, sizing the renderer canvas to a transient dimension. A
-          // later fit() at the correct size is a no-op when cols/rows are
-          // unchanged, so xterm never fires onResize → the canvas stays stale →
-          // garbled glyphs / broken layout, fixed previously only by a manual
-          // WINDOW resize. A local resize delta (rows-1 → rows) guarantees
-          // onResize fires → the addon re-syncs. The forceRepaint(true) after is
-          // essential: the resize re-inits the WebGL canvas (cleared to BLACK)
-          // and a plain refresh() no-ops on a cold context, so without the atlas
-          // rebuild the slot stays black until a real frame.
-          //
-          // `wiggling` suppresses the ResizeObserver for the duration so the
-          // canvas box-change this causes can't feed back into another wiggle.
-          // Bounded (warm-up timers + one ResizeObserver settle), never a loop.
+          // Dedup-busting SIGWINCH: force the PTY/TUI to repaint at the CURRENT
+          // measured size even when cols/rows are unchanged (notifyResizeIfChanged
+          // would dedup and send nothing). Sends a (rows-1 → rows) pair over the
+          // WS — no CSS box change, so it can't feed back into the ResizeObserver.
+          // `wiggling` guards against a re-entrant pair inside the 80ms window.
           let wiggling = false;
-          // Mode-B guard (stuck pane): a slot whose first ResizeObserver read
-          // landed mid-panel-transition can freeze tmux at a wrong size with no
-          // later box-change to correct it (only a manual window resize does =
-          // the user's tell). Force a SIGWINCH at the CURRENT measured size by
-          // sending a dedup-busting resize pair (rows-1 → rows) over the WS. No
-          // CSS box change, no atlas churn — just a clean re-sync of the PTY, so
-          // it's safe to fire on every settle (and once after boot below).
           const forceWiggle = () => {
             if (wiggling) return;
-            const cols = terminal.cols;
-            const rows = terminal.rows;
+            const { cols, rows } = terminal;
             if (cols <= 2 || rows <= 1) return;
             wiggling = true;
             sendResize(cols, rows - 1);
@@ -1434,15 +1396,21 @@ export const XTermTerminal = memo(
               wiggling = false;
             }, 80);
           };
-          wiggleRef.current = forceWiggle;
-          repaintRef.current = () => forceRepaint(true);
 
-          // After boot, fire one corrective re-sync to clear any boot-time size
-          // mismatch (the slot may have been SIGWINCH'd at the un-settled
-          // full-window size before the grid split it).
-          setTimeout(() => {
-            wiggleRef.current?.();
-          }, 2600);
+          // THE single corrective re-sync, wired to the imperative resize()
+          // (Fit button + CanvasSlot warm-up). On Canvas open / add-slot, fit()
+          // can run mid CSS transition and freeze the renderer at a transient
+          // size; a later same-size fit() no-ops, leaving the slot garbled/black
+          // until a manual window resize. resync re-fits, forces a clean PTY
+          // SIGWINCH, and rebuilds THIS terminal's atlas (the WebGL canvas is
+          // cleared to black on resize and a plain refresh no-ops on a cold
+          // context). Idempotent — safe to call repeatedly.
+          const resync = () => {
+            notifyResizeIfChanged(); // fit + refresh + send if size changed
+            forceWiggle();           // force PTY repaint at current size
+            forceRepaint(true);      // rebuild atlas → un-black the canvas
+          };
+          resyncRef.current = resync;
 
           // Buffer flush: drains pendingData AFTER a successful fit so the TUI
           // is rendered at the correct cols×rows, not at xterm's default 80×24.
@@ -1812,19 +1780,17 @@ export const XTermTerminal = memo(
           // Use a time-based debounce (300ms) instead of RAF so intermediate
           // layout sizes during tab switches are never sent to the backend PTY.
           // 300ms honors CLAUDE.md "fit only ≥300ms after a layout change" (200ms
-          // CSS transition + buffer). notifyResizeIfChanged sends the genuine new
-          // cols/rows; forceWiggle then re-syncs the PTY (dedup-busting SIGWINCH)
-          // so an EXISTING booted slot whose size changed (a sibling was added)
-          // re-renders clean instead of keeping a stale frozen size. forceWiggle
-          // no-ops until the slot itself has booted. `wiggling` guards re-entry.
+          // CSS transition + buffer). Only notifyResizeIfChanged here: a genuine
+          // cols/rows change already makes xterm re-sync the renderer. NO forced
+          // wiggle on box-change — firing one on every sibling's ResizeObserver
+          // (when a slot is added) is what disturbed the OTHER slots. The
+          // corrective wiggle lives only in resync() (imperative resize path).
           let resizeTimerId: ReturnType<typeof setTimeout> | null = null;
           const debouncedResize = () => {
-            if (wiggling) return;
             if (resizeTimerId !== null) clearTimeout(resizeTimerId);
             resizeTimerId = setTimeout(() => {
               resizeTimerId = null;
               notifyResizeIfChanged();
-              forceWiggle();
             }, 300);
           };
           const resizeObserver = new ResizeObserver(debouncedResize);
