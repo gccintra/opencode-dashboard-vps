@@ -86,11 +86,9 @@ interface DropHit {
 // swiping across the screen to scroll columns must never be mistaken for one.
 const TOUCH_LONG_PRESS_MS = 350;
 // If a touch moves further than this before the long-press timer fires, it's a
-// scroll, not a hold — cancel the timer and let the browser pan natively.
-// Real touchscreens have natural finger jitter well above mouse-grade
-// precision; too tight a value here cancels nearly every genuine hold and
-// drag never engages — it just always feels like scrolling.
-const TOUCH_SCROLL_CANCEL_PX = 24;
+// scroll, not a hold — cancel the timer and switch to manual-pan mode.
+// 8px: tight enough that flicks feel instant, yet wide enough to survive jitter.
+const TOUCH_SCROLL_CANCEL_PX = 8;
 
 export function KanbanCard({
   task,
@@ -135,6 +133,9 @@ export function KanbanCard({
   const scrollPanActiveRef = useRef(false);
   const scrollPanAxisRef = useRef<'x' | 'y' | null>(null);
   const scrollPanPointRef = useRef<{ x: number; y: number } | null>(null);
+  // Velocity samples for momentum: ring of {dx, dy, t} over last ~100ms
+  const scrollVelocitySamplesRef = useRef<{ dx: number; dy: number; t: number }[]>([]);
+  const momentumFrameRef = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [ghostRect, setGhostRect] = useState<DOMRect | null>(null);
 
@@ -240,10 +241,15 @@ export function KanbanCard({
       cancelAnimationFrame(autoScrollFrameRef.current);
       autoScrollFrameRef.current = null;
     }
+    if (momentumFrameRef.current != null) {
+      cancelAnimationFrame(momentumFrameRef.current);
+      momentumFrameRef.current = null;
+    }
     lastPointerRef.current = null;
     scrollPanActiveRef.current = false;
     scrollPanAxisRef.current = null;
     scrollPanPointRef.current = null;
+    scrollVelocitySamplesRef.current = [];
     draggingRef.current = false;
     pressOrigin.current = null;
     pointerIdRef.current = null;
@@ -302,10 +308,19 @@ export function KanbanCard({
         const prev = scrollPanPointRef.current;
         scrollPanPointRef.current = { x: e.clientX, y: e.clientY };
         if (prev) {
+          const dx = e.clientX - prev.x;
+          const dy = e.clientY - prev.y;
           const colEl = articleRef.current?.closest('[data-column-id]') as HTMLElement | null;
           const boardEl = (colEl ?? articleRef.current)?.closest('.overflow-x-auto') as HTMLElement | null;
-          if (scrollPanAxisRef.current === 'x' && boardEl) boardEl.scrollLeft -= e.clientX - prev.x;
-          else if (scrollPanAxisRef.current === 'y' && colEl) colEl.scrollTop -= e.clientY - prev.y;
+          if (scrollPanAxisRef.current === 'x' && boardEl) boardEl.scrollLeft -= dx;
+          else if (scrollPanAxisRef.current === 'y' && colEl) colEl.scrollTop -= dy;
+          // Track velocity samples for momentum on release
+          const now = performance.now();
+          const samples = scrollVelocitySamplesRef.current;
+          samples.push({ dx, dy, t: now });
+          // Keep only samples from the last 80ms
+          const cutoff = now - 80;
+          scrollVelocitySamplesRef.current = samples.filter(s => s.t >= cutoff);
         }
         return;
       }
@@ -374,14 +389,46 @@ export function KanbanCard({
     clearLongPressTimer();
     const wasDragging = draggingRef.current;
     const wasScrollPanning = scrollPanActiveRef.current;
+    const axis = scrollPanAxisRef.current;
+    const samples = scrollVelocitySamplesRef.current;
     const origin = pressOrigin.current;
+    // Snapshot scroll targets before endDrag resets refs
+    const colEl = articleRef.current?.closest('[data-column-id]') as HTMLElement | null;
+    const boardEl = (colEl ?? articleRef.current)?.closest('.overflow-x-auto') as HTMLElement | null;
     releaseCapture();
     if (wasDragging) {
       commitDrop(e.clientX, e.clientY);
       return;
     }
     endDrag();
-    if (wasScrollPanning) return; // released after a manual scroll — not a tap
+    if (wasScrollPanning) {
+      // Compute average velocity from recent samples and run momentum animation
+      if (samples.length >= 2) {
+        const span = samples[samples.length - 1].t - samples[0].t;
+        if (span > 0) {
+          const totalDx = samples.reduce((s, p) => s + p.dx, 0);
+          const totalDy = samples.reduce((s, p) => s + p.dy, 0);
+          let vx = (totalDx / span) * 16; // px per frame @ 60fps
+          let vy = (totalDy / span) * 16;
+          const FRICTION = 0.88;
+          const MIN_V = 0.3;
+          const step = () => {
+            vx *= FRICTION;
+            vy *= FRICTION;
+            if (axis === 'x' && boardEl) boardEl.scrollLeft -= vx;
+            else if (axis === 'y' && colEl) colEl.scrollTop -= vy;
+            const speed = axis === 'x' ? Math.abs(vx) : Math.abs(vy);
+            if (speed > MIN_V) {
+              momentumFrameRef.current = requestAnimationFrame(step);
+            } else {
+              momentumFrameRef.current = null;
+            }
+          };
+          momentumFrameRef.current = requestAnimationFrame(step);
+        }
+      }
+      return; // released after a manual scroll — not a tap
+    }
     if (!origin) return;
     if ((e.target as HTMLElement).closest('a,button')) return;
     onEdit(); // pointer never crossed the drag threshold → it was a click/tap
