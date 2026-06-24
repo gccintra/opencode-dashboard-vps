@@ -136,8 +136,45 @@ export function KanbanCard({
   // Velocity samples for momentum: ring of {dx, dy, t} over last ~100ms
   const scrollVelocitySamplesRef = useRef<{ dx: number; dy: number; t: number }[]>([]);
   const momentumFrameRef = useRef<number | null>(null);
+  // Fixed-position line showing exact insertion point during drag
+  const dropLineRef = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState(false);
   const [ghostRect, setGhostRect] = useState<DOMRect | null>(null);
+
+  // Drop-line DOM element: created once, kept hidden until dragging.
+  useEffect(() => {
+    const el = document.createElement('div');
+    el.style.cssText =
+      'position:fixed;height:2px;border-radius:2px;pointer-events:none;z-index:9999;' +
+      'background:#b3e502;box-shadow:0 0 8px rgba(179,229,2,0.55);display:none;';
+    document.body.appendChild(el);
+    dropLineRef.current = el;
+    return () => { document.body.removeChild(el); dropLineRef.current = null; };
+  }, []);
+
+  const updateDropLine = (hit: DropHit) => {
+    const el = dropLineRef.current;
+    if (!el) return;
+    if (!hit.columnEl) { el.style.display = 'none'; return; }
+    const colRect = hit.columnEl.getBoundingClientRect();
+    let y: number;
+    if (hit.beforeTaskId) {
+      const cardEl = hit.columnEl.querySelector(`[data-task-id="${hit.beforeTaskId}"]`) as HTMLElement | null;
+      y = cardEl ? cardEl.getBoundingClientRect().top - 6 : colRect.top + 8;
+    } else {
+      const cards = hit.columnEl.querySelectorAll('[data-task-id]');
+      if (cards.length > 0) {
+        const last = cards[cards.length - 1] as HTMLElement;
+        y = last.getBoundingClientRect().bottom + 6;
+      } else {
+        y = colRect.top + 8;
+      }
+    }
+    el.style.display = 'block';
+    el.style.top = `${y}px`;
+    el.style.left = `${colRect.left + 8}px`;
+    el.style.width = `${colRect.width - 16}px`;
+  };
 
   // Paint/clear the hovered column highlight directly (no shared React state).
   const setDropTarget = (el: HTMLElement | null) => {
@@ -217,6 +254,8 @@ export function KanbanCard({
         if (y < rect.top + EDGE_ZONE) colEl.scrollTop -= speedFor(Math.max(0, y - rect.top));
         else if (y > rect.bottom - EDGE_ZONE) colEl.scrollTop += speedFor(Math.max(0, rect.bottom - y));
       }
+      // Reposition drop line as column scrolls under the pointer
+      updateDropLine(dropInfoAt(x, y));
     }
     autoScrollFrameRef.current = requestAnimationFrame(autoScrollTick);
   };
@@ -245,6 +284,7 @@ export function KanbanCard({
       cancelAnimationFrame(momentumFrameRef.current);
       momentumFrameRef.current = null;
     }
+    if (dropLineRef.current) dropLineRef.current.style.display = 'none';
     lastPointerRef.current = null;
     scrollPanActiveRef.current = false;
     scrollPanAxisRef.current = null;
@@ -367,6 +407,7 @@ export function KanbanCard({
     }
     const hit = dropInfoAt(e.clientX, e.clientY);
     setDropTarget(hit.columnEl);
+    updateDropLine(hit);
   };
 
   const releaseCapture = () => {
