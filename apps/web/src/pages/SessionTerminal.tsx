@@ -15,6 +15,8 @@ import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
+import { useSessionEvents } from '../hooks/useSessionEvents';
+import RecoverConversationModal from '../components/RecoverConversationModal';
 
 /* ── Types ── */
 
@@ -147,6 +149,7 @@ function SessionRail({
   onSelect,
   onClose,
   onCreateSession,
+  onRecover,
   creating,
   onRename,
   isMobile,
@@ -159,6 +162,7 @@ function SessionRail({
   onSelect: (s: SessionItem) => void;
   onClose: () => void;
   onCreateSession: (projectId: string) => void;
+  onRecover: (projectId: string) => void;
   creating: string | null;
   onRename: (sessionId: string, name: string) => void;
   isMobile: boolean;
@@ -228,20 +232,32 @@ function SessionRail({
               <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#5a626c]">
                 {g.project.name}
               </span>
-              <button
-                onClick={() => onCreateSession(g.project.id)}
-                disabled={creating === g.project.id}
-                className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all disabled:opacity-40"
-                title={`New session in ${g.project.name}`}
-              >
-                {creating === g.project.id ? (
-                  <div className="size-[8px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
-                ) : (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <div className="flex items-center gap-[2px]">
+                <button
+                  onClick={() => onRecover(g.project.id)}
+                  className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all"
+                  title={`Recover conversation in ${g.project.name}`}
+                >
+                  <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
+                    <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    <path d="M2.5 2v2h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                )}
-              </button>
+                </button>
+                <button
+                  onClick={() => onCreateSession(g.project.id)}
+                  disabled={creating === g.project.id}
+                  className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all disabled:opacity-40"
+                  title={`New session in ${g.project.name}`}
+                >
+                  {creating === g.project.id ? (
+                    <div className="size-[8px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+                  ) : (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             {g.sessions.map((s) => {
               const d = statusDot(s.status);
@@ -334,7 +350,7 @@ function SessionRail({
 
 export default function SessionTerminalPage() {
   const navigate = useNavigate();
-  const { sessionId } = useParams<{ projectId: string; sessionId: string }>();
+  const { projectId, sessionId } = useParams<{ projectId: string; sessionId: string }>();
   const isMobile = useIsMobile();
   const viewportHeight = useViewportHeight();
 
@@ -351,6 +367,9 @@ export default function SessionTerminalPage() {
 
   const termRef = useRef<XTermTerminalHandle>(null);
   const handleResize = useDebouncedResize(sessionId);
+
+  // Global session-events channel — replaces the old 15s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
 
   /* ── Fetch all active sessions for the rail ── */
   const fetchAll = useCallback(async () => {
@@ -383,14 +402,16 @@ export default function SessionTerminalPage() {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 15_000);
+    // Push-based sync: re-fetch on any server-reported session change (<1s).
+    const unsubscribe = onSessionEvent(() => fetchAll());
+    // Fallback safety net (deprecated, kept for 1 release) — spec Risk #4.
     const handler = () => fetchAll();
     window.addEventListener('sessions-changed', handler);
     return () => {
-      clearInterval(id);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handler);
     };
-  }, [fetchAll]);
+  }, [fetchAll, onSessionEvent]);
 
   const persistRail = useCallback((open: boolean) => {
     setRailOpen(open);
@@ -558,6 +579,30 @@ export default function SessionTerminalPage() {
       }
     },
     [creating, navigate],
+  );
+
+  const [recoverModalOpen, setRecoverModalOpen] = useState(false);
+  const [recoverProjectId, setRecoverProjectId] = useState<string | null>(null);
+
+  const handleOpenRecover = useCallback((projectId: string) => {
+    setRecoverProjectId(projectId);
+    setRecoverModalOpen(true);
+  }, []);
+
+  const handleRecover = useCallback(
+    async (projectId: string, conversationId: string, sessionName: string, agentType: 'claude' | 'opencode') => {
+      const session = await apiFetch<{ sessionId: string }>(
+        `/api/projects/${projectId}/sessions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ name: sessionName, resumeConversationId: conversationId, agentType }),
+        },
+      );
+      window.dispatchEvent(new Event('sessions-changed'));
+      setRecoverModalOpen(false);
+      navigate(`/sessions/${projectId}/${session.sessionId}`);
+    },
+    [navigate],
   );
 
   /* ── Canvas callbacks ── */
@@ -896,6 +941,17 @@ export default function SessionTerminalPage() {
                 </svg>
                 <span className="hidden sm:inline">New Session</span>
               </button>
+              <button
+                onClick={() => handleOpenRecover(projectId ?? '')}
+                title="Recuperar conversa"
+                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                  <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M2.5 2v2h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="hidden sm:inline">Recover</span>
+              </button>
             </>
           ) : showCanvas ? (
             /* Canvas hub: create canvas + new session */
@@ -924,6 +980,17 @@ export default function SessionTerminalPage() {
                 </svg>
                 <span className="hidden sm:inline">New Session</span>
               </button>
+              <button
+                onClick={() => handleOpenRecover(projectId ?? '')}
+                title="Recuperar conversa"
+                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                  <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M2.5 2v2h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="hidden sm:inline">Recover</span>
+              </button>
             </>
           ) : (
             /* Terminal: new session + reconnect + fit + kill */
@@ -937,6 +1004,17 @@ export default function SessionTerminalPage() {
                   <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
                 <span className="hidden sm:inline">New Session</span>
+              </button>
+              <button
+                onClick={() => handleOpenRecover(projectId ?? '')}
+                title="Recuperar conversa"
+                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                  <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M2.5 2v2h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="hidden sm:inline">Recover</span>
               </button>
               <button
                 onClick={() => termRef.current?.reconnect()}
@@ -987,6 +1065,7 @@ export default function SessionTerminalPage() {
               onSelect={handleSelect}
               onClose={() => persistRail(false)}
               onCreateSession={handleCreateSession}
+              onRecover={handleOpenRecover}
               creating={creating}
               onRename={handleRename}
               isMobile={false}
@@ -1015,6 +1094,7 @@ export default function SessionTerminalPage() {
                 onSelect={handleSelect}
                 onClose={() => persistRail(false)}
                 onCreateSession={handleCreateSession}
+                onRecover={handleOpenRecover}
                 creating={creating}
                 onRename={handleRename}
                 isMobile
@@ -1332,6 +1412,12 @@ export default function SessionTerminalPage() {
           </div>
         </div>
       )}
+
+      <RecoverConversationModal
+        open={recoverModalOpen}
+        onClose={() => setRecoverModalOpen(false)}
+        onRecover={handleRecover}
+      />
     </div>
   );
 }

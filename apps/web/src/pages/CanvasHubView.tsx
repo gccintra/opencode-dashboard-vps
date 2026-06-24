@@ -5,6 +5,7 @@ import { MobileKeyboard, TerminalStatusBar } from '../components/Terminal';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
+import { useSessionEvents } from '../hooks/useSessionEvents';
 
 /* ── Types ── */
 
@@ -266,6 +267,9 @@ export default function CanvasHubViewPage() {
     }
   }, [id]);
 
+  // Global session-events channel — replaces the old 15s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
+
   /* ── Fetch sessions from all projects ── */
   const fetchSessions = useCallback(async () => {
     try {
@@ -301,14 +305,16 @@ export default function CanvasHubViewPage() {
 
   useEffect(() => {
     Promise.all([fetchCanvas(), fetchSessions()]).finally(() => setLoading(false));
-    const id = setInterval(fetchSessions, 15_000);
+    // Push-based sync: re-fetch on any server-reported session change (<1s).
+    const unsubscribe = onSessionEvent(() => fetchSessions());
+    // Fallback safety net (deprecated, kept for 1 release) — spec Risk #4.
     const handler = () => fetchSessions();
     window.addEventListener('sessions-changed', handler);
     return () => {
-      clearInterval(id);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handler);
     };
-  }, [fetchCanvas, fetchSessions]);
+  }, [fetchCanvas, fetchSessions, onSessionEvent]);
 
   /* ── Layout change ── */
   const handleLayoutChange = useCallback(

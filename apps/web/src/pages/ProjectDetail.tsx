@@ -38,6 +38,7 @@ import CodeEditor from '../components/FileManager/CodeEditor';
 import { CanvasGrid } from '../components/Canvas/CanvasGrid';
 import { CanvasMobile, type CanvasMobileHandle } from '../components/Canvas/CanvasMobile';
 import { useCanvasState } from '../hooks/useCanvasState';
+import { useSessionEvents } from '../hooks/useSessionEvents';
 import { CANVAS_TEMPLATES, getTemplate } from '../components/Canvas/canvasTemplates';
 
 const ResourceConfig = lazy(() => import('../components/ResourceConfig/ResourceConfig'));
@@ -878,6 +879,9 @@ export default function ProjectDetailPage() {
   }, [projectId]);
 
   /* ── Fetch sessions ── */
+  // Global session-events channel — replaces the old 10s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
+
   const fetchSessions = useCallback(async () => {
     if (!projectId || abortedRef.current) return;
     try {
@@ -945,12 +949,18 @@ export default function ProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Poll every 10 s
+  // Push-based sync: re-fetch whenever the server reports a session change.
+  // Replaces the old 10s HTTP poll (changes in any tab arrive in <1s).
   useEffect(() => {
-    const id = setInterval(fetchSessions, 10_000);
-    return () => clearInterval(id);
-  }, [fetchSessions]);
+    const unsubscribe = onSessionEvent(() => {
+      fetchSessions();
+    });
+    return unsubscribe;
+  }, [fetchSessions, onSessionEvent]);
 
+  // Fallback safety net (deprecated, kept for 1 release): the in-page
+  // 'sessions-changed' custom event still triggers a refresh if the events WS
+  // is down during a local mutation (spec Risk #4).
   useEffect(() => {
     const handler = () => {
       fetchSessions();

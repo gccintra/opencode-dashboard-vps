@@ -37,6 +37,7 @@ import {
 import { getActiveResourcesForProject } from './resources';
 import { getDb } from '../db/client';
 import { existsSync } from 'node:fs';
+import { broadcastSessionEvent } from '../ws/events';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbRow = Record<string, any>;
@@ -75,6 +76,7 @@ export function buildCliCommand(opts: {
   agent?: string;
   agentSource?: 'agents' | 'commands';
   effort?: string;
+  resumeConversationId?: string;
 }): string {
   const runtime = opts.agentType === 'opencode' ? 'opencode' : 'claude';
   const parts: string[] = [runtime];
@@ -95,6 +97,16 @@ export function buildCliCommand(opts: {
   const effort = opts.effort?.trim();
   if (effort) {
     parts.push(runtime === 'opencode' ? '--variant' : '--effort', shellQuote(effort));
+  }
+
+  // Resume: claude uses --resume <uuid>; opencode uses --session <ses_id>.
+  const resumeConversationId = opts.resumeConversationId?.trim();
+  if (resumeConversationId) {
+    if (runtime === 'claude') {
+      parts.push('--resume', shellQuote(resumeConversationId));
+    } else {
+      parts.push('--session', shellQuote(resumeConversationId));
+    }
   }
 
   return `${parts.join(' ')}; exec zsh 2>&1 || exec bash\n`;
@@ -185,6 +197,8 @@ function wireSessionExit(sessionId: string): void {
     } catch {
       /* non-fatal */
     }
+    // Notify every connected events client so lists update without polling.
+    broadcastSessionEvent({ action: 'exited', sessionId });
     void code;
   });
 }
@@ -539,6 +553,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             agent: body?.agent,
             agentSource: body?.agentSource,
             effort: body?.effort,
+            resumeConversationId: body?.resumeConversationId,
           });
 
           // tmux-backed spawn: the worker runs a thin `tmux new-session -A`
@@ -593,8 +608,17 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           //    be reflected, not silently respawned.
           wireSessionExit(sessionId);
 
+          const createdMeta = sessionMeta.get(sessionId)!;
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({
+            action: 'created',
+            sessionId,
+            projectId: createdMeta.projectId,
+            name: createdMeta.name,
+          });
+
           set.status = 201;
-          return sessionMeta.get(sessionId)!;
+          return createdMeta;
         } catch (err) {
           set.status = 500;
           return { error: (err as Error).message };
@@ -610,6 +634,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           agent: t.Optional(t.String()),
           agentSource: t.Optional(t.Union([t.Literal('agents'), t.Literal('commands')])),
           effort: t.Optional(t.String()),
+          resumeConversationId: t.Optional(t.String()),
         }),
       },
     )
@@ -701,6 +726,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
         } catch {
           // non-fatal
         }
+        // Notify every connected events client so lists update without polling.
+        broadcastSessionEvent({ action: 'renamed', sessionId, name: meta.name });
         return meta;
       },
       {
@@ -924,6 +951,11 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           }
         }
 
+        if (toRemove.length > 0) {
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({ action: 'cleared', projectId, count: toRemove.length });
+        }
+
         return { removed: toRemove.length };
       } catch (err) {
         set.status = 500;
@@ -951,6 +983,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           // lingering tmux session, then clean up the row.
           await tmuxKillSession(sessionId);
           getDb().run('DELETE FROM sessions WHERE id = ?', [sessionId]);
+          // Notify every connected events client so lists update without polling.
+          broadcastSessionEvent({ action: 'closed', sessionId });
           return { success: true };
         }
 
@@ -981,6 +1015,8 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
         } catch {
           // non-fatal
         }
+        // Notify every connected events client so lists update without polling.
+        broadcastSessionEvent({ action: 'closed', sessionId });
         return { success: true };
       } catch (err) {
         set.status = 500;

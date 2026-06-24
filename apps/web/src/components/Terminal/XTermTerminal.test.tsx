@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
-import { XTermTerminal } from './XTermTerminal';
+import { createRef } from 'react';
+import { XTermTerminal, type XTermTerminalHandle } from './XTermTerminal';
+import { Terminal } from '@xterm/xterm';
 
 /* ── Mocks ── */
 
@@ -20,7 +22,7 @@ const mockTerminal = {
   cols: 80,
   rows: 24,
   // Additional xterm methods used by XTermTerminal
-  parser: { registerOscHandler: vi.fn() },
+  parser: { registerOscHandler: vi.fn(), registerCsiHandler: vi.fn(() => ({ dispose: vi.fn() })) },
   attachCustomKeyEventHandler: vi.fn(),
   onSelectionChange: vi.fn(() => ({ dispose: vi.fn() })),
   refresh: vi.fn(),
@@ -64,6 +66,7 @@ vi.mock('@xterm/addon-webgl', () => ({
   WebglAddon: vi.fn().mockImplementation(() => ({
     activate: vi.fn(),
     dispose: vi.fn(),
+    onContextLoss: vi.fn(),
   })),
 }));
 
@@ -147,6 +150,25 @@ class MockResizeObserver {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).ResizeObserver = MockResizeObserver;
 
+/* ── IntersectionObserver mock (jsdom lacks it) ── */
+class MockIntersectionObserver {
+  constructor(_cb: IntersectionObserverCallback) {}
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn(() => []);
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).IntersectionObserver = MockIntersectionObserver;
+
+// jsdom reports clientWidth=0 for every element, which makes the terminal's
+// fit/flush path (gated on `container.clientWidth > 0`) a no-op. Report a
+// non-zero width so resize/flush logic actually runs under test.
+Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+  configurable: true,
+  get: () => 800,
+});
+
 /* ── onData mock factory (returns a disposable) ── */
 
 // We configure `onData` per-test to return a disposable with a tracked dispose().
@@ -194,6 +216,11 @@ async function flushOpen(): Promise<void> {
     if (last && last.readyState === 0) {
       last.simulateOpen();
     }
+  });
+  // The buffer flush is gated on the poll measuring a STABLE container size
+  // (two equal reads, ~200ms). Advance past that so terminalReady is set.
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300);
   });
 }
 
@@ -313,9 +340,9 @@ describe('XTermTerminal', () => {
     act(() => {
       resizeCallbacks[0]([] as ResizeObserverEntry[], mockObserver as unknown as ResizeObserver);
     });
-    // Flush the requestAnimationFrame that debounces ResizeObserver callbacks.
+    // Flush the 300ms ResizeObserver debounce (CLAUDE.md: fit ≥300ms after layout).
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(50);
+      await vi.advanceTimersByTimeAsync(400);
     });
 
     expect(mockFit.fit).toHaveBeenCalled();
@@ -358,13 +385,113 @@ describe('XTermTerminal', () => {
     act(() => {
       resizeCallbacks[0]([] as ResizeObserverEntry[], mockObserver as unknown as ResizeObserver);
     });
-    // Flush the requestAnimationFrame that debounces ResizeObserver callbacks.
+    // Flush the 300ms ResizeObserver debounce.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(50);
+      await vi.advanceTimersByTimeAsync(400);
     });
 
     expect(second).toHaveBeenCalledWith(100, 30);
     expect(first).not.toHaveBeenCalled();
+  });
+
+  /* ── Canvas garble fix: 300ms ResizeObserver debounce + resync() wiggle ── */
+
+  // Pull the {type:'resize'} SIGWINCH messages out of the WS send mock.
+  function resizeMessages(ws: MockWSInstance): Array<{ type: string; cols: number; rows: number }> {
+    return ws.send.mock.calls
+      .map((c) => c[0])
+      .filter((d): d is string => typeof d === 'string')
+      .map((d) => {
+        try {
+          return JSON.parse(d);
+        } catch {
+          return null;
+        }
+      })
+      .filter((m): m is { type: string; cols: number; rows: number } => !!m && m.type === 'resize');
+  }
+
+  const fireResize = () =>
+    resizeCallbacks[0]([] as ResizeObserverEntry[], mockObserver as unknown as ResizeObserver);
+
+  it('debounces the ResizeObserver by 300ms (honors the CLAUDE.md fit≥300ms rule)', async () => {
+    render(<XTermTerminal sessionId="s1" />);
+    await flushOpen();
+    const ws = wsInstances[0];
+
+    // A genuine new size is sent ONLY after the 300ms debounce settles. flushOpen
+    // already sent 80x24, so 100x30 is a real change notifyResizeIfChanged emits.
+    mockTerminal.cols = 100;
+    mockTerminal.rows = 30;
+    ws.send.mockClear();
+    act(() => {
+      fireResize();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(resizeMessages(ws).some((m) => m.cols === 100 && m.rows === 30)).toBe(false);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100); // total 350ms > 300ms debounce
+    });
+    expect(resizeMessages(ws).some((m) => m.cols === 100 && m.rows === 30)).toBe(true);
+  });
+
+  it('resize() forces a SIGWINCH (rows-1 → rows) even when cols/rows are unchanged (busts dedup)', async () => {
+    const ref = createRef<XTermTerminalHandle>();
+    render(<XTermTerminal ref={ref} sessionId="s1" />);
+    await flushOpen();
+    const ws = wsInstances[0];
+
+    mockTerminal.cols = 120;
+    mockTerminal.rows = 40;
+    // First resync establishes lastSentDims = 120x40.
+    act(() => {
+      ref.current?.resize();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    ws.send.mockClear();
+    // Second resync at the SAME size: notifyResizeIfChanged dedups (no send),
+    // but forceWiggle must still emit a fresh dedup-busting SIGWINCH pair.
+    act(() => {
+      ref.current?.resize();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    const msgs = resizeMessages(ws);
+    expect(msgs).toContainEqual({ type: 'resize', cols: 120, rows: 39 });
+    expect(msgs).toContainEqual({ type: 'resize', cols: 120, rows: 40 });
+  });
+
+  it('collapses rapid ResizeObserver events into a single resize send (no per-event wiggle)', async () => {
+    render(<XTermTerminal sessionId="s1" />);
+    await flushOpen();
+    const ws = wsInstances[0];
+
+    mockTerminal.cols = 100;
+    mockTerminal.rows = 30;
+    ws.send.mockClear();
+    // 3 rapid resize events inside the debounce window collapse into ONE settle.
+    act(() => {
+      fireResize();
+      fireResize();
+      fireResize();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+
+    // Exactly one send of the new size — and NO wiggle (rows-1) frame, since the
+    // ResizeObserver path no longer fires forceWiggle.
+    const sends = resizeMessages(ws).filter((m) => m.cols === 100 && m.rows === 30);
+    expect(sends).toHaveLength(1);
+    expect(resizeMessages(ws).some((m) => m.rows === 29)).toBe(false);
   });
 
   it('uses fontSize=14 by default when no prop is passed', () => {
@@ -708,6 +835,36 @@ describe('XTermTerminal', () => {
       });
 
       expect(mockTerminal.write).not.toHaveBeenCalledWith(MOUSE_RESET);
+    });
+  });
+
+  /* ── WebGL atlas isolation (Canvas garble regression guard) ── */
+  describe('WebGL atlas isolation', () => {
+    it('gives each terminal a UNIQUE fontFamily so xterm never shares one TextureAtlas', async () => {
+      // Canvas garble root cause: xterm's WebGL addon shares ONE TextureAtlas
+      // across terminals whose render config is `configEquals` (fontFamily is
+      // compared exactly, un-normalized). One slot's clearTextureAtlas() then
+      // blanks every sibling's glyphs. Fix = a unique trailing fontFamily
+      // fallback per terminal. If a future "cleanup" deletes that suffix
+      // thinking it's junk, the garble silently returns — this test fails in CI
+      // instead. JetBrains Mono still resolves first, so metrics are identical.
+      render(<XTermTerminal sessionId="iso-a" />);
+      await flushOpen();
+      render(<XTermTerminal sessionId="iso-b" />);
+      await flushOpen();
+
+      const families = vi
+        .mocked(Terminal)
+        .mock.calls.map((c) => (c[0] as { fontFamily?: string } | undefined)?.fontFamily)
+        .filter((f): f is string => typeof f === 'string');
+
+      expect(families.length).toBeGreaterThanOrEqual(2);
+      // Identical real font (same metrics)…
+      families.forEach((f) => expect(f.startsWith("'JetBrains Mono'")).toBe(true));
+      // …but the atlas-iso fallback is present and UNIQUE per terminal.
+      const isoSuffixes = families.map((f) => f.match(/alf-atlas-iso-\d+/)?.[0]);
+      isoSuffixes.forEach((s) => expect(s).toBeTruthy());
+      expect(new Set(isoSuffixes).size).toBe(isoSuffixes.length);
     });
   });
 });

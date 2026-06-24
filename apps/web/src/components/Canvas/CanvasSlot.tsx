@@ -269,14 +269,15 @@ export function CanvasSlot({
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDimsRef = useRef<{ cols: number; rows: number } | null>(null);
 
-  // TUI sessions replay their buffer at the slot dimensions, but opencode may
-  // not process the first SIGWINCH while busy mid-task. Extra resize at 1.5s
-  // and 3s guarantees opencode re-renders once idle.
+  // resize() runs the terminal's full corrective re-sync (re-fit + dedup-busting
+  // SIGWINCH + atlas rebuild). Two shots: 500ms fires just after the 200ms panel
+  // CSS transition settles (near-instant fix on open); 1.8s covers a TUI that was
+  // busy mid-task and ignored the first SIGWINCH.
   useEffect(() => {
     if (!sessionId) return;
-    const t1 = setTimeout(() => terminalRef.current?.resize(), 1500);
-    const t2 = setTimeout(() => terminalRef.current?.resize(), 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t0 = setTimeout(() => terminalRef.current?.resize(), 500);
+    const t1 = setTimeout(() => terminalRef.current?.resize(), 1800);
+    return () => { clearTimeout(t0); clearTimeout(t1); };
   }, [sessionId]);
 
   const handleResize = useCallback(
@@ -322,7 +323,7 @@ export function CanvasSlot({
     ? isOver
       ? 'border-[#b3e502]'
       : isFocused
-        ? 'border-[#b3e502]'
+        ? 'border-[rgba(179,229,2,0.35)]'
         : 'border-white/[0.07]'
     : isOver
       ? 'border-[#b3e502] border-solid'
@@ -355,7 +356,10 @@ export function CanvasSlot({
               onFit={() => { terminalRef.current?.resize(); terminalRef.current?.reconnect(); }}
             />
           </div>
-          <div className="relative flex-1 min-h-0 overflow-hidden">
+          <div
+            className="relative flex-1 min-h-0 overflow-hidden"
+            style={{ backgroundColor: theme?.background ?? '#1e1e2e' }}
+          >
             <XTermTerminal
               key={sessionId}
               ref={terminalRef}

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
+import { useSessionEvents } from '../hooks/useSessionEvents';
+import RecoverConversationModal from '../components/RecoverConversationModal';
 
 /* ── Types ── */
 
@@ -389,7 +391,12 @@ export default function SessionsPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [creating, setCreating] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [recoverModalOpen, setRecoverModalOpen] = useState(false);
+  const [recoverProjectId, setRecoverProjectId] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
+
+  // Global session-events channel — replaces the old 15s HTTP poll.
+  const { onSessionEvent } = useSessionEvents();
 
   /* ── Fetch ── */
   const fetchAll = useCallback(async (manual?: boolean) => {
@@ -438,14 +445,16 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 15_000);
+    // Push-based sync: re-fetch on any server-reported session change (<1s).
+    const unsubscribe = onSessionEvent(() => fetchAll());
+    // Fallback safety net (deprecated, kept for 1 release) — spec Risk #4.
     const handleChanged = () => fetchAll();
     window.addEventListener('sessions-changed', handleChanged);
     return () => {
-      clearInterval(interval);
+      unsubscribe();
       window.removeEventListener('sessions-changed', handleChanged);
     };
-  }, [fetchAll]);
+  }, [fetchAll, onSessionEvent]);
 
   /* ── Create session ── */
   const handleCreate = useCallback(
@@ -473,6 +482,30 @@ export default function SessionsPage() {
       }
     },
     [creating, navigate, groups],
+  );
+
+  /* ── Recover conversation ── */
+  const handleRecover = useCallback(
+    async (projectId: string, conversationId: string, sessionName: string, agentType: 'claude' | 'opencode') => {
+      const session = await apiFetch<{ sessionId: string }>(
+        `/api/projects/${projectId}/sessions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: sessionName,
+            resumeConversationId: conversationId,
+            agentType,
+          }),
+        },
+      );
+      window.dispatchEvent(new Event('sessions-changed'));
+      const projectName = groups.find((g) => g.project.id === projectId)?.project.name ?? '';
+      setRecoverModalOpen(false);
+      navigate(`/sessions/${projectId}/${session.sessionId}`, {
+        state: { projectName },
+      });
+    },
+    [navigate, groups],
   );
 
   /* ── Rename session ── */
@@ -687,6 +720,31 @@ export default function SessionsPage() {
                     ) : (
                       <PlusIcon />
                     )}
+                  </button>
+                  {/* Recover conversation button */}
+                  <button
+                    onClick={() => {
+                      setRecoverProjectId(project.id);
+                      setRecoverModalOpen(true);
+                    }}
+                    className="flex w-[32px] shrink-0 items-center justify-center text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all"
+                    title={`Recover conversation in ${project.name}`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path
+                        d="M2.5 6.5A4 4 0 1 0 4 3.2"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M2.5 2v2h2"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                 </div>
               );
@@ -927,6 +985,12 @@ export default function SessionsPage() {
           </div>
         )}
       </div>
+
+      <RecoverConversationModal
+        open={recoverModalOpen}
+        onClose={() => setRecoverModalOpen(false)}
+        onRecover={handleRecover}
+      />
     </div>
   );
 }

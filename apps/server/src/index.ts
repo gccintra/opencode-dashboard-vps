@@ -15,8 +15,10 @@ import { agentsRoutes } from './routes/agents';
 import { sessionsRoutes, loadSessionsFromDb, reconcileTmuxSessions } from './routes/sessions';
 import { tmuxAvailable, tmuxHasSession } from './pty/tmux';
 import { resourcesRoutes } from './routes/resources';
+import { conversationsRoutes } from './routes/conversations';
 import { filesRoutes, filesBaseRoutes } from './routes/files';
 import { wsRoutes } from './ws/handler';
+import { eventsWsRoutes } from './ws/events';
 import { getPtyManager } from './pty/manager';
 import { systemRoutes } from './routes/system';
 import { canvasesRoutes } from './routes/canvases';
@@ -162,10 +164,12 @@ app
   .use(taskLinksRoutes)
   .use(agentsRoutes)
   .use(resourcesRoutes)
+  .use(conversationsRoutes)
   .use(filesRoutes)
   .use(filesBaseRoutes)
   .use(githubRoutes)
   .use(canvasesRoutes)
+  .use(eventsWsRoutes)
   .use(wsRoutes);
 
 // Observability — server metrics + db stats
