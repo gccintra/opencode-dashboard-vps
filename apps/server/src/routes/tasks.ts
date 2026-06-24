@@ -746,19 +746,13 @@ export const tasksRoutes = new Elysia({ prefix: '/api' })
         const column = existing['column'] as string;
         const projectId = existing.project_id as string;
 
-        // Shift other tasks: if moving down, decrement those between; if moving up, increment those between
-        const oldOrder = existing.sort_order as number;
-        if (newSortOrder > oldOrder) {
-          db.run(
-            `UPDATE tasks SET sort_order = sort_order - 1 WHERE project_id = ? AND "column" = ? AND sort_order > ? AND sort_order <= ?`,
-            [projectId, column, oldOrder, newSortOrder],
-          );
-        } else if (newSortOrder < oldOrder) {
-          db.run(
-            `UPDATE tasks SET sort_order = sort_order + 1 WHERE project_id = ? AND "column" = ? AND sort_order >= ? AND sort_order < ?`,
-            [projectId, column, newSortOrder, oldOrder],
-          );
-        }
+        // Make room at newSortOrder: shift every other task in the column that sits
+        // at or above newSortOrder up by 1, then place this task at newSortOrder.
+        // This is direction-agnostic (works for same-column up/down and cross-column).
+        db.run(
+          `UPDATE tasks SET sort_order = sort_order + 1 WHERE project_id = ? AND "column" = ? AND sort_order >= ? AND id != ?`,
+          [projectId, column, newSortOrder, id],
+        );
 
         db.run('UPDATE tasks SET sort_order = ?, updated_at = ? WHERE id = ?', [
           newSortOrder,

@@ -76,6 +76,7 @@ export function buildCliCommand(opts: {
   agent?: string;
   agentSource?: 'agents' | 'commands';
   effort?: string;
+  resumeConversationId?: string;
 }): string {
   const runtime = opts.agentType === 'opencode' ? 'opencode' : 'claude';
   const parts: string[] = [runtime];
@@ -96,6 +97,16 @@ export function buildCliCommand(opts: {
   const effort = opts.effort?.trim();
   if (effort) {
     parts.push(runtime === 'opencode' ? '--variant' : '--effort', shellQuote(effort));
+  }
+
+  // Resume: claude uses --resume <uuid>; opencode uses --session <ses_id>.
+  const resumeConversationId = opts.resumeConversationId?.trim();
+  if (resumeConversationId) {
+    if (runtime === 'claude') {
+      parts.push('--resume', shellQuote(resumeConversationId));
+    } else {
+      parts.push('--session', shellQuote(resumeConversationId));
+    }
   }
 
   return `${parts.join(' ')}; exec zsh 2>&1 || exec bash\n`;
@@ -542,6 +553,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             agent: body?.agent,
             agentSource: body?.agentSource,
             effort: body?.effort,
+            resumeConversationId: body?.resumeConversationId,
           });
 
           // tmux-backed spawn: the worker runs a thin `tmux new-session -A`
@@ -622,6 +634,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           agent: t.Optional(t.String()),
           agentSource: t.Optional(t.Union([t.Literal('agents'), t.Literal('commands')])),
           effort: t.Optional(t.String()),
+          resumeConversationId: t.Optional(t.String()),
         }),
       },
     )
