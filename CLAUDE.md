@@ -210,3 +210,9 @@ cd apps/web && bunx vitest run --coverage src/path/to/Component.test.tsx
 **Discovery:** Under the repo's default Node 18, vitest crashes with `crypto is not defined` as soon as Elysia is imported — Node 18 lacks the global `crypto` that Elysia (and the test setup) relies on. Node 22 has it.
 **Solution:** Run every vitest invocation with Node 22 on PATH, e.g. `PATH="/root/.nvm/versions/node/v22.22.3/bin:$PATH" bunx vitest run` (adjust the nvm path per machine). This is the test runner only — the pty-worker still needs Node 18 at runtime (node-pty ABI); do not change the worker's Node.
 **Source:** task-replace-sessions-polling-with-ws (test phase)
+
+### 2026-06-23 - Testing: Reassigning `process.env` Breaks `os.homedir()`
+**Context:** Testing a route that scans `~/.claude/projects` (resolved via `os.homedir()`) by pointing HOME at a temp dir.
+**Discovery:** `process.env = { ...OLD_ENV }` (reassigning the whole object) detaches `process.env` from the native libuv environ. Node's `os.homedir()` reads the native environ (not the JS object), so after a reassignment it ignores any `process.env.HOME` you set and returns the real home — the test then scans the machine's real conversation history. Confirmed in Node 22. Setting `process.env.HOME = x` in-place (without reassigning the object) works fine.
+**Solution:** In tests that need `os.homedir()` (or anything libuv-backed) to honor an env override, mutate `process.env` in place (`process.env.HOME = tmp`) and restore in place in `afterEach`. Never `process.env = {...}`. Also: resolve env-derived paths at call time inside the route (helper fn), not at module-load, so `vi.resetModules()` + re-import isn't even required.
+**Source:** task-recover-conversations (conversations route test)
