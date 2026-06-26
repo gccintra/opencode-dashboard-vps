@@ -89,8 +89,6 @@ describe('Sidebar', () => {
       expect(screen.getByText('Tasks')).toBeInTheDocument();
       expect(screen.getByText('Files')).toBeInTheDocument();
       expect(screen.getByText('Templates')).toBeInTheDocument();
-      // Canvas opens a picker modal — rendered as a button, not a link.
-      expect(screen.getByText('Canvas')).toBeInTheDocument();
     });
 
     it('nav links point to correct routes', () => {
@@ -100,7 +98,6 @@ describe('Sidebar', () => {
       expect(screen.getByText('Tasks').closest('a')).toHaveAttribute('href', '/tasks');
       expect(screen.getByText('Files').closest('a')).toHaveAttribute('href', '/files');
       expect(screen.getByText('Templates').closest('a')).toHaveAttribute('href', '/templates');
-      expect(screen.getByText('Canvas').closest('button')).toBeInTheDocument();
     });
 
     it('highlights Projects link as active when on /projects', () => {

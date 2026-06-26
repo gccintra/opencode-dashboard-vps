@@ -25,6 +25,7 @@ const mockTerminal = {
   parser: { registerOscHandler: vi.fn(), registerCsiHandler: vi.fn(() => ({ dispose: vi.fn() })) },
   attachCustomKeyEventHandler: vi.fn(),
   onSelectionChange: vi.fn(() => ({ dispose: vi.fn() })),
+  onRender: vi.fn(() => ({ dispose: vi.fn() })),
   refresh: vi.fn(),
   focus: vi.fn(),
   reset: vi.fn(),
