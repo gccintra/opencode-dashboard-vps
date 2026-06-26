@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Elysia } from 'elysia';
-import { mkdirSync, writeFileSync, rmSync, mkdtempSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, mkdtempSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -167,7 +167,7 @@ describe('tasks routes', () => {
       expect(row?.title).toBe('DB Test');
     });
 
-    it('writes .md file to project directory', async () => {
+    it('does not write a .md sidecar file on create', async () => {
       const res = await app.handle(
         authReq(token, `/api/projects/${projectId}/tasks`, {
           method: 'POST',
@@ -175,11 +175,9 @@ describe('tasks routes', () => {
         }),
       );
       const task = (await res.json()) as { id: string };
+      // The .opencode/tasks/*.md sidecar is no longer written — tasks live in SQLite.
       const mdPath = join(testDir, '.opencode', 'tasks', `${task.id}.md`);
-      expect(existsSync(mdPath)).toBe(true);
-      const content = readFileSync(mdPath, 'utf-8');
-      expect(content).toContain('title: "File Test"');
-      expect(content).toContain('status: backlog');
+      expect(existsSync(mdPath)).toBe(false);
     });
 
     it('returns 400 when title is empty', async () => {
@@ -315,16 +313,18 @@ describe('tasks routes', () => {
       expect(updated.description).toBe('new desc');
     });
 
-    it('updates .md file on edit', async () => {
-      await app.handle(
+    it('does not write a .md sidecar file on edit', async () => {
+      const res = await app.handle(
         authReq(token, `/api/tasks/${taskId}`, {
           method: 'PUT',
           body: { title: 'Edited Title' },
         }),
       );
+      const updated = (await res.json()) as { title: string };
+      expect(updated.title).toBe('Edited Title');
+      // No .md sidecar — the edit is persisted only in SQLite.
       const mdPath = join(testDir, '.opencode', 'tasks', `${taskId}.md`);
-      const content = readFileSync(mdPath, 'utf-8');
-      expect(content).toContain('title: "Edited Title"');
+      expect(existsSync(mdPath)).toBe(false);
     });
 
     it('returns 400 for empty title', async () => {
@@ -458,16 +458,17 @@ describe('tasks routes', () => {
       expect(res.status).toBe(404);
     });
 
-    it('updates .md file after move', async () => {
-      await app.handle(
+    it('does not write a .md sidecar file after move', async () => {
+      const res = await app.handle(
         authReq(token, `/api/tasks/${taskId}/move`, {
           method: 'PUT',
           body: { column: 'done' },
         }),
       );
+      expect(res.status).toBe(200);
+      // No .md sidecar — the move is persisted only in SQLite.
       const mdPath = join(testDir, '.opencode', 'tasks', `${taskId}.md`);
-      const content = readFileSync(mdPath, 'utf-8');
-      expect(content).toContain('status: done');
+      expect(existsSync(mdPath)).toBe(false);
     });
   });
 

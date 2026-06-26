@@ -54,6 +54,24 @@ vi.mock('../pty/manager', () => ({
   resetPtyManager: vi.fn(),
 }));
 
+// ── routes/sessions + tmux mocks ────────────────────────────────────
+// handleOpen revives stranded sessions via ensureSessionAttached and the
+// exit callback probes tmuxHasSession. Both are real modules pulled in by
+// handler.ts; mock them so the handler's async paths are deterministic.
+
+const mockEnsureSessionAttached = vi.hoisted(() => vi.fn());
+const mockGetSessionMetaById = vi.hoisted(() => vi.fn());
+const mockTmuxHasSession = vi.hoisted(() => vi.fn());
+
+vi.mock('../routes/sessions', () => ({
+  ensureSessionAttached: mockEnsureSessionAttached,
+  getSessionMetaById: mockGetSessionMetaById,
+}));
+
+vi.mock('../pty/tmux', () => ({
+  tmuxHasSession: mockTmuxHasSession,
+}));
+
 // ── suite ───────────────────────────────────────────────────────────
 
 describe('WebSocket handler', () => {
@@ -112,6 +130,15 @@ describe('WebSocket handler', () => {
     // 'finished' so handleOpen skips the connect-time status send by default;
     // tests that care about the status message override this.
     mockManager.getDetectedStatus.mockReturnValue('finished');
+    // Revive/exit deps: by default a stranded session can't be revived and the
+    // tmux session is gone, so handleOpen rejects unknown sessions and the exit
+    // callback forwards the exit frame. Tests override as needed.
+    mockEnsureSessionAttached.mockReset();
+    mockEnsureSessionAttached.mockResolvedValue(false);
+    mockGetSessionMetaById.mockReset();
+    mockGetSessionMetaById.mockReturnValue(null);
+    mockTmuxHasSession.mockReset();
+    mockTmuxHasSession.mockResolvedValue(false);
     mockManager.onSessionData.mockImplementation((id: string, cb: (chunk: string) => void) => {
       if (!dataCallbacks.has(id)) dataCallbacks.set(id, []);
       dataCallbacks.get(id)!.push(cb);
@@ -246,7 +273,7 @@ describe('WebSocket handler', () => {
       const { handleOpen, hasConnection } = await import('./handler');
 
       const ws = makeMockWs('ghost');
-      handleOpen(ws);
+      await handleOpen(ws);
 
       expect(ws.closed).toEqual({
         code: 4004,
@@ -290,8 +317,12 @@ describe('WebSocket handler', () => {
       const exitCb = exitCallbacks.get('s-1')?.[0];
       exitCb?.(0);
 
+      // The exit callback probes tmuxHasSession asynchronously before it
+      // forwards the exit frame and closes; wait for that to settle.
+      await vi.waitFor(() => {
+        expect(ws.closed).not.toBeNull();
+      });
       expect(ws.sent).toContain(JSON.stringify({ type: 'exit', code: 0 }));
-      expect(ws.closed).not.toBeNull();
     });
   });
 
