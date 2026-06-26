@@ -29,6 +29,8 @@ vi.mock('../components/Terminal', () => ({
     capturedFontSize = fontSize;
     return <div data-testid="mock-terminal">Terminal: {sessionId}</div>;
   },
+  // EmergencyPage also imports ThemePicker from this barrel.
+  ThemePicker: () => <div data-testid="mock-theme-picker" />,
 }));
 
 /* ── Helpers ── */

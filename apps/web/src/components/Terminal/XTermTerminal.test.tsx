@@ -270,16 +270,21 @@ describe('XTermTerminal', () => {
     expect(onDataDisposableDisposed).toBe(true);
   });
 
-  it('shows a "Connecting…" status badge while WebSocket is connecting, then hides on open', async () => {
+  it('keeps the status badge hidden while connecting and once connected', async () => {
     render(<XTermTerminal sessionId="s1" />);
 
-    const badge = screen.getByTestId('xterm-status-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAttribute('data-status', 'connecting');
-    expect(badge).toHaveTextContent('Connecting');
+    // The badge is gated on `terminalReady`, which only flips after the
+    // terminal has opened — so nothing shows during the initial connect.
+    expect(screen.queryByTestId('xterm-status-badge')).not.toBeInTheDocument();
 
     await flushOpen();
+    await act(async () => {
+      // Fire the terminal-ready safety net (1500ms) so the badge would render
+      // if the status warranted it.
+      await vi.advanceTimersByTimeAsync(1500);
+    });
 
+    // Connected → no badge.
     expect(screen.queryByTestId('xterm-status-badge')).not.toBeInTheDocument();
   });
 
@@ -552,6 +557,11 @@ describe('XTermTerminal', () => {
   it('shows a "Reconnecting…" badge with attempt counter on abnormal close', async () => {
     render(<XTermTerminal sessionId="s1" />);
     await flushOpen();
+    // Reveal the terminal (terminalReady) so the badge can render once a
+    // non-connected status appears.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
     // Badge is hidden while connected.
     expect(screen.queryByTestId('xterm-status-badge')).not.toBeInTheDocument();
 
@@ -568,6 +578,9 @@ describe('XTermTerminal', () => {
   it('shows a "Disconnected" badge on a clean normal close (code 1000)', async () => {
     render(<XTermTerminal sessionId="s1" />);
     await flushOpen();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
     expect(screen.queryByTestId('xterm-status-badge')).not.toBeInTheDocument();
 
     await act(async () => {
@@ -719,12 +732,12 @@ describe('XTermTerminal', () => {
     expect(lastTerminalOptions).toHaveProperty('lineHeight', 1.2);
   });
 
-  it('passes scrollback=0 to the Terminal constructor', async () => {
+  it('passes scrollback=5000 to the Terminal constructor', async () => {
     render(<XTermTerminal sessionId="s1" />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(lastTerminalOptions).toHaveProperty('scrollback', 0);
+    expect(lastTerminalOptions).toHaveProperty('scrollback', 5000);
   });
 
   it('passes convertEol=false to the Terminal constructor', async () => {

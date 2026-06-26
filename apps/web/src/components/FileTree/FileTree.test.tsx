@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FileTree from './FileTree';
+import { FileClipboardProvider } from '../../context/FileClipboardContext';
+
+// FileTree calls useGlobalClipboard, which requires FileClipboardProvider.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: FileClipboardProvider });
 
 /* ── Mocks ── */
 
@@ -119,19 +124,13 @@ describe('FileTree', () => {
     });
   });
 
-  it('shows search bar on Ctrl+P toggle click', async () => {
+  it('shows an always-visible inline search input', async () => {
     mockApiFetch.mockResolvedValueOnce([]);
 
     render(<FileTree projectId="proj-1" onFileOpen={mockFileOpen} />);
 
+    // Search is now an inline filter in the toolbar — no toggle button.
     await waitFor(() => {
-      expect(screen.getByTestId('search-toggle')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId('search-toggle'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('search-bar')).toBeInTheDocument();
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
   });
