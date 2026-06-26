@@ -39,7 +39,7 @@
  */
 
 import type { WorkerTransport } from './transport';
-import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+import type { ClientMessage, ServerMessage } from './protocol';
 
 const LF = 0x0a;
 const BACKSLASH = 0x5c;

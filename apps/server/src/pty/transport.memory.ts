@@ -13,7 +13,7 @@
  */
 
 import type { WorkerTransport } from './transport';
-import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+import type { ClientMessage, ServerMessage } from './protocol';
 
 export class InMemoryWorkerTransport implements WorkerTransport {
   private messageCb: ((msg: ServerMessage) => void) | null = null;

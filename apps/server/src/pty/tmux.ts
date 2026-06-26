@@ -1,14 +1,14 @@
 /**
  * tmux integration for resilient PTY sessions.
  *
- * Sessions run inside a tmux server (a daemon independent of both the Bun
- * server and the Node pty-worker). The worker only ever runs a thin attach
- * client (`tmux new-session -A`); the real processes (bash/claude/opencode)
- * live in the daemon and survive the worker — and the server — being killed.
+ * Sessions run inside a tmux server (a daemon independent of the Bun server).
+ * The server only ever runs a thin `tmux -C new-session -A` control client;
+ * the real processes (bash/claude/opencode) live in the daemon and survive
+ * the server being killed.
  *
  * Design (plan §9 Q1): ALL tmux knowledge lives on the server.
- *  - Spawn args are built here and handed to the worker as an opaque
- *    `command + args` pair (the worker stays tmux-agnostic).
+ *  - Spawn args are built here and handed to the control transport as an
+ *    opaque `args` array (starting with `tmux`).
  *  - Administrative commands (kill/has/list) run here via `child_process`
  *    `execFile`, which works under both Bun and Node (so unit tests that
  *    import this module don't depend on `Bun.spawn`).
@@ -18,14 +18,10 @@
  */
 
 import { execFile } from 'node:child_process';
-import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /** Prefix for every ALF-managed tmux session, to avoid collisions. */
 export const TMUX_PREFIX = 'alf_';
-
-/** The binary that wraps tmux to neutralize the SIGHUP race (see sessions.ts). */
-export const SPAWN_WRAPPER = 'pty-sighup-exec';
 
 /** Map a session id to its tmux session name. */
 export function tmuxName(sessionId: string): string {
@@ -46,22 +42,13 @@ export function sessionIdFromTmuxName(name: string): string | null {
   return name.startsWith(TMUX_PREFIX) ? name.slice(TMUX_PREFIX.length) : null;
 }
 
-/** Resolve the absolute path to the transparent tmux.conf shipped with the worker. */
-function resolveConfPath(): string {
-  let workerDir = resolve(process.cwd(), 'apps/pty-worker');
-  if (!existsSync(workerDir)) {
-    workerDir = resolve(process.cwd(), '../../apps/pty-worker');
-  }
-  return resolve(workerDir, 'tmux.conf');
-}
-
-/** Absolute path to tmux.conf, resolved once at module load. */
-export const TMUX_CONF_PATH = resolveConfPath();
+/** Absolute path to the transparent tmux.conf, resolved next to this module. */
+export const TMUX_CONF_PATH = fileURLToPath(new URL('./tmux.conf', import.meta.url));
 
 /**
  * Build the spawn args for a session's attach client.
  *
- * The worker runs `pty-sighup-exec tmux -f <conf> new-session -A -s <name> ...`.
+ * Control mode runs `tmux -C -f <conf> new-session -A -s <name> ...`.
  * `-A` makes new-session idempotent: it CREATES the session on first call
  * (running `innerCmd`) and ATTACHES to it on every subsequent call (ignoring
  * `innerCmd`, `-x`, `-y`). This single command therefore serves both the

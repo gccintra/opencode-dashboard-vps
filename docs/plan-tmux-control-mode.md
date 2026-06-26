@@ -178,14 +178,12 @@ Responsibilities:
 - **send-keys for huge paste**: chunk hex, or use `load-buffer`/`paste-buffer`
   for large inputs.
 
-### 4.6 Migration & rollback
+### 4.6 Migration & rollback — RETIRED (completed)
 
-- Land behind a flag: `PTY_BACKEND=control|node-pty` (default node-pty until
-  proven), so we can flip per-env and roll back instantly.
-- Phase 1: control.ts + flag, node-pty path untouched.
-- Phase 2: flip default to control in dev, soak.
-- Phase 3: flip prod; after a soak window, delete node-pty, Node 18 worker,
-  pty-sighup-exec, transport.bun, CPU monitor, watchdog. Update CLAUDE.md §3/§10.
+All three phases shipped. The `PTY_BACKEND` flag, the node-pty path, the Node 18
+worker, `pty-sighup-exec`, and `transport.bun` were removed in
+`docs/plan-remove-node-pty.md`. Control mode is now the only backend; there is no
+flag to flip and no rollback path other than `git revert`.
 
 ### 4.7 Test plan
 

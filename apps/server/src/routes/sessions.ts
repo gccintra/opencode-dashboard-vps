@@ -27,13 +27,7 @@ import { Elysia, t } from 'elysia';
 import { authGuard } from '../auth/middleware';
 import { getPtyManager } from '../pty/manager';
 import { detectStatus, getLastActiveAt } from '../pty/detector';
-import {
-  SPAWN_WRAPPER,
-  buildTmuxSpawnArgs,
-  tmuxKillSession,
-  tmuxListSessions,
-  tmuxHasSession,
-} from '../pty/tmux';
+import { buildTmuxSpawnArgs, tmuxKillSession, tmuxListSessions, tmuxHasSession } from '../pty/tmux';
 import { getActiveResourcesForProject } from './resources';
 import { getDb } from '../db/client';
 import { existsSync } from 'node:fs';
@@ -304,7 +298,7 @@ export async function reconcileTmuxSessions(): Promise<void> {
       await manager.spawnSession(
         sessionId,
         cwd,
-        SPAWN_WRAPPER,
+        'tmux',
         buildTmuxSpawnArgs(sessionId, 120, 35),
         undefined,
         120,
@@ -373,7 +367,7 @@ export async function ensureSessionAttached(sessionId: string): Promise<boolean>
       manager.spawnSession(
         sessionId,
         resolveSessionCwd(meta),
-        SPAWN_WRAPPER,
+        'tmux',
         buildTmuxSpawnArgs(sessionId, 120, 35),
         undefined,
         120,
@@ -556,14 +550,13 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
             resumeConversationId: body?.resumeConversationId,
           });
 
-          // tmux-backed spawn: the worker runs a thin `tmux new-session -A`
-          // attach client via pty-sighup-exec; the real processes live in the
-          // tmux daemon and survive the worker (and the server) being killed.
-          // pty-sighup-exec sets SIGHUP=SIG_IGN before exec (inherited across
-          // all descendants, POSIX), neutralizing the Linux PTY SIGHUP race.
+          // tmux-backed spawn: control mode runs a `tmux -C new-session -A`
+          // control client; the real processes live in the tmux daemon and
+          // survive the server being killed. `command` is ignored by the
+          // control transport (it derives the binary from args[0] === 'tmux').
           // The TUI launches at the requested cols×rows; tmux repaints on the
           // client's first resize, so no deferred-launch arming is needed.
-          const spawnCommand = SPAWN_WRAPPER;
+          const spawnCommand = 'tmux';
           const spawnArgs = buildTmuxSpawnArgs(sessionId, cols, rows, initialCmd, extraEnv);
 
           // Spawn with one retry. A spawn that lands while the pty-worker is
@@ -859,7 +852,7 @@ export const sessionsRoutes = new Elysia().guard(authGuard, (app) =>
           await manager.spawnSession(
             sessionId,
             '/root',
-            SPAWN_WRAPPER,
+            'tmux',
             buildTmuxSpawnArgs(sessionId, 120, 35),
             undefined,
             120,

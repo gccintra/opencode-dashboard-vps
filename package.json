@@ -5,19 +5,16 @@
   "type": "module",
   "workspaces": [
     "apps/server",
-    "apps/web",
-    "apps/pty-worker"
+    "apps/web"
   ],
   "scripts": {
     "predev": "bash scripts/init-env.sh",
     "dev": "bun run --filter '*' dev",
-    "dev:flat": "bun run dev:server:raw & bun run dev:web:raw & bun run dev:pty:raw & wait",
+    "dev:flat": "bun run dev:server:raw & bun run dev:web:raw & wait",
     "dev:server:raw": "cd apps/server && env -u SERVER_PORT -u WEB_PORT -u DATABASE_PATH -u TMUX_SOCKET_PATH NODE_ENV=development bun run --watch --env-file ../../.env src/index.ts",
     "dev:web:raw": "cd apps/web && env -u SERVER_PORT -u WEB_PORT vite",
-    "dev:pty:raw": "cd apps/pty-worker && tsx watch src/index.ts",
     "dev:server": "bun run --filter @opencode/server dev",
     "dev:web": "bun run --filter @opencode/web dev",
-    "dev:pty-worker": "bun run --filter @opencode/pty-worker dev",
     "build": "bun run build:web && bun run build:server",
     "build:web": "bun run --filter @opencode/web build",
     "build:server": "bun run --filter @opencode/server build",
@@ -30,7 +27,6 @@
     "test:watch": "vitest",
     "test:bun": "bun test",
     "test:fast": "vitest run --reporter=dot --bail=1",
-    "test:pty-worker": "cd apps/pty-worker && bunx vitest run",
     "db:shell": "sqlite3 ${DATABASE_PATH:-/var/lib/opencode/opencode.db}",
     "db:query": "sqlite3 ${DATABASE_PATH:-/var/lib/opencode/opencode.db}"
   },

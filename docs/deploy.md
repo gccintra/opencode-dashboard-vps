@@ -7,24 +7,20 @@ Step-by-step guide to deploy OpenCode Dashboard on a VPS.
 ## Prerequisites
 
 - **OS:** Ubuntu 24.04 LTS (or Debian 12)
-- **Node.js:** 18 LTS (required for `apps/pty-worker` — Bun 1.3.14 is **incompatible** with node-pty)
-- **Bun:** 1.3+ ([install guide](https://bun.sh/docs/installation))
+- **Bun:** 1.3+ ([install guide](https://bun.sh/docs/installation)) — the server runs on Bun only (no node-pty, no Node worker)
+- **tmux:** ≥ 3.2 (for `-e`; the host is tested on 3.4) — `apt install tmux`. Required: sessions run as `tmux -C` control clients.
+- **Node.js + npm:** only for PM2 (any LTS) — `apt install nodejs npm`
 - **nginx:** `apt install nginx`
 - **certbot:** `apt install certbot python3-certbot-nginx`
 - **PM2:** `npm install -g pm2`
 - **git:** `apt install git`
 - **Domain:** pointed to your VPS IP (A record)
 
-### Install Node 18 LTS
+### Install tmux + Node (for PM2)
 
 ```bash
-# Ubuntu 24.04
-apt update && apt install -y nodejs npm
-node --version  # v18.19.1
-
-# If you need a newer 18.x via NodeSource:
-# curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-# apt install -y nodejs
+apt update && apt install -y tmux nodejs npm
+tmux -V   # tmux 3.4
 ```
 
 ### Install Bun
@@ -229,7 +225,7 @@ pm2 restart opencode-dashboard
 
 ### Common Issues
 
-1. **pty-worker fails to start** — Ensure Node 18 is installed: `node --version` should show v18.x
+1. **Sessions don't survive a restart / spawn fails** — Ensure tmux is installed and on PATH: `tmux -V` should show ≥ 3.2. Without tmux the server falls back to non-resilient behavior.
 2. **nginx 502 Bad Gateway** — Check if the Bun server is running: `pm2 list`, `curl localhost:3001/api/health`
 3. **SSL certificate expired** — Run `certbot renew --force-renewal`
 4. **Port 3001 in use** — Check with `lsof -i :3001` and kill the old process

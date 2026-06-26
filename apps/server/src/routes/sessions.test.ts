@@ -48,7 +48,7 @@ vi.mock('../pty/manager', () => ({
 
 // Mock only the tmux ADMIN commands (which shell out via execFile) so tests
 // don't depend on a running tmux daemon. The pure arg builders
-// (buildTmuxSpawnArgs, SPAWN_WRAPPER, names) keep their real implementations
+// (buildTmuxSpawnArgs, names) keep their real implementations
 // so spawn-arg assertions remain meaningful.
 vi.mock('../pty/tmux', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../pty/tmux')>();
@@ -197,7 +197,7 @@ describe('sessions routes', () => {
       expect(typeof session.createdAt).toBe('number');
     });
 
-    it('calls ptyManager.spawnSession with the project directory and a pty-sighup-exec tmux attach', async () => {
+    it('calls ptyManager.spawnSession with the project directory and a tmux attach', async () => {
       const token = await getToken();
       await app.handle(
         authReq(token, `/api/projects/${projectId}/sessions`, { method: 'POST', body: {} }),
@@ -208,9 +208,10 @@ describe('sessions routes', () => {
       expect(typeof sessionId).toBe('string');
       expect(sessionId.length).toBeGreaterThan(0);
       expect(cwd).toBe(join(testDir, 'project-dir'));
-      // Spawned via the pty-sighup-exec wrapper (SIG_IGN before exec) running a
-      // tmux attach: `tmux -f <conf> new-session -A -s alf_<id> ...`.
-      expect(command).toBe('pty-sighup-exec');
+      // Spawned via tmux control mode: `tmux -C -f <conf> new-session -A -s alf_<id> ...`.
+      // The command is the literal 'tmux'; the control transport derives the
+      // binary from args[0] and ignores `command`.
+      expect(command).toBe('tmux');
       expect(args[0]).toBe('tmux');
       expect(args).toContain('new-session');
       expect(args).toContain('-A');
@@ -292,7 +293,7 @@ describe('sessions routes', () => {
       const body = (await res.json()) as { error: string };
       expect(body.error).toContain('spawn failed');
       expect(mockManager.spawnSession).toHaveBeenCalledTimes(1);
-      expect(mockManager.spawnSession.mock.calls[0]?.[2]).toBe('pty-sighup-exec');
+      expect(mockManager.spawnSession.mock.calls[0]?.[2]).toBe('tmux');
       expect(mockManager.spawnSession.mock.calls[0]?.[3]?.[0]).toBe('tmux');
     });
 

@@ -42,10 +42,9 @@ import type {
   DataResponse,
   ExitResponse,
   ErrorResponse,
-} from '../../../pty-worker/src/protocol';
+} from './protocol';
 import type { WorkerTransport } from './transport';
 import { InMemoryWorkerTransport } from './transport.memory';
-import { BunWorkerTransport } from './transport.bun';
 import { ControlWorkerTransport } from './control';
 import { detectStatus } from './detector';
 
@@ -791,22 +790,14 @@ export class PtyManager {
 let _singleton: PtyManager | null = null;
 
 /**
- * Get the process-wide PTY manager. Uses the Bun transport — only call
- * this from the running Elysia server (Bun runtime). Tests should
- * construct their own `PtyManager(new InMemoryWorkerTransport())` and
- * never call this function, so the Bun transport is never instantiated
- * in Node-only test environments.
+ * Get the process-wide PTY manager. Uses tmux control mode
+ * (`ControlWorkerTransport`) — only call this from the running Elysia server
+ * (Bun runtime). Tests should construct their own
+ * `PtyManager(new InMemoryWorkerTransport())` and never call this function.
  */
 export function getPtyManager(): PtyManager {
   if (!_singleton) {
-    // PTY_BACKEND selects the transport. `control` (default) uses tmux control mode
-    // (no node-pty, no Node 18 worker, no PTY → no CPU-spin wedge); `node-pty`
-    // keeps the legacy worker for rollback.
-    const backend = process.env.PTY_BACKEND ?? 'control';
-    const transport =
-      backend === 'control' ? new ControlWorkerTransport() : new BunWorkerTransport();
-    console.error(`[pty-manager] PTY backend: ${backend}`);
-    _singleton = new PtyManager({ transport });
+    _singleton = new PtyManager({ transport: new ControlWorkerTransport() });
   }
   return _singleton;
 }

@@ -23,7 +23,7 @@
  * listener-leak bugs in tests.
  */
 
-import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+import type { ClientMessage, ServerMessage } from './protocol';
 
 export interface WorkerTransport {
   /** Open the IPC channel. Idempotent. */

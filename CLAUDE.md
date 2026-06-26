@@ -13,15 +13,13 @@ bun run dev
 # Individual workspaces
 bun run dev:web          # Vite → http://localhost:5173
 bun run dev:server       # Elysia → http://localhost:3001
-bun run dev:pty-worker   # Node.js PTY worker
 
 # Type checking
 bun run typecheck        # tsc --noEmit across all workspaces
 
 # Tests
-bun test                 # vitest (apps/server + apps/web only — NOT pty-worker)
+bun test                 # vitest (apps/server + apps/web)
 bun run test:fast        # vitest --reporter=dot --bail=1 (fast CI mode)
-bun run test:pty-worker  # cd apps/pty-worker && bunx vitest run (Node.js, NOT Bun)
 
 # Single test file
 cd apps/web && bunx vitest run src/components/Terminal/XTermTerminal.test.tsx
@@ -42,7 +40,7 @@ The Vite dev server proxies `/api/*` and `/terminal` to `http://localhost:3001` 
 
 ## Architecture
 
-Three processes communicate at runtime:
+Two processes communicate at runtime (plus the tmux daemon):
 
 ```
 Browser (React + xterm.js)
@@ -50,15 +48,18 @@ Browser (React + xterm.js)
   │  WSS /terminal/:sessionId  (xterm stream)
   ▼
 apps/server  (Bun + Elysia)
-  │  stdio JSON-lines IPC
+  │  one `tmux -C` (control-mode) client per session, over stdin/stdout pipes
   ▼
-apps/pty-worker  (Node.js 18 + node-pty)
-  │  node-pty fork/exec
+tmux server (daemon)
+  │  runs the inner shell/CLI in each session
   ▼
-opencode CLI process (real PTY)
+opencode/claude CLI process (real PTY, owned by tmux)
 ```
 
-**Why Node.js 18 for the worker:** `node-pty@1.1.0` calls `uv_version_string` (libuv) during N-API init — this is unimplemented in Bun 1.3.x (oven-sh/bun#18546). The prebuild was compiled against Node 18 ABI (`libnode.so.109`). Node 22 segfaults. **Never import `node-pty` in Bun code.**
+The server spawns no PTY itself: each session is a `tmux -C` control client
+(`Bun.spawn`, no native addon). There is **no `node-pty`, no separate Node worker**
+— the manager talks to tmux directly via `ControlWorkerTransport`
+(`apps/server/src/pty/control.ts`). One runtime (Bun) end to end.
 
 ### apps/server
 
@@ -71,42 +72,44 @@ Entry point: `src/index.ts`. Boot order matters:
 
 **Adding a new route:** create `src/routes/yourroute.ts`, export an Elysia instance, and register it with `.use()` in `src/index.ts`. Forgetting `.use()` is silent — unit tests won't catch it.
 
-### IPC Protocol (Bun ↔ Node worker)
+### Transport message types
 
-Defined in `apps/pty-worker/src/protocol.ts`. One JSON message per line on stdio.
+`WorkerTransport` (`apps/server/src/pty/transport.ts`) is the abstraction the
+manager talks through. The message shapes (`ClientMessage`/`ServerMessage`) live
+in `apps/server/src/pty/protocol.ts`:
 
-Bun → Node: `spawn`, `write` (fire-and-forget), `resize` (fire-and-forget), `kill`, `list`, `shutdown`  
-Node → Bun: `spawned`, `data` (base64-encoded output), `exit`, `killed`, `list`, `error`
+Manager → transport: `spawn`, `write`, `resize`, `kill`, `list`, `shutdown`  
+Transport → manager: `spawned`, `data`, `exit`, `killed`, `list`, `error`
 
-PTY output chunks are base64-encoded to survive the JSON-lines transport without corruption.
-
-`spawn` and `kill` are awaitable (5s timeout). `write`/`resize` are fire-and-forget.
+`ControlWorkerTransport` (prod) maps these onto tmux control mode: input →
+`send-keys -H <hex>`, resize → `refresh-client -C <c>x<r>`, output ← tmux
+`%output` (octal-decoded inline). `InMemoryWorkerTransport` implements the same
+interface for tests. `spawn` and `kill` are awaitable (5s timeout);
+`write`/`resize` are fire-and-forget.
 
 ### Session Lifecycle
 
 Sessions are **tmux-backed and resilient**: every session's real processes
-(bash/claude/opencode) run inside a `tmux` server (a daemon independent of both
-the Bun server and the Node pty-worker). The worker only runs a thin attach
-client (`tmux new-session -A`), so it — and the whole server — can be killed and
-respawned with **zero session loss**. Sessions therefore survive a worker
-crash, a worker self-heal restart, and a server restart. See `apps/server/src/pty/tmux.ts`.
+(bash/claude/opencode) run inside a `tmux` server (a daemon independent of the
+Bun server). The server only runs a thin `tmux -C` control client per session,
+so it can be killed and respawned with **zero session loss**. Sessions survive a
+server restart. See `apps/server/src/pty/tmux.ts` and `control.ts`.
 
 - tmux sessions are named `alf_<sessionId>` (the `alf_` prefix avoids colliding with a human operator's own tmux sessions).
-- `PtyManager` owns `Map<sessionId, SessionState>` (pid of the **attach client**, ~50 KB circular buffer, 3 callback sets)
-- `pty-worker` owns `Map<sessionId, IPty>` (the attach clients, NOT the real processes — those live in the tmux daemon)
+- `PtyManager` owns `Map<sessionId, SessionState>` (pid of the **control client**, ~50 KB circular buffer, 3 callback sets)
 - Status is detected at 1 Hz via regex on the buffer: `waiting` (prompt detected), `active` (otherwise), `finished` (exit event)
-- Closing the browser tab does NOT kill anything — only `DELETE /api/sessions/:id` does (it runs `tmux kill-session` **then** kills the attach client)
-- On disconnect, only the WS callbacks are removed from the session's Sets; the attach client keeps running
+- Closing the browser tab does NOT kill anything — only `DELETE /api/sessions/:id` does (it runs `tmux kill-session` **then** kills the control client)
+- On disconnect, only the WS callbacks are removed from the session's Sets; the control client keeps running
 
-**Spawn:** the worker runs `pty-sighup-exec tmux -f <tmux.conf> new-session -A -s alf_<id> -x <cols> -y <rows> '<innerCmd>'`. `-A` is idempotent (create-if-absent / attach-if-present), so the **same args** serve both the initial spawn and every reattach. `<innerCmd>` is built by `buildCliCommand()` and ends with `exec zsh 2>&1 || exec bash`, so the session drops to a shell (instead of dying) when the CLI exits. Per-session env (`OPENCODE_ACTIVE_*`) is injected with tmux `-e KEY=VAL` because a new-session created in an already-running tmux server inherits the **server's** env, not the client's. The transparent tmux config lives in `apps/pty-worker/tmux.conf` (status bar off, `prefix None`, `escape-time 0` — **non-negotiable for key latency**, truecolor, mouse off).
+**Spawn:** the control transport runs `tmux -C -f <tmux.conf> new-session -A -s alf_<id> -x <cols> -y <rows> '<innerCmd>'`. `-A` is idempotent (create-if-absent / attach-if-present), so the **same args** serve both the initial spawn and every reattach. Args are built by `buildTmuxSpawnArgs()` (`tmux.ts`); the `command` passed to `spawnSession` is the literal `'tmux'` (control derives the binary from `args[0]`). `<innerCmd>` is built by `buildCliCommand()` and ends with `exec zsh 2>&1 || exec bash`, so the session drops to a shell (instead of dying) when the CLI exits. Per-session env (`OPENCODE_ACTIVE_*`) is injected with tmux `-e KEY=VAL` because a new-session created in an already-running tmux server inherits the **server's** env, not the client's. The transparent tmux config lives in `apps/server/src/pty/tmux.conf` (status bar off, `prefix None`, `escape-time 0` — **non-negotiable for key latency**, truecolor, mouse off), resolved next to `tmux.ts` via `import.meta.url`.
 
-**Worker death → reattach:** `PtyManager.setWorkerLostHandler` (wired in `index.ts`) re-attaches every session whose `tmux has-session` still passes (via `reattachSession`, which reuses the existing `SessionState` so the live WS keeps streaming with no client reconnect) and marks the rest exited. Because reattach is lossless, the self-heal worker `restart()` is now safe — there is no "restart vs. lose sessions" dilemma.
+**Server restart → reattach:** `PtyManager.setWorkerLostHandler` (wired in `index.ts`) re-attaches every session whose `tmux has-session` still passes (via `reattachSession`, which reuses the existing `SessionState` so the live WS keeps streaming with no client reconnect) and marks the rest exited. Reattach is lossless.
 
-**Boot reconcile:** on startup `reconcileTmuxSessions()` re-adopts live `alf_` tmux sessions that have known metadata (spawns a fresh attach client, flips status back to `active`) and reaps orphan tmux sessions with no metadata.
+**Boot reconcile:** on startup `reconcileTmuxSessions()` re-adopts live `alf_` tmux sessions that have known metadata (spawns a fresh control client, flips status back to `active`) and reaps orphan tmux sessions with no metadata.
 
-**Deployment prerequisite:** `tmux` (≥ 3.2 for `-e`; host has 3.4) must be on PATH, alongside `pty-sighup-exec` at `/usr/local/bin`. If tmux is absent the server logs a warning and sessions fall back to non-resilient behavior.
+**Deployment prerequisite:** `tmux` (≥ 3.2 for `-e`; host has 3.4) must be on PATH. If tmux is absent the server logs a warning and sessions fall back to non-resilient behavior. No native addon, no Node 18, no `pty-sighup-exec` — Bun-only runtime.
 
-**PTY backend (`PTY_BACKEND` env, default `control`):** the manager talks to the worker through a `WorkerTransport` abstraction, selected in `getPtyManager()` (`manager.ts:805`, `?? 'control'`). `control` (default, prod) uses **tmux control mode** (`tmux -C`, `apps/server/src/pty/control.ts`): one `tmux -C` client per session over stdin/stdout pipes — **no PTY, so no node-pty, no Node 18 worker, no `pty-sighup-exec`, no CPU-spin wedge** (the node-pty Linux `read()=EAGAIN` bug is structurally impossible). `%output` is octal-decoded inline; input → `send-keys -H <hex>`; resize → `refresh-client -C <c>x<r>`; `kill-session` still runs via `tmux.ts` (route layer). Validated by `docs/poc-control-mode-findings.md` (sub-ms echo, no fd leak). `node-pty` (legacy, opt-in via `PTY_BACKEND=node-pty`) uses the Node 18 worker + `pty-sighup-exec` (above); kept only as a rollback flag. Same default tmux socket either way, so reconcile/has-session/kill see both. **PtyManager/WS/routes/detector/reconcile/reattach are transport-agnostic and unchanged.** Removal of the node-pty path is planned in `docs/plan-remove-node-pty.md`. NOTE: `apps/pty-worker/tmux.conf` and `apps/pty-worker/src/protocol.ts` are shared by **both** backends — do not delete them with the worker.
+**PTY transport:** the manager talks to tmux through a `WorkerTransport` abstraction; `getPtyManager()` always uses `ControlWorkerTransport` (tmux control mode, `apps/server/src/pty/control.ts`) — one `tmux -C` client per session over stdin/stdout pipes, **no PTY** (the node-pty Linux `read()=EAGAIN` CPU-spin bug is structurally impossible). `kill-session` runs via `tmux.ts` (route layer). Validated by `docs/poc-control-mode-findings.md` (sub-ms echo, no fd leak). The legacy `node-pty` worker backend was removed in `docs/plan-remove-node-pty.md` (the `PTY_BACKEND` flag and `apps/pty-worker` no longer exist). **PtyManager/WS/routes/detector/reconcile/reattach are transport-agnostic.**
 
 ### Frontend (apps/web)
 
@@ -163,14 +166,9 @@ For Vitest (which runs on Node, not Bun), `bun:sqlite` is mocked via `better-sql
 
 ---
 
-## Known Pre-existing Test Failures
+## Test Suite
 
-These are documented failures that exist in the repo and are not regressions:
-- `ProjectDetail.test.tsx` — 38/38 fail (stale test: mocks `../components/Terminal` without a `TerminalStatusBar` export and references a removed "Config" tab). Verified identical on a clean pre-change file — NOT a regression.
-- `Projects.test.tsx` — ~8 fail (`harnesses.map is not a function`)
-- `Sidebar.test.tsx` — 1 fail (duplicate DOM text)
-- `sessions.test.ts` (server) — 3 fail (mock assertion mismatches; spawn/exit-callback/single-bash-failure cases)
-- `ws/handler.test.ts` (server) — 21 fail (`manager.getDetectedStatus is not a function`; the test mock predates commit `10abf6d` which added `getDetectedStatus()` to `handleOpen`). Verified identical on a clean `develop` worktree — NOT a regression.
+Suite is **green**: server 558/558, web 592/592 (Node 22 — see Lessons Learned). No known pre-existing failures.
 
 When running the full suite, V8 coverage output may be absent if uncaught exceptions abort vitest. Run coverage scoped to a specific file to work around this:
 ```bash
@@ -208,7 +206,7 @@ cd apps/web && bunx vitest run --coverage src/path/to/Component.test.tsx
 ### 2026-06-22 - Testing: Vitest Requires Node 22, Not Node 18
 **Context:** Running `bunx vitest run` in apps/server or apps/web.
 **Discovery:** Under the repo's default Node 18, vitest crashes with `crypto is not defined` as soon as Elysia is imported — Node 18 lacks the global `crypto` that Elysia (and the test setup) relies on. Node 22 has it.
-**Solution:** Run every vitest invocation with Node 22 on PATH, e.g. `PATH="/root/.nvm/versions/node/v22.22.3/bin:$PATH" bunx vitest run` (adjust the nvm path per machine). This is the test runner only — the pty-worker still needs Node 18 at runtime (node-pty ABI); do not change the worker's Node.
+**Solution:** Run every vitest invocation with Node 22 on PATH, e.g. `PATH="/root/.nvm/versions/node/v22.22.3/bin:$PATH" bunx vitest run` (adjust the nvm path per machine). This is the test runner only — production runs on Bun. (Historical: this once mattered because the node-pty worker needed Node 18, since removed.)
 **Source:** task-replace-sessions-polling-with-ws (test phase)
 
 ### 2026-06-23 - Testing: Reassigning `process.env` Breaks `os.homedir()`

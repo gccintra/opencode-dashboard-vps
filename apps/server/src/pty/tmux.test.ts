@@ -5,13 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  TMUX_PREFIX,
-  SPAWN_WRAPPER,
-  tmuxName,
-  sessionIdFromTmuxName,
-  buildTmuxSpawnArgs,
-} from './tmux';
+import { TMUX_PREFIX, tmuxName, sessionIdFromTmuxName, buildTmuxSpawnArgs } from './tmux';
 
 describe('tmux naming', () => {
   it('prefixes session ids with alf_', () => {
@@ -46,9 +40,7 @@ describe('buildTmuxSpawnArgs', () => {
     expect(args).toContain('40');
   });
 
-  it('is run under the SIGHUP wrapper (command, not arg)', () => {
-    // The wrapper is the command; tmux is the first arg.
-    expect(SPAWN_WRAPPER).toBe('pty-sighup-exec');
+  it('starts with the tmux binary (control mode prepends -C)', () => {
     expect(buildTmuxSpawnArgs('s1', 80, 24)[0]).toBe('tmux');
   });
 

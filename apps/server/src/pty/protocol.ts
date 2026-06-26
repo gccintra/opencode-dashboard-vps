@@ -1,11 +1,12 @@
 /**
- * IPC Protocol types — shared between the pty-worker (Node.js) and the
- * Bun/Elysia server's PTY Manager.
+ * PTY transport message types — the `ClientMessage`/`ServerMessage` shapes the
+ * `WorkerTransport` exchanges with the PTY Manager. Used by `control.ts`
+ * (production, tmux control mode) and `transport.memory.ts` (tests).
  *
- * The transport is a line-delimited JSON stream over stdio (stdin from
- * Bun → worker, stdout from worker → Bun). Each JSON message is exactly
- * one line terminated by `\n`. Multiplexing of concurrent PTY sessions
- * uses the `id` field on both requests and responses.
+ * Historically this was a line-delimited JSON stream to a separate node-pty
+ * worker; that worker was removed (see `docs/plan-remove-node-pty.md`). The
+ * message types survive as the transport's internal vocabulary. Multiplexing of
+ * concurrent sessions uses the `id` field on both requests and responses.
  *
  * ─── Request correlation ────────────────────────────────────────────
  * - For `spawn` / `write` / `resize` / `kill`, the `id` is the SESSION id

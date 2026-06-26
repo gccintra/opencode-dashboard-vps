@@ -2,9 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDirs": ["./src", "../../pty-worker/src"],
     "lib": ["ESNext"],
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "../../pty-worker/src/protocol.ts"]
+  "include": ["src/**/*.ts"]
 }

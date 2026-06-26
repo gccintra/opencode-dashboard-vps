@@ -21,7 +21,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { PtyManager } from './manager';
 import { InMemoryWorkerTransport } from './transport.memory';
-import type { ClientMessage, ServerMessage } from '../../../pty-worker/src/protocol';
+import type { ClientMessage, ServerMessage } from './protocol';
 
 interface Harness {
   manager: PtyManager;
