@@ -248,13 +248,18 @@ export function CanvasGrid({
     const fromSession = localSlots[fromSlot] ?? null;
     const toSession = localSlots[toSlot] ?? null;
     if (!fromSession) return;
-    // Swap purely in local state — no API, no localStorage
+    // Optimistic local swap for instant feedback…
     setLocalSlots((prev) => {
       const next = { ...prev, [toSlot]: fromSession };
       if (toSession) next[fromSlot] = toSession;
       else next[fromSlot] = null;
       return next;
     });
+    // …then persist to parent (API) so the swap survives session
+    // create/kill re-sync and navigate-away/back remounts.
+    onAssign(toSlot, fromSession);
+    if (toSession) onAssign(fromSlot, toSession);
+    else onRemove(fromSlot);
   }
 
   const hKey  = `cpg-${storageKey}-${templateId}-h`;

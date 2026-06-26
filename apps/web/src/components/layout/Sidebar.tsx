@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessions, type SessionItem, type SessionGroup } from '../../hooks/useSessions';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import CanvasPickerModal from '../CanvasPickerModal';
 
 /* ── Inline SVG icons ── */
 
@@ -194,6 +195,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [canvasPickerOpen, setCanvasPickerOpen] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   // Listen for sidebar:open event dispatched by page headers
@@ -425,30 +427,17 @@ export default function Sidebar() {
           )}
         </NavLink>
 
-        {/* Canvas */}
-        <NavLink
-          to="/canvas"
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
-          onClick={() => setMobileOpen(false)}
+        {/* Canvas — opens a picker modal instead of a full-screen grid page */}
+        <button
+          type="button"
+          onClick={() => setCanvasPickerOpen(true)}
+          className={`${navLinkBase} w-full text-left text-[#9aa3ad]`}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <CanvasIcon />
-              </span>
-              <span>Canvas</span>
-            </>
-          )}
-        </NavLink>
+          <span className="flex size-[16px] shrink-0 items-center justify-center">
+            <CanvasIcon />
+          </span>
+          <span>Canvas</span>
+        </button>
 
         {/* Templates */}
         <NavLink
@@ -566,6 +555,16 @@ export default function Sidebar() {
       >
         {sidebarContent}
       </aside>
+
+      <CanvasPickerModal
+        open={canvasPickerOpen}
+        onClose={() => setCanvasPickerOpen(false)}
+        onSelect={(id) => {
+          setCanvasPickerOpen(false);
+          setMobileOpen(false);
+          navigate(`/canvas/${id}`);
+        }}
+      />
     </>
   );
 }

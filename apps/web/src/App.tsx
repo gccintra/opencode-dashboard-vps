@@ -10,8 +10,6 @@ import SessionTerminalPage from './pages/SessionTerminal';
 import EmergencyPage from './pages/Emergency';
 import KanbanPage from './pages/Kanban';
 import TaskDetailPage from './pages/TaskDetail';
-import SessionsPage from './pages/Sessions';
-import CanvasHubPage from './pages/CanvasHub';
 import CanvasHubViewPage from './pages/CanvasHubView';
 import FilesPage from './pages/FilesPage';
 import HarnessesPage from './pages/HarnessesPage';
@@ -62,10 +60,8 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/emergency" element={<EmergencyPage />} />
-        <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/tasks" element={<KanbanPage />} />
         <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
-        <Route path="/canvas" element={<CanvasHubPage />} />
         <Route path="/files" element={<FilesPage />} />
         <Route path="/templates" element={<HarnessesPage />} />
         <Route path="/templates/:id" element={<HarnessManagerPage />} />
@@ -82,7 +78,17 @@ function AppRoutes() {
         }
       />
 
-      {/* Sessions workspace: master-detail terminal — full-screen, no global sidebar. */}
+      {/* Sessions workspace: master-detail terminal — full-screen, no global sidebar.
+          Both the bare /sessions landing and a selected session render the same
+          workspace (rail + canvas always available, no need to enter a session first). */}
+      <Route
+        path="/sessions"
+        element={
+          <ProtectedRoute>
+            <SessionTerminalPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/sessions/:projectId/:sessionId"
         element={

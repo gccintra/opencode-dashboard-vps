@@ -1097,6 +1097,32 @@ export const XTermTerminal = memo(
             return true; // consumed — don't let xterm process it further
           });
 
+          // ── OSC 10/11/12 color-query responder ──
+          // TUI apps (opencode's `theme: "system"`, vim, etc.) probe the
+          // terminal's fg/bg/cursor colors with OSC 10/11/12 + "?" so they can
+          // adapt to it. xterm.js does NOT answer these queries, so opencode's
+          // `system` theme can't read OUR background — it falls back to its own
+          // near-black. That fallback differs from the xterm theme.background
+          // painted in the sub-cell remainder, which reads as a frame/border
+          // around the TUI (the "borda" the session never fills). Replying with
+          // our live theme color makes opencode paint edge-to-edge in the SAME
+          // background → the border disappears, and it tracks theme hot-swaps.
+          // Format: OSC <ps> ; rgb:RRRR/GGGG/BBBB ST (8-bit → 16-bit by byte
+          // duplication, the conventional reply width).
+          const toOscColor = (hex: string | undefined): string | null => {
+            const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((hex ?? '').trim());
+            return m ? `rgb:${m[1]}${m[1]}/${m[2]}${m[2]}/${m[3]}${m[3]}` : null;
+          };
+          const replyOscColor = (ps: 10 | 11 | 12, pick: () => string | undefined) => (data: string) => {
+            if (data !== '?') return false; // only answer queries; let color SETs pass through
+            const color = toOscColor(pick());
+            if (color) socket.send(`\x1b]${ps};${color}\x1b\\`);
+            return true; // consumed
+          };
+          terminal.parser.registerOscHandler(10, replyOscColor(10, () => terminal.options.theme?.foreground));
+          terminal.parser.registerOscHandler(11, replyOscColor(11, () => terminal.options.theme?.background));
+          terminal.parser.registerOscHandler(12, replyOscColor(12, () => terminal.options.theme?.cursor ?? terminal.options.theme?.foreground));
+
           // ── DECRQM (request mode) shim — works around an xterm.js v6 crash ──
           // The TUI probes terminal capabilities with DECRQM: `CSI ? <n> $ p`
           // (e.g. `CSI ? 2026 $ p` for synchronized output). xterm's built-in

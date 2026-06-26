@@ -544,10 +544,10 @@ export default function CanvasHubViewPage() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-[16px] bg-[#0a0a0f]">
         <p className="font-['Inter'] text-[16px] text-[#9aa3ad]">Canvas não encontrado</p>
         <button
-          onClick={() => navigate('/canvas')}
+          onClick={() => navigate(-1)}
           className="font-['Inter'] text-[13px] text-[#b3e502] hover:underline"
         >
-          Voltar para Canvas Hub
+          Voltar
         </button>
       </div>
     );
@@ -565,7 +565,7 @@ export default function CanvasHubViewPage() {
         {/* Left: back + name */}
         <div className="flex items-center gap-[8px] min-w-0">
           <button
-            onClick={() => navigate('/canvas')}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-[4px] shrink-0 font-['Inter'] text-[12px] text-[#5a626c] hover:text-[#9aa3ad] transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -632,7 +632,7 @@ export default function CanvasHubViewPage() {
             onKill={handleKillSession}
             onRename={handleRenameSession}
             projectName={canvas.name}
-            onToggleSidebar={() => navigate('/canvas')}
+            onToggleSidebar={() => navigate(-1)}
             externalSlots={mobileSlots}
             onAssignSlot={handleAssignSlotMobile}
             onClearSlot={handleClearSlot}
