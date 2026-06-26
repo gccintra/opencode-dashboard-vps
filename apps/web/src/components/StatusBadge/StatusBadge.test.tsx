@@ -31,7 +31,7 @@ describe('StatusBadge', () => {
       render(<StatusBadge status="finished" />);
       const dot = screen.getByTestId('status-dot-finished');
       expect(dot).toBeInTheDocument();
-      expect(dot.style.backgroundColor).toBe('rgb(68, 68, 85)');
+      expect(dot.style.backgroundColor).toBe('rgb(90, 98, 108)');
     });
 
     it('renders red dot for emergency status', () => {

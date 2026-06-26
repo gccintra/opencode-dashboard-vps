@@ -63,17 +63,6 @@ function FilesIcon() {
   );
 }
 
-function CanvasIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-      <rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-      <rect x="1.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-      <rect x="8.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-    </svg>
-  );
-}
-
 function TemplatesIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -421,31 +410,6 @@ export default function Sidebar() {
                 <FilesIcon />
               </span>
               <span>Files</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Canvas */}
-        <NavLink
-          to="/canvas"
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
-          onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <CanvasIcon />
-              </span>
-              <span>Canvas</span>
             </>
           )}
         </NavLink>

@@ -696,6 +696,53 @@ export const XTermTerminal = memo(
       setTerminalReady(false);
     }, [sessionId]);
 
+    // A fullscreen TUI like opencode leaves its bottom row(s) blank but paints
+    // the rest with its OWN background. Those blank rows render with xterm's
+    // *default* background (our theme), which differs from the TUI's bg → a
+    // visible strip. Fix: sample the TUI's dominant bg and adopt it as the
+    // terminal's default background so the blank rows blend. Re-runs on render
+    // (debounced) so switching the TUI's theme stays in sync. Bare shells have
+    // no dominant RGB bg → sample is null → theme bg left untouched.
+    const [sampledBg, setSampledBg] = useState<string | null>(null);
+    useEffect(() => {
+      if (!terminalReady) return;
+      const t = terminalRef.current;
+      if (!t) return;
+      const baseBg = theme?.background ?? TERMINAL_THEME.background;
+      const sample = () => {
+        const term = terminalRef.current;
+        if (!term) return;
+        const buf = term.buffer.active;
+        const counts = new Map<string, number>();
+        for (let y = 0; y < term.rows; y++) {
+          const cell = buf.getLine(buf.viewportY + y)?.getCell(0);
+          if (!cell || cell.isBgDefault() || !cell.isBgRGB()) continue;
+          const hex = `#${cell.getBgColor().toString(16).padStart(6, '0')}`;
+          counts.set(hex, (counts.get(hex) ?? 0) + 1);
+        }
+        let best = baseBg;
+        let bestN = 0;
+        for (const [hex, n] of counts) if (n > bestN) { best = hex; bestN = n; }
+        // Blank row uses the terminal's *default* bg; sub-pixel remainder below
+        // the last row uses the *container* bg. Match both to the sampled bg.
+        if (term.options.theme?.background !== best) {
+          term.options.theme = { ...term.options.theme, background: best };
+        }
+        setSampledBg(best ?? null);
+      };
+      let debounce: ReturnType<typeof setTimeout> | null = null;
+      const onRender = t.onRender(() => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(sample, 400);
+      });
+      const initial = setTimeout(sample, 700);
+      return () => {
+        onRender.dispose();
+        if (debounce) clearTimeout(debounce);
+        clearTimeout(initial);
+      };
+    }, [terminalReady, sessionId, theme]);
+
     // Expose reconnect + resize + focus to the parent.
     useImperativeHandle(
       ref,
@@ -1096,6 +1143,32 @@ export const XTermTerminal = memo(
             }
             return true; // consumed — don't let xterm process it further
           });
+
+          // ── OSC 10/11/12 color-query responder ──
+          // TUI apps (opencode's `theme: "system"`, vim, etc.) probe the
+          // terminal's fg/bg/cursor colors with OSC 10/11/12 + "?" so they can
+          // adapt to it. xterm.js does NOT answer these queries, so opencode's
+          // `system` theme can't read OUR background — it falls back to its own
+          // near-black. That fallback differs from the xterm theme.background
+          // painted in the sub-cell remainder, which reads as a frame/border
+          // around the TUI (the "borda" the session never fills). Replying with
+          // our live theme color makes opencode paint edge-to-edge in the SAME
+          // background → the border disappears, and it tracks theme hot-swaps.
+          // Format: OSC <ps> ; rgb:RRRR/GGGG/BBBB ST (8-bit → 16-bit by byte
+          // duplication, the conventional reply width).
+          const toOscColor = (hex: string | undefined): string | null => {
+            const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((hex ?? '').trim());
+            return m ? `rgb:${m[1]}${m[1]}/${m[2]}${m[2]}/${m[3]}${m[3]}` : null;
+          };
+          const replyOscColor = (ps: 10 | 11 | 12, pick: () => string | undefined) => (data: string) => {
+            if (data !== '?') return false; // only answer queries; let color SETs pass through
+            const color = toOscColor(pick());
+            if (color) socket.send(`\x1b]${ps};${color}\x1b\\`);
+            return true; // consumed
+          };
+          terminal.parser.registerOscHandler(10, replyOscColor(10, () => terminal.options.theme?.foreground));
+          terminal.parser.registerOscHandler(11, replyOscColor(11, () => terminal.options.theme?.background));
+          terminal.parser.registerOscHandler(12, replyOscColor(12, () => terminal.options.theme?.cursor ?? terminal.options.theme?.foreground));
 
           // ── DECRQM (request mode) shim — works around an xterm.js v6 crash ──
           // The TUI probes terminal capabilities with DECRQM: `CSI ? <n> $ p`
@@ -1995,7 +2068,7 @@ export const XTermTerminal = memo(
           ref={containerRef}
           data-testid="xterm-container"
           className="absolute inset-0 [contain:strict]"
-          style={{ backgroundColor: theme?.background ?? TERMINAL_THEME.background }}
+          style={{ backgroundColor: sampledBg ?? theme?.background ?? TERMINAL_THEME.background }}
         />
 
         {/* "Copiado!" toast — shown after any copy action */}

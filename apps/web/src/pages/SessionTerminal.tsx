@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   XTermTerminal,
   MobileKeyboard,
@@ -17,6 +17,7 @@ import { apiFetch } from '../lib/api';
 import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { useSessionEvents } from '../hooks/useSessionEvents';
 import RecoverConversationModal from '../components/RecoverConversationModal';
+import CanvasPickerModal from '../components/CanvasPickerModal';
 
 /* ── Types ── */
 
@@ -321,8 +322,9 @@ function SessionRail({
         ))}
       </div>
 
-      {/* Canvas nav item — like ProjectDetail */}
-      <div className="shrink-0 border-t border-white/[0.06] py-[6px]">
+      {/* Canvas nav item — like ProjectDetail. Hidden on mobile: canvas multi-terminal
+          is desktop-only; mobile just switches between sessions. */}
+      <div className={`shrink-0 border-t border-white/[0.06] py-[6px] ${isMobile ? 'hidden' : ''}`}>
         <button
           onClick={onSelectCanvas}
           className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
@@ -346,11 +348,127 @@ function SessionRail({
   );
 }
 
+/* ── Canvas hub card (with rename + delete) ── */
+
+function CanvasHubCard({
+  canvas,
+  index,
+  onSelect,
+  onRename,
+  onDelete,
+}: {
+  canvas: CanvasItem;
+  index: number;
+  onSelect: () => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const startEdit = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditValue(canvas.name);
+      setEditing(true);
+    },
+    [canvas.name],
+  );
+
+  const saveEdit = useCallback(() => {
+    setEditing(false);
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== canvas.name) onRename(canvas.id, trimmed);
+  }, [editValue, canvas.id, canvas.name, onRename]);
+
+  return (
+    <div
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+      className="kb-rise group relative isolate flex cursor-pointer flex-col gap-[8px] overflow-hidden rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-[12px] transition-[transform,border-color,background-color] duration-200 hover:-translate-y-[2px] hover:border-[#b3e502]/25 hover:bg-white/[0.05]"
+      onClick={() => !editing && !confirmDelete && onSelect()}
+    >
+      <span aria-hidden className="absolute inset-y-[10px] left-0 w-[2px] rounded-r-full bg-[#b3e502] opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
+      <div className="flex items-center gap-[6px] min-w-0">
+        {editing ? (
+          <input
+            autoFocus
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            onBlur={saveEdit}
+            onClick={(e) => e.stopPropagation()}
+            className="min-w-0 flex-1 rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+          />
+        ) : (
+          <span className="min-w-0 flex-1 truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
+            {canvas.name}
+          </span>
+        )}
+
+        {!editing && !confirmDelete && (
+          <div className="flex shrink-0 items-center gap-[2px] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={startEdit}
+              className="flex size-[22px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.1)] hover:text-[#b3e502] transition-colors"
+              aria-label="Renomear canvas"
+            >
+              <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
+                <path d="M7.5 1.5l2 2L3 10H1V8L7.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+              className="flex size-[22px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(255,85,68,0.1)] hover:text-[#f54] transition-colors"
+              aria-label="Deletar canvas"
+            >
+              <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
+                <path d="M1 3h9M4 3V2h3v1M2 3l.8 7h5.4L9 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {!editing && confirmDelete && (
+          <div className="flex shrink-0 items-center gap-[5px]" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="rounded-[5px] bg-[#f54] px-[7px] py-[2px] font-['Inter'] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
+              onClick={(e) => { e.stopPropagation(); onDelete(canvas.id); }}
+            >
+              Sim
+            </button>
+            <button
+              className="rounded-[5px] bg-[rgba(255,255,255,0.08)] px-[7px] py-[2px] font-['Inter'] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+            >
+              Não
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-[5px]">
+        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] text-[#9aa3ad]">
+          {canvas.cols}×{canvas.rows}
+        </span>
+        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#667]">
+          {canvas.slotCount}/{canvas.totalSlots}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* ── Page: Sessions Workspace (master-detail, no global sidebar) ── */
 
 export default function SessionTerminalPage() {
   const navigate = useNavigate();
   const { projectId, sessionId } = useParams<{ projectId: string; sessionId: string }>();
+  const [searchParams] = useSearchParams();
+  const canvasParam = searchParams.get('canvas');
   const isMobile = useIsMobile();
   const viewportHeight = useViewportHeight();
 
@@ -471,6 +589,17 @@ export default function SessionTerminalPage() {
     return () => clearTimeout(t);
   }, [fontSize]);
 
+  // Corrective re-sync on session open/switch — mirrors CanvasSlot. resize()
+  // bundles re-fit + dedup-busting SIGWINCH + atlas rebuild. Two shots: 500ms
+  // fixes boot/layout size mismatch; 1.8s covers a TUI that was busy mid-task
+  // and ignored the first SIGWINCH.
+  useEffect(() => {
+    if (!sessionId) return;
+    const t0 = setTimeout(() => termRef.current?.resize(), 500);
+    const t1 = setTimeout(() => termRef.current?.resize(), 1800);
+    return () => { clearTimeout(t0); clearTimeout(t1); };
+  }, [sessionId]);
+
   const handleZoomIn = useCallback(() => setFontSize((p) => Math.min(p + 1, FONT_SIZE_MAX)), []);
   const handleZoomOut = useCallback(() => setFontSize((p) => Math.max(p - 1, FONT_SIZE_MIN)), []);
   const handleZoomReset = useCallback(() => setFontSize(defaultFontSize), [defaultFontSize]);
@@ -523,6 +652,9 @@ export default function SessionTerminalPage() {
 
   /* ── Canvas / project-picker state ── */
   const [showCanvas, setShowCanvas] = useState(false);
+  const [canvasPickerOpen, setCanvasPickerOpen] = useState(false);
+  const [canvasRenaming, setCanvasRenaming] = useState(false);
+  const [canvasRenameValue, setCanvasRenameValue] = useState('');
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [canvases, setCanvases] = useState<CanvasItem[]>([]);
   const [canvasesLoading, setCanvasesLoading] = useState(false);
@@ -534,6 +666,19 @@ export default function SessionTerminalPage() {
   type PickerResolver = (projectId: string | null) => void;
   const [pickerResolver, setPickerResolver] = useState<PickerResolver | null>(null);
   const canvasMobileRef = useRef<CanvasMobileHandle | null>(null);
+
+  /* ── Canvas is route-driven: ?canvas=<id> on /sessions is the source of truth.
+        Opening a canvas leaves the session route, so the session is no longer the
+        active section; terminals keep running in tmux regardless.
+        Canvas is desktop-only — on mobile we strip the param and stay in session mode. ── */
+  useEffect(() => {
+    if (canvasParam && isMobile) {
+      navigate('/sessions', { replace: true });
+      return;
+    }
+    setShowCanvas(!!canvasParam);
+    setSelectedCanvasId(canvasParam);
+  }, [canvasParam, isMobile, navigate]);
 
   const handleKill = useCallback(async () => {
     if (!sessionId || killing) return;
@@ -631,6 +776,32 @@ export default function SessionTerminalPage() {
       setCanvasCreating(false);
     }
   }, [canvasCreating, fetchCanvases]);
+
+  const handleRenameCanvas = useCallback(async (id: string, name: string) => {
+    setCanvases((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
+    setCanvasData((prev) => (prev && prev.id === id ? { ...prev, name } : prev));
+    try {
+      await apiFetch(`/api/canvases/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      });
+    } catch {
+      /* next fetch reverts */
+    }
+  }, []);
+
+  const handleDeleteCanvas = useCallback(
+    async (id: string) => {
+      setCanvases((prev) => prev.filter((c) => c.id !== id));
+      if (selectedCanvasId === id) setSelectedCanvasId(null);
+      try {
+        await apiFetch(`/api/canvases/${id}`, { method: 'DELETE' });
+      } catch {
+        /* silent */
+      }
+    },
+    [selectedCanvasId],
+  );
 
   useEffect(() => {
     if (showCanvas) fetchCanvases();
@@ -773,14 +944,14 @@ export default function SessionTerminalPage() {
         {/* Left: back + rail toggle + mode-specific breadcrumb */}
         <div className="flex min-w-0 items-center gap-[8px]">
           <button
-            onClick={() => navigate('/sessions')}
+            onClick={() => navigate('/projects')}
             className="flex shrink-0 items-center gap-[5px] rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:text-[#f0f0f0]"
-            title="Voltar para Sessions"
+            title="Voltar para Projects"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M8 2L4 6L8 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="hidden sm:inline">Sessions</span>
+            <span className="hidden sm:inline">Projects</span>
           </button>
 
           {!railOpen && (
@@ -800,18 +971,52 @@ export default function SessionTerminalPage() {
             /* Canvas embed: ← Canvas / name */
             <>
               <button
-                onClick={() => setSelectedCanvasId(null)}
-                className="flex shrink-0 items-center gap-[4px] font-['Inter'] text-[12px] text-[#5a626c] hover:text-[#9aa3ad] transition-colors"
+                onClick={() => setCanvasPickerOpen(true)}
+                title="Trocar de canvas"
+                className="flex shrink-0 items-center gap-[4px] rounded-[6px] px-[6px] py-[3px] font-['Inter'] text-[12px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#9aa3ad]"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M8 2L4 6L8 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
                 </svg>
                 Canvas
               </button>
               <span className="shrink-0 font-['Inter'] text-[13px] text-[#334]">/</span>
-              <span className="min-w-0 max-w-[180px] truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
-                {canvasData.name}
-              </span>
+              {canvasRenaming ? (
+                <input
+                  autoFocus
+                  value={canvasRenameValue}
+                  onChange={(e) => setCanvasRenameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const v = canvasRenameValue.trim();
+                      if (v && v !== canvasData.name) handleRenameCanvas(canvasData.id, v);
+                      setCanvasRenaming(false);
+                    } else if (e.key === 'Escape') {
+                      setCanvasRenaming(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    const v = canvasRenameValue.trim();
+                    if (v && v !== canvasData.name) handleRenameCanvas(canvasData.id, v);
+                    setCanvasRenaming(false);
+                  }}
+                  className="min-w-0 max-w-[180px] rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[2px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => {
+                    setCanvasRenameValue(canvasData.name);
+                    setCanvasRenaming(true);
+                  }}
+                  title="Renomear canvas"
+                  className="min-w-0 max-w-[180px] truncate rounded-[4px] px-[4px] py-[2px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] transition-colors hover:bg-white/[0.06]"
+                >
+                  {canvasData.name}
+                </button>
+              )}
             </>
           ) : showCanvas ? (
             /* Canvas hub */
@@ -842,7 +1047,7 @@ export default function SessionTerminalPage() {
               ) : (
                 <div className="group flex min-w-0 items-center gap-[4px]">
                   <span className="min-w-0 max-w-[140px] truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
-                    {sessionName || 'Session'}
+                    {sessionName || (sessionId ? 'Session' : 'Sessions')}
                   </span>
                   {sessionName && (
                     <button
@@ -857,12 +1062,14 @@ export default function SessionTerminalPage() {
                   )}
                 </div>
               )}
-              <span
-                className={`size-[6px] shrink-0 rounded-full transition-colors ${
-                  isConnected ? 'bg-[#22dd88]' : isConnecting ? 'bg-[#ffaa00] animate-pulse' : 'bg-[#445]'
-                }`}
-                style={isConnected ? { boxShadow: '0 0 6px rgba(34,221,136,0.5)' } : undefined}
-              />
+              {sessionId && (
+                <span
+                  className={`size-[6px] shrink-0 rounded-full transition-colors ${
+                    isConnected ? 'bg-[#22dd88]' : isConnecting ? 'bg-[#ffaa00] animate-pulse' : 'bg-[#445]'
+                  }`}
+                  style={isConnected ? { boxShadow: '0 0 6px rgba(34,221,136,0.5)' } : undefined}
+                />
+              )}
             </>
           )}
         </div>
@@ -1005,6 +1212,8 @@ export default function SessionTerminalPage() {
                 </svg>
                 <span className="hidden sm:inline">New Session</span>
               </button>
+              {sessionId && (
+              <>
               <button
                 onClick={() => handleOpenRecover(projectId ?? '')}
                 title="Recuperar conversa"
@@ -1049,6 +1258,8 @@ export default function SessionTerminalPage() {
                 </svg>
                 <span className="hidden sm:inline">{killing ? 'Killing…' : 'Kill'}</span>
               </button>
+              </>
+              )}
             </>
           )}
         </div>
@@ -1071,8 +1282,7 @@ export default function SessionTerminalPage() {
               isMobile={false}
               showCanvas={showCanvas}
               onSelectCanvas={() => {
-                setShowCanvas(true);
-                setSelectedCanvasId(null);
+                setCanvasPickerOpen(true);
                 if (isMobile) persistRail(false);
               }}
               canvasLabel={canvasData?.name}
@@ -1100,8 +1310,7 @@ export default function SessionTerminalPage() {
                 isMobile
                 showCanvas={showCanvas}
                 onSelectCanvas={() => {
-                  setShowCanvas(true);
-                  setSelectedCanvasId(null);
+                  setCanvasPickerOpen(true);
                   if (isMobile) persistRail(false);
                 }}
                 canvasLabel={canvasData?.name}
@@ -1132,8 +1341,6 @@ export default function SessionTerminalPage() {
                     }
                   }}
                   onRename={async (sid, name) => handleRename(sid, name)}
-                  projectName={canvasData.name}
-                  onToggleSidebar={() => persistRail(true)}
                   externalSlots={Array.from({ length: 8 }, (_, i) => {
                     const liveIds = new Set(sessions.map((s) => s.sessionId));
                     const sid = canvasData.slots[i] ?? null;
@@ -1184,67 +1391,14 @@ export default function SessionTerminalPage() {
             </div>
           </div>
         ) : showCanvas ? (
-          /* ══ Canvas hub/list ══ */
-          <div className="relative min-w-0 flex-1 overflow-hidden overflow-y-auto">
-            {/* Canvas list */}
-            <div className="p-[16px]">
-              {canvasesLoading ? (
-                <div className="grid gap-[12px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="h-[80px] animate-pulse rounded-[12px] border border-white/[0.06] bg-white/[0.03]" />
-                  ))}
-                </div>
-              ) : canvases.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-[60px] text-center">
-                  <div className="mb-[14px] flex size-[52px] items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.03]">
-                    <svg width="22" height="22" viewBox="0 0 16 16" fill="none" className="text-[#b3e502]">
-                      <rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-                      <rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-                      <rect x="1.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-                      <rect x="8.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.25" />
-                    </svg>
-                  </div>
-                  <h3 className="font-['Syne'] text-[17px] font-bold text-white">Nenhum canvas</h3>
-                  <p className="mt-[5px] max-w-[220px] font-['Inter'] text-[12px] text-[#5a626c]">
-                    Crie um canvas para organizar terminais
-                  </p>
-                  <button
-                    onClick={handleCreateCanvas}
-                    disabled={canvasCreating}
-                    className="mt-[16px] flex items-center gap-[5px] rounded-[9px] bg-[#b3e502] px-[16px] py-[9px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516] disabled:opacity-50"
-                  >
-                    Criar Canvas
-                  </button>
-                </div>
-              ) : (
-                <div className="grid gap-[12px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-                  {canvases.map((canvas, i) => (
-                    <div
-                      key={canvas.id}
-                      style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                      className="kb-rise group relative isolate flex cursor-pointer flex-col gap-[8px] overflow-hidden rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-[12px] transition-[transform,border-color,background-color] duration-200 hover:-translate-y-[2px] hover:border-[#b3e502]/25 hover:bg-white/[0.05]"
-                      onClick={() => setSelectedCanvasId(canvas.id)}
-                    >
-                      <span aria-hidden className="absolute inset-y-[10px] left-0 w-[2px] rounded-r-full bg-[#b3e502] opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
-                      <span className="truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">{canvas.name}</span>
-                      <div className="flex items-center gap-[5px]">
-                        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] text-[#9aa3ad]">
-                          {canvas.cols}×{canvas.rows}
-                        </span>
-                        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#667]">
-                          {canvas.slotCount}/{canvas.totalSlots}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          /* ══ Canvas loading (canvasData fetch in flight) ══ */
+          <div className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+            <div className="size-[22px] animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
           </div>
         ) : (
           /* ══ Terminal ══ */
           <div className="relative min-w-0 flex-1 overflow-hidden">
-            {sessionId && (
+            {sessionId ? (
               <XTermTerminal
                 key={sessionId}
                 ref={termRef}
@@ -1255,6 +1409,50 @@ export default function SessionTerminalPage() {
                 theme={getThemeById(themeId).xterm}
                 className="absolute inset-0"
               />
+            ) : (
+              /* No session selected — workspace landing */
+              <div className="flex h-full flex-col items-center justify-center px-[24px] text-center">
+                <div className="mb-[16px] flex size-[60px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03]">
+                  <svg width="26" height="26" viewBox="0 0 16 16" fill="none">
+                    <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="#b3e502" strokeWidth="1.25" />
+                    <path d="M5 13.5h6" stroke="#b3e502" strokeWidth="1.25" strokeLinecap="round" />
+                    <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="#b3e502" strokeWidth="1.25" />
+                  </svg>
+                </div>
+                <h3 className="font-['Syne'] text-[20px] font-bold text-white">
+                  {sessions.length > 0 ? 'Selecione uma sessão' : 'Nenhuma sessão ativa'}
+                </h3>
+                <p className="mt-[6px] max-w-[280px] font-['Inter'] text-[13px] leading-relaxed text-[#5a626c]">
+                  {sessions.length > 0
+                    ? 'Escolha uma sessão na lista à esquerda, abra um Canvas, ou crie uma nova.'
+                    : 'Crie uma sessão para começar, ou abra um Canvas.'}
+                </p>
+                <div className="mt-[20px] flex flex-wrap items-center justify-center gap-[10px]">
+                  <button
+                    onClick={() => setShowProjectPicker(true)}
+                    className="flex items-center gap-[6px] rounded-[10px] bg-[#b3e502] px-[18px] py-[10px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
+                      <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                    Nova Sessão
+                  </button>
+                  {!isMobile && (
+                    <button
+                      onClick={() => setCanvasPickerOpen(true)}
+                      className="flex items-center gap-[6px] rounded-[10px] border border-white/[0.08] bg-white/[0.03] px-[18px] py-[10px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:text-[#e6e8eb]"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                        <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                        <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                        <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                      </svg>
+                      Abrir Canvas
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -1417,6 +1615,15 @@ export default function SessionTerminalPage() {
         open={recoverModalOpen}
         onClose={() => setRecoverModalOpen(false)}
         onRecover={handleRecover}
+      />
+
+      <CanvasPickerModal
+        open={canvasPickerOpen}
+        onClose={() => setCanvasPickerOpen(false)}
+        onSelect={(id) => {
+          setCanvasPickerOpen(false);
+          navigate(`/sessions?canvas=${id}`);
+        }}
       />
     </div>
   );

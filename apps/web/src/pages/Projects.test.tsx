@@ -215,7 +215,7 @@ describe('ProjectsPage', () => {
         expect(screen.getByText('api-service')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search projects…');
+      const searchInput = screen.getByPlaceholderText('Search…');
       await userEvent.type(searchInput, 'api');
 
       await waitFor(() => {
@@ -233,7 +233,7 @@ describe('ProjectsPage', () => {
         expect(screen.getByText('api-service')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search projects…');
+      const searchInput = screen.getByPlaceholderText('Search…');
       await userEvent.type(searchInput, 'API');
 
       expect(screen.getByText('api-service')).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe('ProjectsPage', () => {
 
       await waitFor(() => expect(screen.getByText('api-service')).toBeInTheDocument());
 
-      const searchInput = screen.getByPlaceholderText('Search projects…');
+      const searchInput = screen.getByPlaceholderText('Search…');
       await userEvent.type(searchInput, 'zzzzz');
 
       await waitFor(() => {
@@ -260,7 +260,7 @@ describe('ProjectsPage', () => {
 
       await waitFor(() => expect(screen.getByText('api-service')).toBeInTheDocument());
 
-      const searchInput = screen.getByPlaceholderText('Search projects…');
+      const searchInput = screen.getByPlaceholderText('Search…');
       await userEvent.type(searchInput, 'zzzzz');
 
       await waitFor(() => {
@@ -497,7 +497,7 @@ describe('ProjectsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Delete api-service/)).toBeInTheDocument();
-        expect(screen.getByText(/Active sessions will be terminated/)).toBeInTheDocument();
+        expect(screen.getByText(/This will terminate all active sessions/)).toBeInTheDocument();
       });
     });
 
@@ -512,13 +512,13 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByLabelText('Delete api-service'));
 
       await waitFor(() => {
-        expect(screen.getByText(/Active sessions will be terminated/)).toBeInTheDocument();
+        expect(screen.getByText(/This will terminate all active sessions/)).toBeInTheDocument();
       });
 
       await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
       await waitFor(() => {
-        expect(screen.queryByText(/Active sessions will be terminated/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/This will terminate all active sessions/)).not.toBeInTheDocument();
         expect(screen.getByText('api-service')).toBeInTheDocument();
       });
     });
@@ -543,7 +543,7 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByLabelText('Delete api-service'));
 
       await waitFor(() => {
-        expect(screen.getByText(/Active sessions will be terminated/)).toBeInTheDocument();
+        expect(screen.getByText(/This will terminate all active sessions/)).toBeInTheDocument();
       });
 
       // Click the Delete confirm button in the modal (the red one)

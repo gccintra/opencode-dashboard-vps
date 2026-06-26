@@ -55,7 +55,9 @@ export const canvasesRoutes = new Elysia({ prefix: '/api/canvases' })
           .query(`
             SELECT c.*,
               (SELECT COUNT(*) FROM canvas_slots cs
-               WHERE cs.canvas_id = c.id AND cs.session_id IS NOT NULL) AS slot_count
+               JOIN sessions s ON s.id = cs.session_id
+               WHERE cs.canvas_id = c.id
+                 AND s.status NOT IN ('exited', 'killed', 'finished')) AS slot_count
             FROM canvases c
             ORDER BY c.created_at ASC
           `)

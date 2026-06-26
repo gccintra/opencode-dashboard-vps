@@ -37,6 +37,12 @@ vi.mock('../components/Terminal', () => ({
     capturedFontSize = fontSize;
     return <div data-testid="mock-terminal">Terminal: {sessionId}</div>;
   },
+  // ProjectDetail also pulls MobileKeyboard and TerminalStatusBar from this
+  // barrel. Stub them so the page renders without xterm/WebSocket internals.
+  MobileKeyboard: () => <div data-testid="mock-mobile-keyboard" />,
+  TerminalStatusBar: ({ fontSize }: { fontSize?: number }) => (
+    <div data-testid="mock-status-bar">Status: {fontSize}</div>
+  ),
 }));
 
 // Mock ResourceConfig to avoid lazy-loading issues in jsdom and keep
@@ -48,9 +54,17 @@ vi.mock('../components/ResourceConfig/ResourceConfig', () => ({
 }));
 
 // Mock FileTree to avoid API calls in tests
-vi.mock('../components/FileTree/FileTree', () => ({
+vi.mock('../components/FileManager/FileTree', () => ({
   default: ({ projectId }: { projectId: string }) => (
     <div data-testid="file-tree">FileTree for: {projectId}</div>
+  ),
+}));
+
+// Mock CodeEditor — the Files tab mounts it alongside FileTree, and it would
+// otherwise fetch file contents in jsdom.
+vi.mock('../components/FileManager/CodeEditor', () => ({
+  default: ({ projectId }: { projectId: string }) => (
+    <div data-testid="mock-code-editor">CodeEditor for: {projectId}</div>
   ),
 }));
 
@@ -81,6 +95,14 @@ function mockApiError(message = 'Network error', status = 500) {
   mockApiFetch.mockRejectedValueOnce({ status, message });
 }
 
+// Mount-time load failure: the page fires `/api/projects` before the sessions
+// fetch, so resolve that first call and reject the sessions request (which
+// drives the error state).
+function mockLoadError(message = 'Network error', status = 500) {
+  mockProjectResponse();
+  mockApiError(message, status);
+}
+
 function renderPage(projectId = 'test-project') {
   return render(
     <MemoryRouter initialEntries={[`/projects/${projectId}`]}>
@@ -95,6 +117,9 @@ function renderPage(projectId = 'test-project') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Font size persists to localStorage; clear it so each test starts from the
+  // default (13) instead of inheriting a prior test's stored value.
+  localStorage.clear();
   // The mock factory returns a fresh `vi.fn()` for `apiFetch` each time
   // the module is re-evaluated; clearAllMocks doesn't always clear the
   // queue, so we re-assign.
@@ -125,7 +150,7 @@ describe('ProjectDetailPage', () => {
         expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       });
       expect(screen.getByText('No active session')).toBeInTheDocument();
-      expect(screen.getByText(/Start a session to use the terminal/)).toBeInTheDocument();
+      expect(screen.getByText(/Create a session to open a terminal/)).toBeInTheDocument();
     });
 
     it('renders the New Session button when no session is active', async () => {
@@ -198,7 +223,7 @@ describe('ProjectDetailPage', () => {
 
   describe('error state', () => {
     it('shows the error message when the sessions fetch fails', async () => {
-      mockApiError('Server is on fire');
+      mockLoadError('Server is on fire');
       renderPage();
 
       await waitFor(() => {
@@ -208,7 +233,7 @@ describe('ProjectDetailPage', () => {
     });
 
     it('shows a Try Again button in the error state', async () => {
-      mockApiError('Boom');
+      mockLoadError('Boom');
       renderPage();
 
       await waitFor(() => {
@@ -217,9 +242,9 @@ describe('ProjectDetailPage', () => {
     });
 
     it('refetches sessions when Try Again is clicked', async () => {
-      mockApiError('First call fails');
-      // Second call succeeds.
-      mockSessionsResponse([]);
+      mockLoadError('First call fails'); // projects resolves, sessions rejects
+      // Retry re-fetches only the sessions endpoint; make it succeed.
+      mockApiFetch.mockResolvedValueOnce([]);
       renderPage();
 
       await waitFor(() => {
@@ -231,10 +256,12 @@ describe('ProjectDetailPage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       });
-      expect(mockApiFetch).toHaveBeenCalledTimes(2);
+      // 1) /api/projects, 2) sessions (reject), 3) sessions retry.
+      expect(mockApiFetch).toHaveBeenCalledTimes(3);
     });
 
     it('uses a fallback error message when the API error has none', async () => {
+      mockProjectResponse(); // first call (/api/projects) resolves
       mockApiFetch.mockRejectedValueOnce({ status: 500 });
       renderPage();
 
@@ -452,7 +479,7 @@ describe('ProjectDetailPage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('back-button')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('back-button')).toHaveTextContent('Projects');
+      expect(screen.getByTestId('back-button')).toHaveTextContent('Voltar');
     });
 
     it('renders the header with the expected border', async () => {
@@ -477,13 +504,13 @@ describe('ProjectDetailPage', () => {
       });
     });
 
-    it('shows Terminal and Config tabs', async () => {
+    it('shows Terminal and Files tabs', async () => {
       mockSessionsResponse([]);
       renderPage();
 
       await waitFor(() => {
         expect(screen.getByTestId('tab-terminal')).toBeInTheDocument();
-        expect(screen.getByTestId('tab-config')).toBeInTheDocument();
+        expect(screen.getByTestId('tab-files')).toBeInTheDocument();
       });
     });
 
@@ -493,38 +520,39 @@ describe('ProjectDetailPage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('tab-terminal')).toHaveAttribute('aria-selected', 'true');
-        expect(screen.getByTestId('tab-config')).toHaveAttribute('aria-selected', 'false');
+        expect(screen.getByTestId('tab-files')).toHaveAttribute('aria-selected', 'false');
       });
     });
 
-    it('switches to Config tab and renders ResourceConfig', async () => {
+    it('switches to the Files tab and renders the file panel', async () => {
       mockSessionsResponse([]);
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByTestId('tab-config')).toBeInTheDocument();
+        expect(screen.getByTestId('tab-files')).toBeInTheDocument();
       });
 
-      await userEvent.click(screen.getByTestId('tab-config'));
+      await userEvent.click(screen.getByTestId('tab-files'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('mock-resource-config')).toBeInTheDocument();
+        expect(screen.getByTestId('files-panel')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('mock-resource-config')).toHaveTextContent('test-project');
+      // The panel renders FileTree in both the desktop and mobile layouts.
+      expect(screen.getAllByTestId('file-tree').length).toBeGreaterThan(0);
     });
 
-    it('returns to Terminal tab when switching back', async () => {
+    it('returns to the Terminal tab when switching back', async () => {
       mockSessionsResponse([]);
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByTestId('tab-config')).toBeInTheDocument();
+        expect(screen.getByTestId('tab-files')).toBeInTheDocument();
       });
 
-      // Go to Config
-      await userEvent.click(screen.getByTestId('tab-config'));
+      // Go to Files
+      await userEvent.click(screen.getByTestId('tab-files'));
       await waitFor(() => {
-        expect(screen.getByTestId('mock-resource-config')).toBeInTheDocument();
+        expect(screen.getByTestId('files-panel')).toBeInTheDocument();
       });
 
       // Go back to Terminal
@@ -532,7 +560,7 @@ describe('ProjectDetailPage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       });
-      expect(screen.queryByTestId('mock-resource-config')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('files-panel')).not.toBeInTheDocument();
     });
 
     it('switches to terminal tab when a new session is created', async () => {
@@ -545,7 +573,7 @@ describe('ProjectDetailPage', () => {
       });
       await userEvent.click(screen.getByTestId('tab-files'));
       await waitFor(() => {
-        expect(screen.getByTestId('file-tree')).toBeInTheDocument();
+        expect(screen.getByTestId('files-panel')).toBeInTheDocument();
       });
 
       // Now create a session (from the terminal tab)
@@ -687,15 +715,8 @@ describe('ProjectDetailPage', () => {
       vi.useRealTimers();
     });
 
-    it('passes fontSize=12 to XTermTerminal when viewport is narrow', async () => {
-      // Set innerWidth below the 640px threshold.
-      const originalWidth = window.innerWidth;
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: 375,
-      });
-      window.dispatchEvent(new Event('resize'));
+    it('passes the stored font size from localStorage to XTermTerminal', async () => {
+      localStorage.setItem('terminalFontSize', '18');
 
       mockSessionsResponse([
         { sessionId: 'sess-1', name: 'Sessão 1', status: 'active', createdAt: 1000 },
@@ -706,25 +727,10 @@ describe('ProjectDetailPage', () => {
         expect(screen.getByTestId('mock-terminal')).toBeInTheDocument();
       });
 
-      expect(capturedFontSize).toBe(12);
-
-      // Restore.
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: originalWidth,
-      });
+      expect(capturedFontSize).toBe(18);
     });
 
-    it('passes fontSize=13 to XTermTerminal when viewport is wide', async () => {
-      const originalWidth = window.innerWidth;
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: 1024,
-      });
-      window.dispatchEvent(new Event('resize'));
-
+    it('passes the default font size (13) to XTermTerminal when nothing is stored', async () => {
       mockSessionsResponse([
         { sessionId: 'sess-1', name: 'Sessão 1', status: 'active', createdAt: 1000 },
       ]);
@@ -735,12 +741,6 @@ describe('ProjectDetailPage', () => {
       });
 
       expect(capturedFontSize).toBe(13);
-
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: originalWidth,
-      });
     });
   });
 });

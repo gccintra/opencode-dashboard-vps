@@ -1134,12 +1134,14 @@ export default function ProjectDetailPage() {
   }, [activeTab, showCanvas]);
 
   /* ── Resize on session switch ── */
+  // Dual-shot corrective re-sync — mirrors CanvasSlot. 500ms fixes boot/layout
+  // size mismatch; 1.8s covers a TUI that was busy mid-task and ignored the
+  // first SIGWINCH (the old single 300ms shot missed that case).
   useEffect(() => {
     if (!activeSessionId) return;
-    const t = setTimeout(() => {
-      terminalRef.current?.resize();
-    }, 300);
-    return () => clearTimeout(t);
+    const t0 = setTimeout(() => terminalRef.current?.resize(), 500);
+    const t1 = setTimeout(() => terminalRef.current?.resize(), 1800);
+    return () => { clearTimeout(t0); clearTimeout(t1); };
   }, [activeSessionId]);
 
   const handleSessionStatusChange = useCallback(

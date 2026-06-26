@@ -6,6 +6,8 @@ import AppLayout from './AppLayout';
 // Mock Sidebar
 vi.mock('./Sidebar', () => ({
   default: () => <aside data-testid="sidebar">Sidebar</aside>,
+  // AppLayout also imports the AlfLogo named export from this module.
+  AlfLogo: () => <svg data-testid="alf-logo" />,
 }));
 
 // Mock EmergencyTerminal
@@ -45,7 +47,6 @@ describe('AppLayout', () => {
 
       expect(root).toBeInTheDocument();
       expect(root.className).toContain('flex');
-      expect(root.className).toContain('h-screen');
       expect(root.className).toContain('h-dvh');
       expect(root.className).toContain('bg-[#0a0a0f]');
     });
@@ -82,8 +83,8 @@ describe('AppLayout', () => {
       const children = root.children;
 
       expect(children[0]).toHaveAttribute('data-testid', 'sidebar');
-      // children[1] IS the <main> element
-      expect(children[1].tagName).toBe('MAIN');
+      // children[1] is the content column that wraps the <main> element
+      expect(children[1].querySelector('main')).not.toBeNull();
     });
 
     it('main content fills remaining space after sidebar', () => {

@@ -71,8 +71,11 @@ describe('CodeEditor', () => {
 
     render(<CodeEditor projectId="proj-1" initialFilePath="src/app.ts" />);
 
+    // The gutter is the first child of the editor content area and lists one
+    // number per line (no dedicated testid), so '1','2','3' → '123'.
+    const content = await screen.findByTestId('editor-content');
     await waitFor(() => {
-      expect(screen.getByTestId('line-numbers')).toBeInTheDocument();
+      expect(content.firstElementChild?.textContent).toBe('123');
     });
   });
 
@@ -93,8 +96,9 @@ describe('CodeEditor', () => {
     const textarea = screen.getByTestId('editor-textarea');
     fireEvent.change(textarea, { target: { value: 'modified content' } });
 
+    // A modified tab shows a '●' dot marker (in the tab and the status bar).
     await waitFor(() => {
-      expect(screen.getByText('Modified')).toBeInTheDocument();
+      expect(screen.getAllByText('●').length).toBeGreaterThan(0);
     });
   });
 

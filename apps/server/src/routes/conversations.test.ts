@@ -67,6 +67,18 @@ describe('conversations route', () => {
     const { validateAuthEnv } = await import('../auth/env');
     validateAuthEnv();
 
+    // The conversations route only returns conversations whose cwd resolves to a
+    // registered project (via the SQLite `projects` table). Seed one project
+    // whose directory ('/') is a prefix of every test conversation's cwd so the
+    // resolver keeps them all.
+    const { initDb, getDb } = await import('../db/client');
+    initDb(':memory:');
+    const nowIso = new Date().toISOString();
+    getDb().run(
+      `INSERT INTO projects (id, name, directory, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+      ['proj-conv-test', 'Conversations Test Project', '/', nowIso, nowIso],
+    );
+
     const { authRoutes } = await import('../auth/index');
     const { conversationsRoutes } = await import('./conversations');
     app = new Elysia().use(authRoutes).use(conversationsRoutes);
@@ -170,7 +182,9 @@ describe('conversations route', () => {
   it('falls back to "[no message]" when no user message exists', async () => {
     mkdirSync(join(projectsDir, '-root-proj'), { recursive: true });
     writeConversation('-root-proj', VALID_UUID, [
-      { type: 'mode', mode: 'default' },
+      // cwd present (so the conversation resolves to the seeded project) but no
+      // user message — exercises the '[no message]' fallback.
+      { type: 'mode', mode: 'default', cwd: '/x' },
       { type: 'assistant', message: { role: 'assistant', content: 'hi' } },
     ]);
     await buildApp();
