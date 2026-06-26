@@ -10,7 +10,6 @@ import SessionTerminalPage from './pages/SessionTerminal';
 import EmergencyPage from './pages/Emergency';
 import KanbanPage from './pages/Kanban';
 import TaskDetailPage from './pages/TaskDetail';
-import CanvasHubViewPage from './pages/CanvasHubView';
 import FilesPage from './pages/FilesPage';
 import HarnessesPage from './pages/HarnessesPage';
 import HarnessManagerPage from './pages/HarnessManagerPage';
@@ -100,16 +99,6 @@ function AppRoutes() {
 
       {/* Legacy redirect: old isolated session route → workspace under /sessions. */}
       <Route path="/session/:projectId/:sessionId" element={<LegacySessionRedirect />} />
-
-      {/* Canvas Hub view: full-screen canvas for a specific saved canvas */}
-      <Route
-        path="/canvas/:id"
-        element={
-          <ProtectedRoute>
-            <CanvasHubViewPage />
-          </ProtectedRoute>
-        }
-      />
     </Routes>
   );
 }
