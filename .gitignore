@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+dev-dist/
 coverage/
 
 # Logs
@@ -20,6 +21,10 @@ logs/
 *.db-journal
 *.db-shm
 *.db-wal
+
+# Runtime data (DB, harnesses) — kept outside apps/server so bun --watch
+# doesn't loop-restart on every DB write
+/.data/
 
 # IDE
 .idea/

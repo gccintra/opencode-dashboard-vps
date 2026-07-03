@@ -49,8 +49,12 @@ if [[ "$WEB_PORT" == "$SERVER_PORT" ]]; then
   WEB_PORT=$(find_free_port $((WEB_PORT + 1)))
 fi
 
-DB_PATH="$REPO_ROOT/apps/server/data/opencode.db"
-mkdir -p "$(dirname "$DB_PATH")"
+# DB and harnesses live outside apps/server: bun --watch recursively watches
+# its cwd, so writes under apps/server/data (sqlite WAL churn every 1s from
+# the status monitor) trigger an infinite restart loop.
+DB_PATH="$REPO_ROOT/.data/opencode.db"
+HARNESSES_PATH="$REPO_ROOT/.data/harnesses"
+mkdir -p "$(dirname "$DB_PATH")" "$HARNESSES_PATH"
 
 # derive a unique tmux socket name from the worktree directory name
 WT_SLUG=$(basename "$REPO_ROOT" | tr '[:upper:] +/' '[:lower:]---' | cut -c1-40)
@@ -61,6 +65,7 @@ sed \
   -e "s|^SERVER_PORT=.*|SERVER_PORT=$SERVER_PORT|" \
   -e "s|^WEB_PORT=.*|WEB_PORT=$WEB_PORT|" \
   -e "s|^DATABASE_PATH=.*|DATABASE_PATH=$DB_PATH|" \
+  -e "s|^HARNESSES_PATH=.*|HARNESSES_PATH=$HARNESSES_PATH|" \
   -e "s|^TMUX_SOCKET_PATH=.*|TMUX_SOCKET_PATH=$TMUX_SOCKET|" \
   "$TEMPLATE_ENV" > "$ENV_FILE"
 
