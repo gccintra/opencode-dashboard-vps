@@ -34,11 +34,11 @@ function isProduction(): boolean {
 }
 
 // Reduce OOM-killer priority so SSH/DBus are killed before this process
-try {
-  Bun.write('/proc/self/oom_score_adj', '-500');
-} catch {
-  /* non-fatal: may lack permission in some environments */
-}
+// (Linux-only: /proc doesn't exist on macOS, and Bun.write returns a promise
+// whose rejection must be caught explicitly — a bare try/catch won't see it)
+Bun.write('/proc/self/oom_score_adj', '-500').catch(() => {
+  /* non-fatal: no /proc (e.g. macOS) or lack permission */
+});
 
 // Validate required environment variables before starting
 validateAuthEnv();

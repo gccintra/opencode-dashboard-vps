@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, createLogger } from 'vite';
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -9,7 +9,23 @@ export default defineConfig(({ mode }) => {
   const serverPort = env.SERVER_PORT || '3001';
   const webPort = parseInt(env.WEB_PORT || '5173', 10);
 
+  // Terminal/canvas WS connections get torn down abruptly on every tab close,
+  // slot switch, or backend restart — Vite logs that as one of "http proxy
+  // error:", "ws proxy error:", or "ws proxy socket error:" with a benign
+  // ECONNRESET/EPIPE cause (either side closing mid-read or mid-write).
+  // It's expected noise, not an actionable failure.
+  const BENIGN_SOCKET_CODES = new Set(['ECONNRESET', 'EPIPE']);
+  const logger = createLogger();
+  const logError = logger.error.bind(logger);
+  logger.error = (msg, options) => {
+    const err = options?.error as NodeJS.ErrnoException | undefined;
+    const isProxyMsg = msg.includes('proxy error') || msg.includes('proxy socket error');
+    if (isProxyMsg && err?.code && BENIGN_SOCKET_CODES.has(err.code)) return;
+    logError(msg, options);
+  };
+
   return {
+  customLogger: logger,
   plugins: [
     react(),
     tailwindcss(),
