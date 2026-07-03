@@ -169,7 +169,7 @@ describe('HarnessFileTree', () => {
     expect(screen.getByTestId('harness-node-utils.ts')).toBeInTheDocument();
   });
 
-  it('uses JetBrains Mono font for file names and Inter for directories', () => {
+  it('uses JetBrains Mono font for file names (directories use the system font)', () => {
     render(<HarnessFileTree files={sampleFiles} />);
 
     const readmeNode = screen.getByTestId('harness-node-README.md');

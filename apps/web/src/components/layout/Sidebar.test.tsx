@@ -103,13 +103,13 @@ describe('Sidebar', () => {
     it('highlights Projects link as active when on /projects', () => {
       renderSidebar('/projects');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('bg-[rgba(179,229,2,0.12)]');
+      expect(projectsLink).toHaveClass('bg-accent/12');
     });
 
     it('Projects link shows inactive styling when not on /projects', () => {
       renderSidebar('/tasks');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
+      expect(projectsLink).toHaveClass('text-ink-2');
     });
   });
 
@@ -219,13 +219,13 @@ describe('Sidebar', () => {
     it('handles root path — Projects not active', () => {
       renderSidebar('/');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
+      expect(projectsLink).toHaveClass('text-ink-2');
     });
 
     it('handles nested project route — Projects not active (end prop)', () => {
       renderSidebar('/projects/123');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('text-[#9aa3ad]');
+      expect(projectsLink).toHaveClass('text-ink-2');
     });
   });
 });

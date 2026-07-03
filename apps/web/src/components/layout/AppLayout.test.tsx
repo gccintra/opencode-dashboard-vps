@@ -48,7 +48,7 @@ describe('AppLayout', () => {
       expect(root).toBeInTheDocument();
       expect(root.className).toContain('flex');
       expect(root.className).toContain('h-dvh');
-      expect(root.className).toContain('bg-[#0a0a0f]');
+      expect(root.className).toContain('bg-bg');
     });
 
     it('renders the Sidebar component', () => {
