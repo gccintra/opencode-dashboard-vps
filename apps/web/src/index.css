@@ -1,5 +1,53 @@
 @import 'tailwindcss';
 
+/* ── Self-hosted Fonts (no external CDN dependency) ──
+   UI text uses the platform system stack (see --font-sans below); only the
+   terminal/code mono face is shipped. */
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+/* Bold weight required for terminal bold characters (e.g. opencode headers) */
+@import '@fontsource/jetbrains-mono/700.css';
+
+/* ════════════════════════════════════════════════════════════════
+   "Graphite" design tokens — mac-native developer-tool aesthetic.
+   Dark-only. Flat surfaces, hairline dividers, one lime accent.
+   Canonical spec: apps/web/DESIGN.md
+   ════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Surfaces */
+  --color-bg: #0e0e11; /* app canvas → bg-bg */
+  --color-surface: #16161a; /* sidebar, panels, cards */
+  --color-surface-2: #1c1c21; /* raised controls, inputs, modals */
+  --color-surface-3: #232329; /* hover of surface-2, menus */
+
+  /* Borders */
+  --color-hairline: rgba(255, 255, 255, 0.08);
+  --color-hairline-strong: rgba(255, 255, 255, 0.14);
+
+  /* Text ladder (ink-* avoids collision with border-2 width utility) */
+  --color-ink: #e8e8ea;
+  --color-ink-2: #98989f;
+  --color-ink-3: #66666e;
+  --color-ink-4: #4a4a52;
+
+  /* Brand + semantics (mac traffic lights) */
+  --color-accent: #b3e502;
+  --color-accent-hover: #c2f516;
+  --color-danger: #ff5f57;
+  --color-warning: #febc2e;
+  --color-success: #28c840;
+
+  /* Fonts */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Radius */
+  --radius-control: 6px; /* buttons, inputs, nav pills */
+  --radius-panel: 8px; /* cards, panels */
+  --radius-modal: 10px; /* modals, menus */
+}
+
 /* Full-screen app — body/html must never scroll; each screen manages its own
    scroll containers. Without this, any 1px overflow makes the whole page scroll. */
 html,
@@ -7,20 +55,6 @@ body {
   overflow: hidden;
   height: 100%;
 }
-
-/* ── Self-hosted Fonts (no external CDN dependency) ──*/
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/jetbrains-mono/400.css';
-@import '@fontsource/jetbrains-mono/500.css';
-/* Bold weight required for terminal bold characters (e.g. opencode headers) */
-@import '@fontsource/jetbrains-mono/700.css';
-/* Syne — distinctive geometric display face used for the Tasks board headings */
-@import '@fontsource/syne/600.css';
-@import '@fontsource/syne/700.css';
-@import '@fontsource/syne/800.css';
 
 .editor-syntax-ts,
 .editor-syntax-tsx {

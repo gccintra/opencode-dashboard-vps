@@ -1,182 +1,101 @@
-# Aurora Glass — Visual Identity
+# Graphite — Visual Identity
 
-The design language introduced on the **/tasks** route. This document is the source of truth for rolling the same look out to every other screen.
+Mac-native developer-tool aesthetic. This document is the source of truth for the app's visual language and for migrating the remaining Aurora Glass screens.
 
-Stack: React + Tailwind v4 (arbitrary values), self-hosted fonts via `@fontsource`. No CSS-in-JS, no external UI kit.
+Stack: React + Tailwind v4 (`@theme` tokens in `src/index.css`), system font stack, JetBrains Mono via `@fontsource`. No CSS-in-JS, no external UI kit. Shared primitives live in `src/components/ui/`.
 
 ---
 
 ## 1. Concept
 
-**Dark cosmic glassmorphism — minimal, technological, calm.**
+**Dark graphite mac chrome — dense, flat, quiet.**
 
-- A near-black canvas with **ambient light blooms** drifting behind the content (the "aurora").
-- Content sits on **frosted-glass panels**: translucent white fills + `backdrop-blur` + a 1px top highlight that reads as a real glass edge.
-- A single **electric-lime** accent (`#b3e502`) used sparingly — primary actions, active states, focus, "live" signals.
-- Restraint over decoration. Generous spacing, few borders, Linear-like clarity. The atmosphere lives in the background; the foreground stays clean.
+- Two-tone chrome like Finder/Xcode: sidebar and panels sit on a slightly lighter neutral (`surface`) than the content canvas (`bg`).
+- **Hairline dividers** (1px, low-alpha white) do the structural work — not shadows, not blur.
+- Controls are small and dense: 28px default height, 24px compact, 13px text, 6px radius.
+- A single **electric-lime** accent (`#b3e502`) used sparingly — primary buttons, active nav selection, focus rings, live dots.
+- Semantic colors are the mac traffic lights: danger `#ff5f57`, warning `#febc2e`, success `#28c840`.
 
-North star references: Linear (structure/restraint), Grok & awwwards entries (atmosphere/glass/motion).
+**What died with Aurora Glass** (do not reintroduce): aurora blooms, grid overlay, `backdrop-blur` glassmorphism, `kb-sheen` sweeps, `kb-rise` entrances, hover `-translate-y` lifts, lime glow shadows, Syne display font.
+
+North star references: macOS system apps (Finder, Xcode source lists), Orca (stablyai), Linear (restraint).
 
 ---
 
 ## 2. Design Tokens
 
-### 2.1 Color
+Defined in `src/index.css` `@theme`. **Always use the token class, never the raw hex.**
 
-| Role | Value | Notes |
-|------|-------|-------|
-| **Canvas / page bg** | `#0a0a0f` | Every screen root. (`#0a0a0f]/80` for blurred bars.) |
-| **Elevated solid surface** | `#111118` | Modals, dropdown menus, `<option>` backgrounds. |
-| **Accent (lime)** | `#b3e502` | Primary buttons, active, focus, links-to-action. |
-| **Accent hover** | `#c2f516` | Hover state of lime fills. |
-| **Accent glow** | `rgba(179,229,2,X)` | Shadows/tints. `0.5` shadow, `0.1` chip bg, `0.06` ghost bg, `0.3`–`0.4` borders. |
+### 2.1 Surfaces
 
-**Glass fills** (translucent white over the canvas):
+| Class | Value | Use |
+|-------|-------|-----|
+| `bg-bg` | `#0e0e11` | App canvas, page roots, toolbars. |
+| `bg-surface` | `#16161a` | Sidebar, panels, cards, section headers. |
+| `bg-surface-2` | `#1c1c21` | Raised controls, modals, profile tiles. |
+| `bg-surface-3` | `#232329` | Hover of surface-2, menus, active segmented item. |
+| `bg-black/20`–`/25` | — | Inset fields (inputs, segmented track). |
 
-| Token | Use |
+### 2.2 Borders
+
+| Class | Use |
 |-------|-----|
-| `bg-white/[0.02]` | Quietest panel (textarea, nested boxes, list zones). |
-| `bg-white/[0.03]` | Default glass (buttons, inputs, cards-in-context, headers). |
-| `bg-white/[0.04]` | Resting card surface. |
-| `bg-white/[0.05]` – `[0.06]` | Hover of cards/buttons. |
-| `bg-white/[0.08]` – `[0.1]` | Active segmented item / pressed neutral toggle. |
+| `border-hairline` | Default 1px divider everywhere (`rgba(255,255,255,0.08)`). |
+| `border-hairline-strong` | Hover emphasis (`0.14`). |
+| `border-accent/30`–`/40` | Focus / active / drag-over. |
 
-**Borders:**
+### 2.3 Text ladder
 
-| Token | Use |
-|-------|-----|
-| `border-white/[0.06]` | Default hairline (panels, cards, dividers). |
-| `border-white/[0.07]` | Inputs/buttons. |
-| `border-white/[0.08]` | Modals, stronger dividers. |
-| `border-white/[0.12]` – `[0.14]` | Hover. |
-| `border-[#b3e502]/40` | Focus / active / drag-over. |
+| Class | Value | Use |
+|-------|-------|-----|
+| `text-ink` | `#e8e8ea` | Titles, primary text, active nav. |
+| `text-ink-2` | `#98989f` | Secondary text, inactive nav, descriptions. |
+| `text-ink-3` | `#66666e` | Muted labels, timestamps, section headers. |
+| `text-ink-4` | `#4a4a52` | Faint (dead-session dots, decorative glyphs). |
 
-**Text ladder** (light → dark):
+### 2.4 Brand + semantics
 
-| Token | Use |
-|-------|-----|
-| `text-white` | Display headings (Syne). |
-| `#f2f3f5` / `#f0f0f0` | Primary body text, card titles. |
-| `#e6e8eb` | Brightened hover text, column names. |
-| `#9aa3ad` | Secondary (button labels, values). |
-| `#7a828c` | Muted (descriptions, counts, helper). |
-| `#5a626c` | Faint (placeholders, section labels, icons). |
-| `#454c55` | Faintest (empty hints, disabled copy). |
+| Class | Value | Use |
+|-------|-------|-----|
+| `accent` | `#b3e502` | Primary buttons (`bg-accent text-black`), active selection tint (`bg-accent/12`), focus ring (`ring-accent/50`), live dots. |
+| `accent-hover` | `#c2f516` | Hover of lime fills. |
+| `danger` | `#ff5f57` | Destructive actions, errors. Tint pattern: `border-danger/25 bg-danger/10 text-danger`. |
+| `warning` | `#febc2e` | Waiting states, counts. Same tint pattern. |
+| `success` | `#28c840` | Connected/active/online. Same tint pattern. |
 
-**Aurora bloom colors** (radial gradients, see §3):
+### 2.5 Radius
 
-- Lime `rgba(179,229,2,0.2)`
-- Teal `rgba(45,212,191,0.16)`
-- Violet `rgba(139,92,246,0.16–0.18)`
+| Class | Value | Use |
+|-------|-------|-----|
+| `rounded-control` | 6px | Buttons, inputs, nav pills, chips-with-height. |
+| `rounded-panel` | 8px | Cards, panels, empty-state tiles. |
+| `rounded-modal` | 10px | Modals, menus. |
+| `rounded-[4px]` | 4px | Badges, tiny chips. |
 
-**Semantic:**
+### 2.6 Elevation
 
-| Role | Value |
-|------|-------|
-| Danger | `red-500` family (`red-500/10` bg, `red-500/30` border, `red-400` text) |
-| Warning / expired | `#fa0` (`rgba(250,160,0,0.08)` bg, `0.3` border) |
-| Online / success dot | `#2dd` |
-| External link (GitHub) | `#58a6ff` |
-| Scrim / overlay | `black/40`, `black/60`, `black/70` + `backdrop-blur-sm` |
+Flat by default. Only two exceptions:
+- Raised controls (default Button, active segmented item): `shadow-[inset_0_0.5px_0_rgba(255,255,255,0.06)]` — a subtle top bevel.
+- Modals/menus: real drop shadow (`shadow-2xl`), scrim `bg-black/60` (no blur).
 
-> **Do not** use the legacy `#121315` bg or `#af0` / `rgba(170,255,0,...)` accent on new work. Aurora Glass standardizes on `#0a0a0f` + `#b3e502`.
-
-### 2.2 Typography
-
-Three families, all self-hosted (`src/index.css` `@fontsource` imports):
-
-| Family | Tailwind | Use |
-|--------|----------|-----|
-| **Syne** | `font-['Syne']` | Display only — page titles, section/empty-state headings, column names. Weights 600/700/800. Pair with tight tracking: `tracking-[-0.5px]` (large), `tracking-[0.2px]` (small bold). |
-| **Inter** | `font-['Inter']` | All body/UI text. Weights 400/500/600/700. |
-| **JetBrains Mono** | `font-['JetBrains_Mono']` | IDs, numeric counts (`tabular-nums`), code, textareas, badges. |
-
-Scale used:
-
-| Element | Class |
-|---------|-------|
-| Page title | `text-[24px] font-extrabold` → `sm:text-[26px]` (Syne) |
-| Full-page hero title | `text-[26px]` → `sm:text-[30px]` font-extrabold (Syne) |
-| Heading / modal title | `text-[17px]`–`text-[20px]` font-bold (Syne) |
-| Card title | `text-[13.5px] font-semibold` (Inter), `leading-[1.4]`, `line-clamp-2` |
-| Body | `text-[13px]`–`text-[14px]` (Inter) |
-| **Section label** | `text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]` (Inter) |
-| Meta / badge | `text-[10px]`–`text-[11px]` |
-
-### 2.3 Radius
-
-| Token | Use |
-|-------|-----|
-| `rounded-full` | Dots, pills, count badges, status indicators. |
-| `rounded-[5px]` / `[6px]` | Chips, badges, small icon buttons. |
-| `rounded-[8px]` / `[9px]` | Buttons, inputs, sidebar rows, segmented items. |
-| `rounded-[10px]` | Search input, footer/action panels, error banners. |
-| `rounded-[12px]` | Inner panels, mobile cards, empty zones. |
-| `rounded-[14px]` | **Cards.** |
-| `rounded-[16px]`–`[18px]` | Column drop zones, modals, large containers. |
-
-### 2.4 Spacing
-
-Tailwind arbitrary px on a 2-step scale: `4 6 8 10 12 14 16 18 20 24 28 32`. Page gutters: `px-[16px]` mobile → `sm:px-[28px]`/`sm:px-[32px]`. Card padding `p-[14px]`. Panel padding `px-[16px] py-[14px]`.
-
-### 2.5 Elevation (glass)
-
-Glass = translucent fill **+** `backdrop-blur-md` **+** inset top highlight **+** soft drop shadow.
-
-```
-/* Resting card */
-shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)]
-/* Hover card (lift) */
--translate-y-[2px]
-shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)]
-/* Lime CTA */
-shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)]   /* hover: -4px → -4px w/ 0.65 */
-```
-
-The `..._inset` top highlight is non-negotiable — it's what makes a panel read as glass rather than flat.
+Nothing else gets a shadow. No glows.
 
 ---
 
-## 3. Atmosphere layer
+## 3. Typography
 
-Every Aurora Glass screen renders a fixed, non-interactive background behind `z-10` content. Blooms + a masked grid. CSS lives in `src/index.css` under the `kb-` prefix (reproduced in §9) and is screen-agnostic — reuse as-is.
-
-```tsx
-<div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
-  {/* Ambient atmosphere — canonical 3-bloom trio (lime + teal + violet) */}
-  <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-    <div className="kb-aurora" style={{ top: '-180px', left: '-120px', width: 620, height: 620,
-      opacity: 0.5, background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)' }} />
-    <div className="kb-aurora" style={{ top: '-220px', left: '38%', width: 680, height: 680,
-      opacity: 0.4, animationDelay: '-7s', background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)' }} />
-    <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560,
-      opacity: 0.38, animationDelay: '-13s', background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)' }} />
-    <div className="kb-grid" />
-  </div>
-
-  {/* z-10 content goes here */}
-</div>
-```
-
-Rules:
-- **Prefer the full 3-bloom trio above** (lime → teal → violet) — it's the canonical atmosphere on `/tasks`, `/projects`, `/projectdetail`. A 2-bloom variant reads noticeably flatter; only drop to 2 in tight/embedded surfaces.
-- Vary `width/height`, `opacity` (0.38–0.5), and `animationDelay` (stagger by several seconds) so blooms never pulse in unison. Anchor them off-screen (negative offsets) at the top.
-- Always `pointer-events-none` + parent `overflow-hidden` so blooms never create scroll or block clicks.
-- All real content must be `relative z-10`.
+- **UI:** system stack (`--font-sans`: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto`). Body inherits automatically — no font class needed.
+- **Mono:** `font-['JetBrains_Mono']` for IDs, counts, paths, code, terminal, badges with numerals.
+- Scale: `text-[11px]` captions/labels (uppercase + `tracking-[0.5px]` for section labels), `text-[12px]` compact controls, `text-[13px]` default UI, `text-[15px]` section/modal titles, `text-[17px] sm:text-[20px]` page titles. Titles use `font-semibold tracking-[-0.2px]` — never extrabold, never Syne.
 
 ---
 
 ## 4. Motion
 
-CSS-only. Defined in `index.css`. **Always gated by `prefers-reduced-motion`** (the block disables every animation).
-
-| Class | Effect | Use |
-|-------|--------|-----|
-| `kb-aurora` | 22s drift loop | Background blooms. |
-| `kb-rise` | 460ms fade-up, `cubic-bezier(0.22,1,0.36,1)` | Entrance for cards/lists/hero icons. Stagger with `style={{ animationDelay: `${Math.min(i,8)*45}ms` }}`. |
-| `kb-sheen` | Light sweep on hover (720ms) | Primary CTAs. Requires `relative overflow-hidden` on the element. |
-
-UI feedback transitions: `transition-... duration-150` (controls) to `duration-200` (cards/columns). Keep ≤ 300ms. Hover lift on cards = `-translate-y-[2px]`.
+- `transition-colors duration-150` — the only standard transition.
+- Drawers/slides keep their existing `transition-transform duration-200`.
+- `animate-pulse` allowed for live dots; `animate-spin` for spinners. No `animate-ping` halos.
+- No entrance animations, no hover lifts, no sheens. Keep everything ≤ 300ms and respect `prefers-reduced-motion`.
 
 ---
 
@@ -185,191 +104,109 @@ UI feedback transitions: `transition-... duration-150` (controls) to `duration-2
 ### 5.1 Page shell
 
 ```tsx
-<div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
-  <header className="relative z-10 shrink-0 border-b border-white/[0.06] ... backdrop-blur-md">…</header>
-  <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">…scroll region…</div>
-  <footer className="relative z-10 shrink-0 border-t border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">…</footer>
+<div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-bg">
+  <header className="shrink-0 border-b border-hairline bg-bg">…</header>
+  <div className="min-h-0 flex-1 overflow-y-auto">…scroll region…</div>
 </div>
 ```
 
-### 5.2 Height/scroll chain (critical)
+No atmosphere layer, no `relative z-10` wrappers — content sits directly on `bg-bg`.
 
-- The page shell fills its parent with `h-full` + `min-h-0`. **Never** `min-h-screen` inside the app shell (it escapes the flex box and creates page-level scrollbars).
-- Header/footer are `shrink-0`; the middle is `flex-1 min-h-0` and owns the scroll (`overflow-y-auto`, or `overflow-x-auto` for horizontal lanes).
-- **Every flex ancestor in a scroll subtree needs `min-h-0`** (and `min-w-0` for horizontal). Tailwind's flex children default to `min-width:auto`/`min-height:auto` and refuse to shrink, which breaks `overflow-*`.
+### 5.2 Scroll chain (unchanged, still critical)
 
-### 5.3 The `min-w-0` rule (the horizontal-scroll fix)
+- The page shell fills its parent with `h-full` + `min-h-0`. **Never** `min-h-screen` inside the app shell.
+- Header/footer are `shrink-0`; the middle is `flex-1 min-h-0` and owns the scroll.
+- **Every flex ancestor in a scroll subtree needs `min-h-0`** (and `min-w-0` for horizontal).
 
-The shared `AppLayout` content column (the flex-row sibling of the Sidebar) **must keep `min-w-0`**. Without it, any wide child forces the whole page wider than the viewport → a page-level horizontal scrollbar instead of a contained one. The same applies to any new flex item that holds horizontally-scrolling content: add `min-w-0`.
+### 5.3 Structural dimensions (do not change)
 
-Containment pattern: confine horizontal scroll to one element (`overflow-x-auto`); all ancestors stay `overflow-hidden` / `min-w-0`.
+Terminal-dimension estimators hard-code chrome sizes: global sidebar 240px, ProjectDetail sessions sidebar 220px, mobile top bar 48px, terminal header ~50px, tab bar ~42px, status bar ~26px. See `estimateSidebarTerminalDims` (Sidebar.tsx) and `estimateTerminalDims` (ProjectDetail.tsx). Changing any of these requires updating the estimators.
 
----
+### 5.4 Terminal resize timing (unchanged)
 
-## 6. Component recipes
-
-Copy-paste starting points. Adjust spacing, keep tokens.
-
-**Secondary / ghost button**
-```
-flex h-[34px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03]
-px-[12px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all
-hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]
-```
-
-**Primary CTA (lime + sheen)**
-```
-kb-sheen relative flex h-[34px] items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502]
-px-[14px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f]
-shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all
-hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]
-```
-
-**Input / search**
-```
-h-[36px] w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px]
-font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none
-backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]
-```
-(Leading icon: absolute, `text-[#5a626c]`, `group-focus-within:text-[#b3e502]`.)
-
-**Segmented control** — container `rounded-[10px] border border-white/[0.07] bg-white/[0.03] p-[3px] backdrop-blur-md`, `role="tablist"`. Item `rounded-[7px] px-[12px] py-[5px] text-[12px] font-semibold`, `role="tab"` + `aria-selected`:
-- Active **emphasis**: `bg-[#b3e502] text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)]`
-- Active **neutral** (mode toggles): `bg-white/[0.1] text-[#f0f0f0]`
-- Inactive: `text-[#7a828c] hover:text-[#d1d5db]`
-
-**Card** (glass + hover lift + accent edge)
-```
-group relative isolate flex flex-col gap-[10px] overflow-hidden rounded-[14px]
-border border-white/[0.06] bg-white/[0.04] p-[14px] backdrop-blur-md
-shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)]
-transition-[transform,border-color,background-color,box-shadow] duration-200
-hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05]
-focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b3e502]/40
-```
-Optional left accent edge: an absolute `w-[2px]` bar, `opacity-0 group-hover:opacity-100`, colored by context.
-
-**Chip / badge** — `rounded-[5px] px-[6px] py-[2px] text-[10px]`. ID badge: mono, `border-white/[0.07] bg-black/40 text-[#9aa3ad]`. Status chip: tint by a single color → `borderColor: c+'40'`, `background: c+'1a'`, `color: c`, with a `size-[5px]` dot.
-
-**Select** — same as input + `appearance-none`; give each `<option>` `className="bg-[#111118]"` (native dropdowns ignore translucency).
-
-**Count pill** — `rounded-full border border-white/[0.07] bg-white/[0.03] px-[8px] py-[1px] font-['JetBrains_Mono'] text-[11px] text-[#7a828c] tabular-nums`.
-
-**Section label** — `font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]`.
-
-**Modal / dialog** — scrim `fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm`; panel `rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl`. (Modals use the **solid** `#111118`, not glass, for readability.) Reserve true modals for confirmations/quick forms — primary detail views are **routes/pages**, not modals.
-
-**"Live" / pulsing signal** — lime dot with `animate-ping` halo:
-```tsx
-<span className="relative flex size-[5px]">
-  <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#b3e502] opacity-60" />
-  <span className="relative inline-flex size-[5px] rounded-full bg-[#b3e502]" />
-</span>
-```
-
-### 6.1 State patterns
-
-- **Loading**: pulsing glass skeletons (`animate-pulse rounded-[14px] bg-white/[0.03]`) in the real layout shape — not spinners (except route-level full-page: lime ring spinner).
-- **Empty**: centered, glass icon tile (`size-[64px] rounded-[18px]` glass + inset top highlight), **lime-stroked icon** (`stroke="#b3e502"` — never muted gray), Syne heading, muted line, lime CTA. Wrap in `kb-rise`.
-- **Error**: `rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md` + inline Retry.
-- **No-results** (filtered empty): muted line + lime "Clear filters" text button.
-
-### 6.2 Polish bar — the difference between "on-token" and "beautiful"
-
-A screen can use every token and still read flat. These are the moves that close the gap to the `/tasks` reference. Check them on every migrated screen:
-
-- **Content surfaces are GLASS, not solid.** Cards, stat tiles, sidebar rows → `bg-white/[0.03]`–`[0.04]` + `backdrop-blur-md` + inset top highlight. Solid `#111118` is reserved for **modals, dropdown menus, and `<option>`** only. Using `#111118` on a card is the #1 reason a screen looks flat despite correct tokens.
-- **Everything enters.** Card grids, stat strips, list items, empty states get `kb-rise` with a stagger: `style={{ animationDelay: \`${Math.min(i,8)*45}ms\` }}`. No entrance = lifeless.
-- **Empty-state icons are lime, in a glass tile** — not gray glyphs floating on the bg (see §6.1).
-- **Full 3-bloom atmosphere** (§3), not 2. The teal middle bloom is what makes the background feel alive.
-- **Primary CTAs are real lime buttons** — `kb-sheen` + `rounded-[9px]`/`[10px]` + lime glow shadow. A flat `bg-[#b3e502] rounded-[6px]` with no sheen/shadow is a downgrade.
-- **Headings are Syne**, including modal/dialog titles (`text-[17px]`–`[20px] font-bold text-white`). Inter-only headings read generic.
+Any `fit()` call must happen ≥300ms after a layout change (200ms CSS transition + 100ms buffer). Dual-shot pattern: 500ms + 1800ms after session switch.
 
 ---
 
-## 7. Responsiveness
+## 6. Components — import from `src/components/ui`
 
-- Mobile-first. Verify at **375px** before scaling. Breakpoints: `sm` 640, `lg` 1024.
-- Buttons hide text labels on small screens (`<span className="hidden sm:inline">`), keep the icon.
-- Multi-column/lane layouts: horizontal lanes at `lg`; below that, collapse to a tabbed single column or stacked grid.
-- Detail/two-pane: `grid grid-cols-1 gap-[24px] lg:grid-cols-[minmax(0,1fr)_300px]` — stacks on mobile, sidebar (300px) on `lg`. Use `minmax(0,1fr)` (not `1fr`) so the main column can shrink.
-- Footer action bars: `flex-col` → `sm:flex-row`. Primary action full-width on mobile (`w-full sm:w-auto`).
-
----
-
-## 8. Accessibility (required)
-
-- Contrast ≥ 4.5:1 body text on `#0a0a0f` (the text ladder above is tuned for it; don't go lighter-muted than `#5a626c` for meaningful text).
-- Focus visible: `focus-visible:ring-2 focus-visible:ring-[#b3e502]/40` on interactive cards/controls.
-- Icon-only buttons: `aria-label`. Toggles: `aria-pressed`. Segmented: `role="tablist"`/`role="tab"`/`aria-selected`.
-- Clickable cards: `tabIndex={0}` + `onKeyDown` Enter handler.
-- Never signal state by color alone — pair with a dot, icon, or label.
-- Honor `prefers-reduced-motion` (the `kb-` block already does; don't add JS animations that bypass it).
-- Touch targets ≥ 44×44 (pad small icon buttons).
-
----
-
-## 9. The `kb-` CSS block (source: `src/index.css`)
-
-Screen-agnostic. Reuse as-is on any screen; do not rename per-screen.
-
-```css
-@keyframes kb-aurora-drift {
-  0%   { transform: translate3d(-4%, -2%, 0) scale(1); }
-  50%  { transform: translate3d(4%, 3%, 0) scale(1.12); }
-  100% { transform: translate3d(-4%, -2%, 0) scale(1); }
-}
-@keyframes kb-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes kb-sheen {
-  0%        { transform: translateX(-120%) skewX(-12deg); }
-  60%, 100% { transform: translateX(220%) skewX(-12deg); }
-}
-.kb-aurora { position: absolute; pointer-events: none; border-radius: 50%; filter: blur(90px);
-  will-change: transform; animation: kb-aurora-drift 22s ease-in-out infinite; }
-.kb-grid { position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 44px 44px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 78%);
-          mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 78%); }
-.kb-rise { animation: kb-rise 460ms cubic-bezier(0.22,1,0.36,1) both; }
-.kb-sheen::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 40%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
-  transform: translateX(-120%) skewX(-12deg); pointer-events: none; }
-.kb-sheen:hover::after { animation: kb-sheen 720ms ease-out; }
-.kb-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
-.kb-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
-.kb-scroll::-webkit-scrollbar-thumb:hover { background: rgba(179,229,2,0.25); }
-
-@media (prefers-reduced-motion: reduce) {
-  .kb-aurora, .kb-rise, .kb-sheen:hover::after { animation: none; }
-  .kb-rise { opacity: 1; transform: none; }
-}
+```ts
+import { Button, IconButton, Panel, Modal, Input, Textarea, Select, Badge, SegmentedControl, Toolbar, EmptyState, cx } from '../components/ui';
 ```
 
+| Component | Props | Notes |
+|-----------|-------|-------|
+| `Button` | `variant: 'primary'\|'default'\|'ghost'\|'danger'`, `size: 'sm'(24px)\|'md'(28px)` | primary = flat lime, text-black; default = mac push button (surface-2 + bevel); ghost = transparent; danger = red tint. |
+| `IconButton` | `size`, **`aria-label` required** | Square ghost button for icons. |
+| `Panel` | `padding: 'none'\|'sm'\|'md'`, `interactive` | The card. `interactive` adds hover border + focus ring — no lift. |
+| `Modal` | `open, onClose, title?, footer?, maxWidth?` | Scrim without blur, Escape-to-close built in. |
+| `Input`/`Textarea`/`Select` | native props | 28px, inset dark fill, accent focus. `<option className="bg-surface-2">`. |
+| `Badge` | `tone: neutral\|accent\|success\|warning\|danger`, `dot?`, `mono?` | Tint chip. Static dot (no ping). |
+| `SegmentedControl` | `items, value, onChange` | `role="tablist"`; active item is neutral (surface-3), not lime. |
+| `Toolbar` | `end?` | 44px header row with bottom hairline. |
+| `EmptyState` | `icon?, title, description?, action?` | Neutral icon tile; accent only on the action button. |
+
+**Raw recipes** (not componentized):
+
+- Source-list row (sidebars): `h-[28px] mx-[8px] rounded-control px-[8px] text-[13px]`; active = `bg-accent/12 text-ink` + icon `text-accent`; inactive = `text-ink-2 hover:bg-white/[0.04] hover:text-ink`. Selection is a pill — no left bar.
+- Section label: `text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3`.
+- Error banner: `rounded-control border border-danger/30 bg-danger/10 px-[16px] py-[12px] text-[13px] text-danger`.
+- Status dots: `size-[6px] rounded-full` + `bg-success`/`bg-warning`/`bg-ink-4` (dead). `animate-pulse` when live. No glow shadows.
+
 ---
 
-## 10. Migration checklist (per screen)
+## 7. States
 
-When converting an existing screen to Aurora Glass:
+- **Loading:** flat skeletons — `animate-pulse` blocks of `bg-white/[0.04]`–`[0.06]` inside a `Panel`. Spinners: `animate-spin` circle in `text-ink-3` or `border-accent`.
+- **Empty:** `EmptyState` component.
+- **Error:** danger banner (above) with inline Retry.
+- **Focus:** `focus-visible:ring-2 ring-accent/50` on all interactive elements.
 
-- [ ] Root → page shell (`relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]`). Drop any `min-h-screen`.
-- [ ] Add the atmosphere layer (§3); wrap real content in `relative z-10`.
-- [ ] Swap bg `#121315`/`#0d0d14` → `#0a0a0f`; accent `#af0`/`rgba(170,255,0,*)` → `#b3e502`.
-- [ ] Headings → Syne; keep body Inter, IDs/counts JetBrains Mono (`tabular-nums`).
-- [ ] Surfaces → glass recipe (translucent fill + `backdrop-blur-md` + inset top highlight + soft shadow). **No solid `#111118` on cards/stat tiles** — that's modals/`<option>` only (§6.2).
-- [ ] Borders/text → the token ladders (§2.1).
-- [ ] Primary action → lime CTA (+ `kb-sheen`); secondary → ghost glass button.
-- [ ] Inputs/selects/segmented → recipes (§6); `<option>` gets `bg-[#111118]`.
-- [ ] Entrance motion via `kb-rise` (+ stagger); confirm `prefers-reduced-motion` still calm.
-- [ ] Fix the scroll chain: `min-h-0` on flex ancestors, `min-w-0` where horizontal, one scroll owner.
-- [ ] States: loading skeletons, empty, error, no-results (§6.1).
-- [ ] a11y pass (§8): focus rings, aria-labels, keyboard, contrast.
-- [ ] Verify at 375px, then `sm`, then `lg`.
-- [ ] **Polish bar (§6.2)** — run it last: glass not solid, everything enters, lime empty icons, 3 blooms, Syne headings. This is what separates "on-token" from "beautiful".
+---
 
-> Reference implementation: `src/components/KanbanBoard/*` (board, card, column, filters) and `src/components/KanbanBoard/TaskDetail.tsx` + `src/pages/TaskDetail.tsx` (full-page detail). Migrated page examples: `src/pages/Projects.tsx` and `src/pages/ProjectDetail.tsx`.
+## 8. Responsiveness & accessibility
+
+- Mobile-first: everything works at 375px. Breakpoints `sm` 640 / `md` 768 / `lg` 1024.
+- Touch targets ≥ 44px on mobile (visual size may be smaller; extend hit area with padding).
+- Contrast: `ink` on `bg`/`surface` ≥ 12:1; `ink-2` ≥ 5:1; `ink-3` only for non-essential text. Lime `#b3e502` on black passes AA at all sizes.
+- `aria-label` on all icon-only buttons; `role="tablist"`/`aria-selected` on tabs/segments.
+
+---
+
+## 9. Migration map (Aurora → Graphite)
+
+Remaining waves: KanbanBoard cluster, FilesPage, HarnessesPage, Dashboard, Emergency, Login, TaskDetail, and shared modals (CanvasPickerModal, RecoverConversationModal, Harnesses modals). Apply this table, then hand-polish:
+
+| Aurora | Graphite |
+|---|---|
+| `bg-[#0a0a0f]` page root | `bg-bg` |
+| Atmosphere block (`kb-aurora` + `kb-grid` + wrapper) | delete; drop now-useless `relative z-10` |
+| `bg-[#111118]` | `bg-surface-2` |
+| Glass (`bg-white/[0.02-0.04]` + `backdrop-blur-md` + inset shadow) | `bg-surface border border-hairline`, no blur |
+| `border-white/[0.06-0.08]` / `[0.12-0.14]` | `border-hairline` / `border-hairline-strong` |
+| `#f0f0f0`/`#f2f3f5`/`#e6e8eb`/`text-white` | `text-ink` |
+| `#9aa3ad` | `text-ink-2` |
+| `#7a828c`, `#5a626c` | `text-ink-3` |
+| `#454c55`, `#445566` | `text-ink-4` |
+| `#b3e502` arbitrary classes | `accent` tokens |
+| `kb-sheen`, glow shadows, `hover:-translate-y`, `kb-rise` | delete; `transition-colors duration-150` |
+| `rounded-[14-18px]` / `[8-10px]` | `rounded-panel`(cards) or `rounded-modal`(modals) / `rounded-control` |
+| `red-500/*`, `#f54`, `#f56` | `danger` |
+| `#fa0`, `#ffaa00` | `warning` |
+| `#2dd`, `#2d8`, `#22dd88` | `success` |
+| Syne/extrabold headings | `text-[17px] sm:text-[20px] font-semibold tracking-[-0.2px] text-ink` |
+| Local Modal/button/input markup | `ui/` primitives |
+
+Per-screen checklist:
+- [ ] Root → Graphite page shell; delete atmosphere.
+- [ ] Apply the mapping table.
+- [ ] Replace local modals/buttons/inputs with `ui/` primitives.
+- [ ] Fix scroll chain (`min-h-0`).
+- [ ] Update any class-string test assertions in the same commit.
+- [ ] Eyeball at 375px and desktop.
+
+---
+
+## 10. Legacy: the `kb-` CSS block
+
+The `kb-` classes (aurora, grid, rise, sheen) remain in `src/index.css` **only** because unmigrated screens still use them. They are **deprecated** — never use them in new or migrated code. Delete the block when the last Aurora screen migrates (tracked by the migration map above).

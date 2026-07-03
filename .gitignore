@@ -37,6 +37,7 @@ ecosystem.config.cjs
 
 # OpenCode internal
 .opencode
+.claude
 
 # Images
 images

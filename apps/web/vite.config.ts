@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => {
         description: 'ALF code — manage multiple opencode CLI sessions',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0a0a0f',
-        theme_color: '#0a0a0f',
+        background_color: '#0e0e11',
+        theme_color: '#0e0e11',
         orientation: 'any',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

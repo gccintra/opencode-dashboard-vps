@@ -44,6 +44,5 @@
     "vitest": "3.2.6"
   },
   "dependencies": {
-    "@fontsource/syne": "^5.2.7"
   }
 }
