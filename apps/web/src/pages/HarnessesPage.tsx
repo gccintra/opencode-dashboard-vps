@@ -95,22 +95,22 @@ function DeleteDialog({
         className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-['Syne'] text-[18px] font-bold text-white">Delete {harnessName}?</h3>
-        <p className="mt-[8px] font-['Inter'] text-[13px] leading-[1.5] text-[#9aa3ad]">
+        <h3 className="text-[18px] font-bold text-white">Delete {harnessName}?</h3>
+        <p className="mt-[8px] text-[13px] leading-[1.5] text-[#9aa3ad]">
           This template will be permanently removed.
         </p>
         <div className="mt-[20px] flex justify-end gap-[10px]">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="rounded-[8px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
+            className="rounded-[8px] border border-white/[0.07] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="rounded-[8px] bg-red-600 px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+            className="rounded-[8px] bg-red-600 px-[16px] py-[8px] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
           >
             {loading ? 'Deleting...' : 'Delete'}
           </button>
@@ -288,13 +288,13 @@ export default function HarnessesPage() {
       {/* Header */}
       <header className="sticky top-0 z-20 shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">
         <div className="flex items-center justify-between gap-[10px] pl-[52px] pr-[20px] py-[14px] sm:px-[28px] lg:px-[28px]">
-          <h1 className="font-['Syne'] text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
+          <h1 className="text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
             Templates
           </h1>
 
           <button
             onClick={openCreate}
-            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
+            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
           >
             <PlusIcon />
             <span className="hidden sm:inline">New Template</span>
@@ -307,7 +307,7 @@ export default function HarnessesPage() {
       <div className="relative z-10 flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[22px] sm:px-[28px] sm:pt-[28px]">
         {/* Error */}
         {error && (
-          <div className="mb-[20px] flex items-center gap-[10px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400">
+          <div className="mb-[20px] flex items-center gap-[10px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] text-[13px] text-red-400">
             <span className="flex-1">{error}</span>
             <button onClick={loadHarnesses} className="shrink-0 underline hover:text-red-300">
               Retry
@@ -341,13 +341,13 @@ export default function HarnessesPage() {
                 <path d="M8 12h8M12 8v8" stroke="#b3e502" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <h3 className="font-['Syne'] text-[20px] font-bold text-white">No templates yet</h3>
-            <p className="mt-[6px] max-w-[340px] font-['Inter'] text-[13px] leading-relaxed text-[#7a828c]">
+            <h3 className="text-[20px] font-bold text-white">No templates yet</h3>
+            <p className="mt-[6px] max-w-[340px] text-[13px] leading-relaxed text-[#7a828c]">
               Create your first template to bootstrap projects.
             </p>
             <button
               onClick={openCreate}
-              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
             >
               Create your first template
             </button>
@@ -366,11 +366,11 @@ export default function HarnessesPage() {
                 {/* Header row with name + edit gear */}
                 <div className="flex items-start justify-between gap-[12px]">
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-['Inter'] text-[15px] font-semibold text-[#f0f0f0]">
+                    <h3 className="truncate text-[15px] font-semibold text-[#f0f0f0]">
                       {harness.name}
                     </h3>
                     {harness.description && (
-                      <p className="mt-[4px] line-clamp-1 font-['Inter'] text-[13px] text-[#7a828c]">
+                      <p className="mt-[4px] line-clamp-1 text-[13px] text-[#7a828c]">
                         {harness.description}
                       </p>
                     )}
@@ -398,7 +398,7 @@ export default function HarnessesPage() {
                 {/* File count badge */}
                 {'fileCount' in harness && (
                   <div className="flex items-center gap-[8px]">
-                    <span className="inline-block rounded-full bg-[rgba(179,229,2,0.1)] px-[8px] py-[3px] font-['Inter'] text-[12px] text-[#b3e502]">
+                    <span className="inline-block rounded-full bg-[rgba(179,229,2,0.1)] px-[8px] py-[3px] text-[12px] text-[#b3e502]">
                       {(harness as HarnessDetail).fileCount} file
                       {(harness as HarnessDetail).fileCount !== 1 ? 's' : ''}
                     </span>
@@ -410,7 +410,7 @@ export default function HarnessesPage() {
                   <div />
                   <button
                     onClick={() => setDeleteTarget(harness)}
-                    className="font-['Inter'] text-[12px] font-medium text-[#5a626c] hover:text-red-400 transition-colors"
+                    className="text-[12px] font-medium text-[#5a626c] hover:text-red-400 transition-colors"
                     aria-label={`Delete ${harness.name}`}
                   >
                     Delete

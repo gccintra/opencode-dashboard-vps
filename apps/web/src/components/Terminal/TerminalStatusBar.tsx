@@ -122,7 +122,7 @@ export function TerminalStatusBar({
             onClick={onZoomOut}
             disabled={fontSize <= FONT_SIZE_MIN}
             title="Diminuir fonte (Ctrl+-)"
-            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
           >
             A<span className="relative top-[1px] text-[8px] leading-none">-</span>
           </button>
@@ -143,7 +143,7 @@ export function TerminalStatusBar({
             onClick={onZoomIn}
             disabled={fontSize >= FONT_SIZE_MAX}
             title="Aumentar fonte (Ctrl++)"
-            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] font-['Inter'] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
           >
             A<span className="relative top-[1px] text-[8px] leading-none">+</span>
           </button>

@@ -42,7 +42,7 @@ export default function HarnessPreviewModal({
     if (!selectedHarnessId) {
       return (
         <div className="flex items-center justify-center py-[48px]">
-          <span className="font-['Inter'] text-[14px] text-[#5a626c]">
+          <span className="text-[14px] text-[#5a626c]">
             Select a template to preview its files
           </span>
         </div>
@@ -66,7 +66,7 @@ export default function HarnessPreviewModal({
     if (!preview) {
       return (
         <div className="flex items-center justify-center py-[48px]">
-          <span className="font-['Inter'] text-[14px] text-[#5a626c]">
+          <span className="text-[14px] text-[#5a626c]">
             Select a template to preview its files
           </span>
         </div>
@@ -96,7 +96,7 @@ export default function HarnessPreviewModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-[20px]">
-          <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">
+          <h3 className="text-[16px] font-semibold text-[#f0f0f0]">
             Apply Template
           </h3>
           <button
@@ -109,7 +109,7 @@ export default function HarnessPreviewModal({
 
         {/* Harness selector */}
         <div className="mb-[16px]">
-          <label className="mb-[6px] block font-['Inter'] text-[13px] font-medium text-[#9aa3ad]">
+          <label className="mb-[6px] block text-[13px] font-medium text-[#9aa3ad]">
             Template
           </label>
           {harnessesLoading ? (
@@ -120,7 +120,7 @@ export default function HarnessPreviewModal({
               onChange={(e) =>
                 onHarnessChange(e.target.value || null)
               }
-              className="w-full rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#b3e502] transition-colors"
+              className="w-full rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#b3e502] transition-colors"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
@@ -143,7 +143,7 @@ export default function HarnessPreviewModal({
             </select>
           )}
           {selectedHarness && (
-            <p className="mt-[6px] font-['Inter'] text-[12px] text-[#5a626c]">
+            <p className="mt-[6px] text-[12px] text-[#5a626c]">
               {selectedHarness.description}
             </p>
           )}
@@ -153,7 +153,7 @@ export default function HarnessPreviewModal({
         <div className="mb-[16px] border-t border-[rgba(255,255,255,0.06)]" />
 
         {/* Preview label */}
-        <div className="mb-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad]">
+        <div className="mb-[8px] text-[13px] font-medium text-[#9aa3ad]">
           Preview
         </div>
 
@@ -178,7 +178,7 @@ export default function HarnessPreviewModal({
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
-            <span className="font-['Inter'] text-[13px] text-[#fc0]">
+            <span className="text-[13px] text-[#fc0]">
               {preview!.conflicts.length} file(s) already exist in this project.
               Enable overwrite to replace them.
             </span>
@@ -194,7 +194,7 @@ export default function HarnessPreviewModal({
               onChange={(e) => setOverwrite(e.target.checked)}
               className="h-[16px] w-[16px] rounded-[3px] border border-[rgba(255,255,255,0.12)] bg-[#0a0a0f] accent-[#b3e502] cursor-pointer"
             />
-            <span className="font-['Inter'] text-[13px] text-[#ccd]">
+            <span className="text-[13px] text-[#ccd]">
               Overwrite existing files
             </span>
           </label>
@@ -218,7 +218,7 @@ export default function HarnessPreviewModal({
               <line x1="15" y1="9" x2="9" y2="15" />
               <line x1="9" y1="9" x2="15" y2="15" />
             </svg>
-            <span className="font-['Inter'] text-[13px] text-[#f55]">
+            <span className="text-[13px] text-[#f55]">
               {applyError}
             </span>
           </div>
@@ -229,14 +229,14 @@ export default function HarnessPreviewModal({
           <button
             onClick={onClose}
             disabled={applying}
-            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={() => onApply(overwrite)}
             disabled={!selectedHarnessId || applying}
-            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
+            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
           >
             {applying ? (
               <>

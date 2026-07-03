@@ -89,7 +89,7 @@ export function LabelChip({ label, onRemove, size = 'sm' }: LabelChipProps) {
     const segPad = size === 'md' ? 'px-[8px] py-[3px] text-[11.5px]' : 'px-[6px] py-[1.5px] text-[10px]';
     return (
       <span
-        className="inline-flex max-w-full items-center overflow-hidden rounded-[6px] border font-['Inter'] font-semibold leading-none backdrop-blur-md"
+        className="inline-flex max-w-full items-center overflow-hidden rounded-[6px] border font-semibold leading-none backdrop-blur-md"
         style={{ borderColor: labelTint(label.color, 0.4), color: label.color }}
         title={label.name}
       >
@@ -112,7 +112,7 @@ export function LabelChip({ label, onRemove, size = 'sm' }: LabelChipProps) {
 
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-[5px] rounded-[6px] border font-['Inter'] font-semibold leading-none backdrop-blur-md ${pad}`}
+      className={`inline-flex max-w-full items-center gap-[5px] rounded-[6px] border font-semibold leading-none backdrop-blur-md ${pad}`}
       style={{
         backgroundColor: labelTint(label.color, 0.12),
         borderColor: labelTint(label.color, 0.34),

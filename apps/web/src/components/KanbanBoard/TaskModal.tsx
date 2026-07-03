@@ -171,7 +171,7 @@ export function TaskModal({
                 <select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="appearance-none bg-transparent font-['Inter'] text-[12px] text-[#7a828c] cursor-pointer outline-none transition-colors hover:text-[#9aa3ad]"
+                  className="appearance-none bg-transparent text-[12px] text-[#7a828c] cursor-pointer outline-none transition-colors hover:text-[#9aa3ad]"
                 >
                   {projects.map((p) => (
                     <option key={p.id} value={p.id} className="bg-[#111118] text-[#f0f0f0]">
@@ -179,10 +179,10 @@ export function TaskModal({
                     </option>
                   ))}
                 </select>
-                <span className="font-['Inter'] text-[12px] text-[#454c55]">/</span>
+                <span className="text-[12px] text-[#454c55]">/</span>
               </>
             )}
-            <span className="font-['Inter'] text-[12px] text-[#7a828c]">New Task</span>
+            <span className="text-[12px] text-[#7a828c]">New Task</span>
           </div>
           <button
             type="button"
@@ -214,10 +214,10 @@ export function TaskModal({
             aria-label="Title"
             placeholder="Task title"
             autoFocus
-            className="w-full bg-transparent font-['Syne'] text-[20px] font-bold tracking-[-0.3px] text-white placeholder:text-[#454c55] outline-none"
+            className="w-full bg-transparent text-[20px] font-bold tracking-[-0.3px] text-white placeholder:text-[#454c55] outline-none"
           />
           {titleError && (
-            <p className="mt-[4px] font-['Inter'] text-[12px] text-red-400">{titleError}</p>
+            <p className="mt-[4px] text-[12px] text-red-400">{titleError}</p>
           )}
         </div>
 
@@ -228,7 +228,7 @@ export function TaskModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add description..."
             rows={3}
-            className="w-full resize-y bg-transparent font-['Inter'] text-[14px] leading-[1.55] text-[#9aa3ad] placeholder:text-[#454c55] outline-none"
+            className="w-full resize-y bg-transparent text-[14px] leading-[1.55] text-[#9aa3ad] placeholder:text-[#454c55] outline-none"
           />
         </div>
 
@@ -245,7 +245,7 @@ export function TaskModal({
                 setShowColumnPicker((v) => !v);
                 setShowLabelPicker(false);
               }}
-              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] font-['Inter'] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
+              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
             >
               <span
                 className="size-[6px] shrink-0 rounded-full"
@@ -263,7 +263,7 @@ export function TaskModal({
                       setColumn(opt.id);
                       setShowColumnPicker(false);
                     }}
-                    className={`flex w-full items-center gap-[6px] px-[10px] py-[7px] font-['Inter'] text-[12px] transition-colors hover:bg-white/[0.06] ${
+                    className={`flex w-full items-center gap-[6px] px-[10px] py-[7px] text-[12px] transition-colors hover:bg-white/[0.06] ${
                       column === opt.id ? 'text-[#f0f0f0]' : 'text-[#9aa3ad]'
                     }`}
                   >
@@ -287,7 +287,7 @@ export function TaskModal({
                 setShowColumnPicker(false);
                 setShowLabelPicker(false);
               }}
-              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] font-['Inter'] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
+              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
             >
               <span
                 className="size-[6px] shrink-0 rounded-full"
@@ -305,7 +305,7 @@ export function TaskModal({
                       setPriority(p);
                       setShowPriorityPicker(false);
                     }}
-                    className={`flex w-full items-center gap-[6px] px-[10px] py-[7px] font-['Inter'] text-[12px] transition-colors hover:bg-white/[0.06] ${
+                    className={`flex w-full items-center gap-[6px] px-[10px] py-[7px] text-[12px] transition-colors hover:bg-white/[0.06] ${
                       priority === p ? 'text-[#f0f0f0]' : 'text-[#9aa3ad]'
                     }`}
                   >
@@ -329,7 +329,7 @@ export function TaskModal({
                 setShowColumnPicker(false);
                 setShowPriorityPicker(false);
               }}
-              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] font-['Inter'] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
+              className="flex items-center gap-[5px] rounded-[6px] border border-white/[0.07] bg-white/[0.03] px-[8px] py-[4px] text-[12px] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:bg-white/[0.06]"
             >
               <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
                 <path
@@ -345,7 +345,7 @@ export function TaskModal({
             {showLabelPicker && (
               <div className="absolute top-full left-0 z-50 mt-[4px] min-w-[180px] overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#111118] shadow-xl">
                 {projectLabels.length === 0 ? (
-                  <p className="px-[10px] py-[8px] font-['Inter'] text-[12px] text-[#5a626c]">
+                  <p className="px-[10px] py-[8px] text-[12px] text-[#5a626c]">
                     No labels for this project
                   </p>
                 ) : (
@@ -356,7 +356,7 @@ export function TaskModal({
                         key={label.id}
                         type="button"
                         onClick={() => toggleLabel(label.id)}
-                        className="flex w-full items-center gap-[7px] px-[10px] py-[7px] font-['Inter'] text-[12px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06]"
+                        className="flex w-full items-center gap-[7px] px-[10px] py-[7px] text-[12px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06]"
                       >
                         <span
                           className="size-[8px] shrink-0 rounded-[2px]"
@@ -404,14 +404,14 @@ export function TaskModal({
 
         {/* Error */}
         {error && (
-          <div className="mx-[20px] mt-[10px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+          <div className="mx-[20px] mt-[10px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
             {error}
           </div>
         )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-[20px] py-[14px]">
-          <span className="font-['Inter'] text-[11px] text-[#454c55]">
+          <span className="text-[11px] text-[#454c55]">
             <kbd className="font-['JetBrains_Mono']">Ctrl+Enter</kbd> to submit
           </span>
           <div className="flex items-center gap-[8px]">
@@ -419,7 +419,7 @@ export function TaskModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[14px] py-[7px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
+              className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[14px] py-[7px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
             >
               Cancel
             </button>
@@ -427,7 +427,7 @@ export function TaskModal({
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="kb-sheen relative flex items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] py-[7px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
+              className="kb-sheen relative flex items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] py-[7px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create task'}
             </button>

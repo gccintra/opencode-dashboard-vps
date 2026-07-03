@@ -272,7 +272,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
       {/* ══════ Header ══════ */}
       <header className="relative z-10 flex shrink-0 items-center justify-between gap-[12px] border-b border-white/[0.06] px-[20px] py-[16px] sm:px-[32px]">
         <div className="flex items-baseline gap-[12px]">
-          <h1 className="font-['Syne'] text-[24px] font-extrabold leading-none tracking-[-0.5px] text-white sm:text-[26px]">
+          <h1 className="text-[24px] font-extrabold leading-none tracking-[-0.5px] text-white sm:text-[26px]">
             Tasks
           </h1>
           {!loading && tasks.length > 0 && (
@@ -287,7 +287,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* Columns button */}
           <button
             onClick={() => setColumnsModalOpen(true)}
-            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
           >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
               <rect x="1" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -300,7 +300,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* Labels button */}
           <button
             onClick={() => setLabelsModalOpen(true)}
-            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <path
@@ -317,7 +317,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* New Task button */}
           <button
             onClick={() => openCreate('backlog')}
-            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
+            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="#0a0a0f" strokeWidth="1.8" strokeLinecap="round" />
@@ -331,7 +331,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
       {/* ══════ Filters ══════ */}
       <div className="relative z-10 shrink-0 px-[16px] pt-[16px] sm:px-[32px] sm:pt-[20px]">
         {error && (
-          <div className="mb-[14px] flex items-center gap-[8px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+          <div className="mb-[14px] flex items-center gap-[8px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
             <span className="flex-1">{error}</span>
             <button onClick={fetchData} className="font-semibold underline hover:text-red-300">
               Retry
@@ -372,13 +372,13 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
                 />
               </svg>
             </div>
-            <h3 className="font-['Syne'] text-[18px] font-bold text-[#f0f0f0]">No tasks yet</h3>
-            <p className="mt-[8px] max-w-[320px] font-['Inter'] text-[13px] leading-[1.55] text-[#7a828c]">
+            <h3 className="text-[18px] font-bold text-[#f0f0f0]">No tasks yet</h3>
+            <p className="mt-[8px] max-w-[320px] text-[13px] leading-[1.55] text-[#7a828c]">
               Create your first task or sync a GitHub repo to get started.
             </p>
             <button
               onClick={() => openCreate('backlog')}
-              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
             >
               Create your first task
             </button>
@@ -388,10 +388,10 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
         {/* No filter results */}
         {!loading && !error && tasks.length > 0 && totalFiltered === 0 && (
           <div className="flex h-full flex-col items-center justify-center px-[24px] text-center">
-            <p className="font-['Inter'] text-[14px] text-[#9aa3ad]">No tasks match your filters</p>
+            <p className="text-[14px] text-[#9aa3ad]">No tasks match your filters</p>
             <button
               onClick={() => setFilters({ ...DEFAULT_FILTERS })}
-              className="mt-[10px] font-['Inter'] text-[13px] font-semibold text-[#b3e502] hover:underline"
+              className="mt-[10px] text-[13px] font-semibold text-[#b3e502] hover:underline"
             >
               Clear filters
             </button>
@@ -457,20 +457,20 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
             className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-['Syne'] text-[17px] font-bold text-[#f0f0f0]">Delete task?</h3>
-            <p className="mt-[8px] font-['Inter'] text-[13px] leading-[1.5] text-[#7a828c]">
+            <h3 className="text-[17px] font-bold text-[#f0f0f0]">Delete task?</h3>
+            <p className="mt-[8px] text-[13px] leading-[1.5] text-[#7a828c]">
               This action cannot be undone.
             </p>
             <div className="mt-[20px] flex justify-end gap-[10px]">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-[8px] border border-white/[0.08] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] transition-colors hover:border-white/[0.16] hover:text-[#e6e8eb]"
+                className="rounded-[8px] border border-white/[0.08] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] transition-colors hover:border-white/[0.16] hover:text-[#e6e8eb]"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="rounded-[8px] bg-red-600 px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-white transition-colors hover:bg-red-500"
+                className="rounded-[8px] bg-red-600 px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors hover:bg-red-500"
               >
                 Delete
               </button>

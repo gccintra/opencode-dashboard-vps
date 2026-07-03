@@ -146,7 +146,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
             type="button"
             onClick={() => setBrowseModalOpen(true)}
             disabled={disabled}
-            className="rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] text-[13px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50 whitespace-nowrap"
           >
             Browse
           </button>
@@ -184,7 +184,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
           </div>
         )}
 
-        {error && <p className="mt-[4px] font-['Inter'] text-[12px] text-red-400">{error}</p>}
+        {error && <p className="mt-[4px] text-[12px] text-red-400">{error}</p>}
       </div>
 
       <DirectoryBrowseModal

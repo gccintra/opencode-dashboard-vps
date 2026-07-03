@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, type ApiError } from '../lib/api';
 import { DirectoryPicker } from '../components/DirectoryPicker';
+import {
+  Button,
+  IconButton,
+  Modal,
+  Input,
+  Textarea,
+  Select,
+  Panel,
+  EmptyState,
+} from '../components/ui';
 
 /* ── Types ── */
 
@@ -86,33 +96,6 @@ function ChevronIcon() {
   );
 }
 
-/* ── Modal wrapper ── */
-
-function Modal({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="mx-4 w-full max-w-[400px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 /* ── Delete dialog ── */
 
 function DeleteDialog({
@@ -128,40 +111,27 @@ function DeleteDialog({
   onCancel: () => void;
   loading: boolean;
 }) {
-  if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      <div
-        className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-['Syne'] text-[18px] font-bold text-white">
-          Delete {projectName}?
-        </h3>
-        <p className="mt-[8px] font-['Inter'] text-[13px] leading-[1.5] text-[#9aa3ad]">
-          This will terminate all active sessions.
-        </p>
-        <div className="mt-[20px] flex justify-end gap-[10px]">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="flex h-[34px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[16px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
-          >
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={`Delete ${projectName}?`}
+      maxWidth="max-w-[380px]"
+      footer={
+        <>
+          <Button onClick={onCancel} disabled={loading}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="rounded-[9px] bg-red-600 px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={loading}>
             {loading ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <p className="text-[13px] leading-[1.5] text-ink-2">
+        This will terminate all active sessions.
+      </p>
+    </Modal>
   );
 }
 
@@ -231,122 +201,105 @@ function ProjectFormModal({
     onSubmit({ name: name.trim(), directory: directory.trim(), description: description.trim(), harnessId });
   };
 
-  if (!open) return null;
-
   const labelClass =
-    "mb-[5px] block font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
-  const inputClass =
-    "w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[9px] font-['Inter'] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]";
+    'mb-[5px] block text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Saving…' : 'Save'}
+          </Button>
+        </>
+      }
     >
-      <div
-        className="mx-4 w-full max-w-[420px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-['Syne'] text-[18px] font-bold text-white">{title}</h3>
-
-        <div className="mt-[18px] space-y-[14px]">
-          <div>
-            <label htmlFor="project-name" className={labelClass}>
-              Name
-            </label>
-            <input
-              id="project-name"
-              type="text"
-              value={name}
-              onChange={(e) => { setName(e.target.value); setNameError(''); }}
-              className={inputClass}
-              placeholder="my-project"
-            />
-            {nameError && (
-              <p className="mt-[4px] font-['Inter'] text-[12px] text-red-400">{nameError}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="project-directory" className={labelClass}>
-              Directory
-            </label>
-            <DirectoryPicker
-              value={directory}
-              onChange={(path) => { setDirectory(path); setDirError(''); }}
-              error={dirError}
-              disabled={loading}
-              placeholder="/home/user/projects/my-project"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="project-description" className={labelClass}>
-              Description{' '}
-              <span className="font-normal normal-case text-[#5a626c]">(optional)</span>
-            </label>
-            <textarea
-              id="project-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className={`${inputClass} resize-none`}
-              placeholder="Optional description"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="project-harness" className={labelClass}>
-              Template{' '}
-              <span className="font-normal normal-case text-[#5a626c]">(optional)</span>
-            </label>
-            {harnessesLoading ? (
-              <div className="h-[38px] rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] flex items-center px-[12px]">
-                <span className="font-['Inter'] text-[13px] text-[#5a626c]">Loading templates…</span>
-              </div>
-            ) : (
-              <select
-                id="project-harness"
-                value={harnessId || ''}
-                onChange={(e) => setHarnessId(e.target.value || null)}
-                className={`${inputClass} appearance-none`}
-              >
-                <option value="">None — empty project</option>
-                {harnesses.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                    {h.description ? ` — ${h.description}` : ''}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+      <div className="space-y-[14px]">
+        <div>
+          <label htmlFor="project-name" className={labelClass}>
+            Name
+          </label>
+          <Input
+            id="project-name"
+            type="text"
+            value={name}
+            onChange={(e) => { setName(e.target.value); setNameError(''); }}
+            placeholder="my-project"
+          />
+          {nameError && (
+            <p className="mt-[4px] text-[12px] text-danger">{nameError}</p>
+          )}
         </div>
 
-        {error && (
-          <p className="mt-[14px] rounded-[8px] border border-red-500/30 bg-red-500/10 px-[12px] py-[8px] font-['Inter'] text-[13px] text-red-400">
-            {error}
-          </p>
-        )}
+        <div>
+          <label htmlFor="project-directory" className={labelClass}>
+            Directory
+          </label>
+          <DirectoryPicker
+            value={directory}
+            onChange={(path) => { setDirectory(path); setDirError(''); }}
+            error={dirError}
+            disabled={loading}
+            placeholder="/home/user/projects/my-project"
+          />
+        </div>
 
-        <div className="mt-[20px] flex justify-end gap-[10px]">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex h-[34px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[16px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="kb-sheen relative flex h-[34px] items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[16px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
-          >
-            {loading ? 'Saving…' : 'Save'}
-          </button>
+        <div>
+          <label htmlFor="project-description" className={labelClass}>
+            Description{' '}
+            <span className="font-normal normal-case text-ink-3">(optional)</span>
+          </label>
+          <Textarea
+            id="project-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="resize-none"
+            placeholder="Optional description"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="project-harness" className={labelClass}>
+            Template{' '}
+            <span className="font-normal normal-case text-ink-3">(optional)</span>
+          </label>
+          {harnessesLoading ? (
+            <div className="flex h-[28px] items-center rounded-control border border-hairline bg-black/20 px-[10px]">
+              <span className="text-[13px] text-ink-3">Loading templates…</span>
+            </div>
+          ) : (
+            <Select
+              id="project-harness"
+              value={harnessId || ''}
+              onChange={(e) => setHarnessId(e.target.value || null)}
+            >
+              <option value="" className="bg-surface-2">
+                None — empty project
+              </option>
+              {harnesses.map((h) => (
+                <option key={h.id} value={h.id} className="bg-surface-2">
+                  {h.name}
+                  {h.description ? ` — ${h.description}` : ''}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
-    </div>
+
+      {error && (
+        <p className="mt-[14px] rounded-control border border-danger/30 bg-danger/10 px-[12px] py-[8px] text-[13px] text-danger">
+          {error}
+        </p>
+      )}
+    </Modal>
   );
 }
 
@@ -355,21 +308,18 @@ function ProjectFormModal({
 function LiveBadge({ live }: { live: number }) {
   if (live > 0) {
     return (
-      <div className="flex items-center gap-[8px] rounded-[12px] border border-[#b3e502]/25 bg-[rgba(179,229,2,0.08)] px-[14px] py-[11px]">
-        <span className="relative flex size-[6px] shrink-0">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#b3e502] opacity-60" />
-          <span className="relative inline-flex size-[6px] rounded-full bg-[#b3e502]" />
-        </span>
-        <span className="font-['Inter'] text-[13px] font-semibold text-[#b3e502]">
+      <div className="flex items-center gap-[8px] rounded-control border border-accent/25 bg-accent/[0.08] px-[12px] py-[8px]">
+        <span className="size-[6px] shrink-0 animate-pulse rounded-full bg-accent" />
+        <span className="text-[12px] font-semibold text-accent">
           {live} active session{live !== 1 ? 's' : ''}
         </span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-[8px] rounded-[12px] border border-white/[0.06] bg-white/[0.02] px-[14px] py-[11px]">
-      <span className="size-[6px] shrink-0 rounded-full bg-[#5a626c]" />
-      <span className="font-['Inter'] text-[13px] font-medium text-[#5a626c]">No active sessions</span>
+    <div className="flex items-center gap-[8px] rounded-control border border-hairline bg-black/20 px-[12px] py-[8px]">
+      <span className="size-[6px] shrink-0 rounded-full bg-ink-4" />
+      <span className="text-[12px] font-medium text-ink-3">No active sessions</span>
     </div>
   );
 }
@@ -402,7 +352,6 @@ function ProjectCard({
   onDelete,
   onSync,
   syncing,
-  index = 0,
 }: {
   project: Project;
   stats: { active: number; waiting: number; finished: number };
@@ -420,46 +369,31 @@ function ProjectCard({
 
   return (
     <article
-      style={{
-        animationDelay: `${Math.min(index, 8) * 45}ms`,
-        borderColor: live > 0 ? 'rgba(179,229,2,0.2)' : 'rgba(255,255,255,0.06)',
-      }}
-      className="kb-rise group relative isolate flex flex-col gap-[14px] overflow-hidden rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[18px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)] focus-within:border-[#b3e502]/30"
+      className={`group relative flex flex-col gap-[14px] rounded-panel border bg-surface p-[16px] transition-colors duration-150 hover:border-hairline-strong focus-within:border-accent/30 ${
+        live > 0 ? 'border-accent/20' : 'border-hairline'
+      }`}
     >
-      {/* Live accent edge — fades in on hover, solid when live */}
-      <span
-        aria-hidden
-        className={`absolute inset-y-[14px] left-0 w-[2px] rounded-r-full bg-[#b3e502] transition-opacity duration-200 ${
-          live > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
-        }`}
-        style={live > 0 ? { boxShadow: '0 0 8px rgba(179,229,2,0.4)' } : undefined}
-      />
-
       {/* Header */}
       <div className="flex items-start justify-between gap-[12px]">
         <button onClick={onOpen} className="min-w-0 flex-1 text-left outline-none">
-          <h3 className="truncate font-['Inter'] text-[15px] font-semibold tracking-[-0.15px] text-[#f0f0f0] transition-colors group-hover:text-white">
+          <h3 className="truncate text-[13px] font-semibold tracking-[-0.1px] text-ink">
             {project.name}
           </h3>
-          <p className="mt-[3px] flex items-center gap-[5px] font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
+          <p className="mt-[3px] flex items-center gap-[5px] font-['JetBrains_Mono'] text-[11px] text-ink-3">
             <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="shrink-0">
               <path d="M1.5 4.2c0-.6.4-1 1-1h2.2l1 1.3h4.8c.6 0 1 .4 1 1v4.3c0 .6-.4 1-1 1H2.5c-.6 0-1-.4-1-1V4.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
             </svg>
             <span className="truncate">{project.directory}</span>
           </p>
         </button>
-        <button
-          onClick={onEdit}
-          className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#9aa3ad]"
-          aria-label={`Edit ${project.name}`}
-        >
+        <IconButton onClick={onEdit} aria-label={`Edit ${project.name}`}>
           <GearIcon />
-        </button>
+        </IconButton>
       </div>
 
       {/* Description */}
       {project.description && (
-        <p className="line-clamp-2 font-['Inter'] text-[12.5px] leading-[1.5] text-[#7a828c]">
+        <p className="line-clamp-2 text-[12.5px] leading-[1.5] text-ink-2">
           {project.description}
         </p>
       )}
@@ -472,48 +406,44 @@ function ProjectCard({
         <div className="flex min-w-0 items-center gap-[8px]">
           {repoShort && (
             <span
-              className="inline-flex max-w-[150px] items-center gap-[4px] rounded-[6px] border border-white/[0.06] bg-white/[0.02] px-[7px] py-[3px] font-['Inter'] text-[11px] font-medium text-[#7a828c]"
+              className="inline-flex max-w-[150px] items-center gap-[4px] rounded-[4px] border border-hairline bg-black/20 px-[6px] py-[2px] text-[11px] font-medium text-ink-2"
               title={project.githubRepo ?? undefined}
             >
-              <span className="shrink-0 text-[#58a6ff]"><GitHubIcon /></span>
+              <span className="shrink-0 text-ink-2"><GitHubIcon /></span>
               <span className="truncate">{repoShort}</span>
             </span>
           )}
-          <span className="shrink-0 font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
+          <span className="shrink-0 font-['JetBrains_Mono'] text-[11px] text-ink-3">
             {relativeTime(project.updatedAt)}
           </span>
         </div>
 
         <div className="flex shrink-0 items-center gap-[6px]">
           {project.githubRepo && onSync && (
-            <button
+            <IconButton
               onClick={() => onSync(project.id)}
               disabled={syncing}
-              className="flex size-[30px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#b3e502] disabled:opacity-50"
               title={`Sync from ${project.githubRepo}`}
               aria-label="Sync from GitHub"
             >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className={syncing ? 'animate-spin' : ''}>
                 <path d="M12 7a5 5 0 1 1-1.46-3.54M12 2v2.5H9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </button>
+            </IconButton>
           )}
-          <button
+          <IconButton
             onClick={onDelete}
-            className="flex size-[30px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+            className="hover:bg-danger/10 hover:text-danger"
             aria-label={`Delete ${project.name}`}
           >
             <TrashIcon />
-          </button>
-          <button
-            onClick={onOpen}
-            className="kb-sheen relative flex h-[30px] items-center gap-[5px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[12.5px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-6px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_20px_-6px_rgba(179,229,2,0.65)]"
-          >
+          </IconButton>
+          <Button variant="primary" size="sm" onClick={onOpen} className="px-[10px]">
             Open
             <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
               <path d="M1 10L10 1M10 1H3.5M10 1v6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     </article>
@@ -524,18 +454,18 @@ function ProjectCard({
 
 function SkeletonCard() {
   return (
-    <article className="flex flex-col gap-[16px] rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[20px] animate-pulse">
+    <article className="flex animate-pulse flex-col gap-[16px] rounded-panel border border-hairline bg-surface p-[16px]">
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-[5px]">
-          <div className="h-[17px] w-[140px] rounded-[4px] bg-[rgba(255,255,255,0.06)]" />
-          <div className="h-[13px] w-[220px] rounded-[4px] bg-[rgba(255,255,255,0.04)]" />
+          <div className="h-[15px] w-[140px] rounded-[4px] bg-white/[0.06]" />
+          <div className="h-[12px] w-[220px] rounded-[4px] bg-white/[0.04]" />
         </div>
-        <div className="size-[30px] rounded-[6px] bg-[rgba(255,255,255,0.06)]" />
+        <div className="size-[28px] rounded-control bg-white/[0.06]" />
       </div>
-      <div className="h-[58px] rounded-[10px] bg-[rgba(255,255,255,0.04)]" />
+      <div className="h-[34px] rounded-control bg-white/[0.04]" />
       <div className="flex items-center justify-between">
-        <div className="h-[14px] w-[110px] rounded-[4px] bg-[rgba(255,255,255,0.04)]" />
-        <div className="h-[28px] w-[72px] rounded-[6px] bg-[rgba(255,255,255,0.06)]" />
+        <div className="h-[13px] w-[110px] rounded-[4px] bg-white/[0.04]" />
+        <div className="h-[24px] w-[64px] rounded-control bg-white/[0.06]" />
       </div>
     </article>
   );
@@ -553,32 +483,27 @@ function StatsStrip({
   liveProjects: number;
 }) {
   return (
-    <div className="mb-[28px] grid grid-cols-3 gap-[10px]">
+    <div className="mb-[24px] grid grid-cols-3 gap-[10px]">
       {[
-        { label: 'Projects', value: projects, dot: null as string | null, glow: undefined as string | undefined, pulse: false },
-        { label: 'Active Sessions', value: activeSessions, dot: '#b3e502', glow: 'rgba(179,229,2,0.5)', pulse: true },
-        { label: 'Live Projects', value: liveProjects, dot: activeSessions > 0 ? '#b3e502' : null, glow: 'rgba(179,229,2,0.4)', pulse: false },
-      ].map(({ label, value, dot, glow, pulse }, i) => (
-        <div
-          key={label}
-          style={{ animationDelay: `${i * 45}ms` }}
-          className="kb-rise flex flex-col gap-[8px] rounded-[14px] border border-white/[0.06] bg-white/[0.03] px-[18px] py-[16px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)]"
-        >
+        { label: 'Projects', value: projects, dot: false, pulse: false },
+        { label: 'Active Sessions', value: activeSessions, dot: true, pulse: true },
+        { label: 'Live Projects', value: liveProjects, dot: activeSessions > 0, pulse: false },
+      ].map(({ label, value, dot, pulse }) => (
+        <Panel key={label} padding="md" className="flex flex-col gap-[8px]">
           <div className="flex items-center gap-[6px]">
             {dot && (
               <span
-                className={`size-[6px] shrink-0 rounded-full ${pulse ? 'animate-pulse' : ''}`}
-                style={{ backgroundColor: dot, boxShadow: glow ? `0 0 6px ${glow}` : undefined }}
+                className={`size-[6px] shrink-0 rounded-full bg-accent ${pulse ? 'animate-pulse' : ''}`}
               />
             )}
-            <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
               {label}
             </span>
           </div>
-          <span className="font-['Inter'] text-[28px] font-bold leading-none tracking-[-0.8px] text-[#f0f0f0]">
+          <span className="font-['JetBrains_Mono'] text-[24px] font-bold leading-none tracking-[-0.5px] text-ink">
             {value}
           </span>
-        </div>
+        </Panel>
       ))}
     </div>
   );
@@ -775,68 +700,58 @@ export default function ProjectsPage() {
   /* ── Render ── */
 
   return (
-    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
-      {/* Atmosphere */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="kb-aurora" style={{ top: '-180px', left: '-120px', width: 620, height: 620, opacity: 0.5, background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)' }} />
-        <div className="kb-aurora" style={{ top: '-220px', left: '38%', width: 680, height: 680, opacity: 0.4, animationDelay: '-7s', background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)' }} />
-        <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.38, animationDelay: '-13s', background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)' }} />
-        <div className="kb-grid" />
-      </div>
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-bg">
       {/* Header */}
-      <header className="relative z-10 sticky top-0 shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">
-        <div className="flex items-center justify-between gap-[10px] pl-[52px] pr-[20px] py-[14px] sm:px-[28px] lg:px-[28px]">
-          <h1 className="font-['Syne'] text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
+      <header className="sticky top-0 shrink-0 border-b border-hairline bg-bg">
+        <div className="flex items-center justify-between gap-[10px] py-[10px] pl-[52px] pr-[16px] sm:px-[24px]">
+          <h1 className="text-[17px] font-semibold tracking-[-0.2px] text-ink sm:text-[20px]">
             Projects
           </h1>
 
           <div className="flex items-center gap-[8px]">
             {/* Search toggle (mobile) / always visible (sm+) */}
             <div className={`relative ${showSearch || search ? 'flex' : 'hidden sm:flex'}`}>
-              <div className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#5a626c]">
+              <div className="pointer-events-none absolute left-[10px] top-1/2 z-10 -translate-y-1/2 text-ink-3">
                 <SearchIcon />
               </div>
-              <input
+              <Input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
                 autoFocus={showSearch}
                 onBlur={() => { if (!search) setShowSearch(false); }}
-                className="h-[36px] w-[160px] sm:w-[200px] rounded-[10px] border border-white/[0.07] bg-white/[0.03] pl-[30px] pr-[10px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
+                className="w-[160px] pl-[30px] sm:w-[200px]"
               />
             </div>
 
             {/* Mobile search icon */}
             {!showSearch && !search && (
-              <button
+              <IconButton
                 onClick={() => setShowSearch(true)}
-                className="flex size-[32px] items-center justify-center rounded-[9px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#9aa3ad] sm:hidden"
                 aria-label="Search"
+                className="border border-hairline bg-surface-2 sm:hidden"
               >
                 <SearchIcon />
-              </button>
+              </IconButton>
             )}
 
-            <button
-              onClick={handleOpenCreate}
-              className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
-            >
+            <Button variant="primary" onClick={handleOpenCreate}>
               <PlusIcon />
               <span className="hidden sm:inline">New Project</span>
               <span className="sm:hidden">New</span>
-            </button>
+            </Button>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[22px] sm:px-[28px] sm:pt-[28px]">
+      <div className="flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[20px] sm:px-[24px]">
         {/* Error */}
         {error && (
-          <div className="mb-[20px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400">
+          <div className="mb-[20px] rounded-control border border-danger/30 bg-danger/10 px-[16px] py-[12px] text-[13px] text-danger">
             {error}
-            <button onClick={fetchProjects} className="ml-[8px] underline hover:text-red-300">
+            <button onClick={fetchProjects} className="ml-[8px] underline hover:text-danger/80">
               Retry
             </button>
           </div>
@@ -853,22 +768,19 @@ export default function ProjectsPage() {
 
         {/* Section toolbar */}
         {!loading && !error && (
-          <div className="mb-[18px] flex items-center justify-between">
+          <div className="mb-[16px] flex items-center justify-between">
             <div className="flex items-center gap-[8px]">
-              <h2 className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.9px] text-[#5a626c]">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.9px] text-ink-3">
                 All Projects
               </h2>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a626c]">
+              <span className="font-['JetBrains_Mono'] text-[11px] text-ink-3">
                 {filtered.length}
               </span>
             </div>
-            <button
-              onClick={() => setSort(sort === 'newest' ? 'alpha' : 'newest')}
-              className="flex items-center gap-[4px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb] transition-all"
-            >
+            <Button size="sm" onClick={() => setSort(sort === 'newest' ? 'alpha' : 'newest')}>
               {sort === 'newest' ? 'Newest' : 'A–Z'}
               <ChevronIcon />
-            </button>
+            </Button>
           </div>
         )}
 
@@ -884,39 +796,35 @@ export default function ProjectsPage() {
 
         {/* Empty state */}
         {!loading && !error && projects.length === 0 && (
-          <div className="kb-rise flex flex-col items-center justify-center py-[80px] text-center">
-            <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#b3e502" strokeWidth="1.5" />
+          <EmptyState
+            className="py-[80px]"
+            icon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
               </svg>
-            </div>
-            <h3 className="font-['Syne'] text-[20px] font-bold text-white mb-[6px]">
-              No projects yet
-            </h3>
-            <p className="max-w-[300px] font-['Inter'] text-[13px] leading-relaxed text-[#5a626c]">
-              Create your first project to start managing opencode sessions.
-            </p>
-            <button
-              onClick={handleOpenCreate}
-              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
-            >
-              Create your first project
-            </button>
-          </div>
+            }
+            title="No projects yet"
+            description="Create your first project to start managing opencode sessions."
+            action={
+              <Button variant="primary" onClick={handleOpenCreate}>
+                Create your first project
+              </Button>
+            }
+          />
         )}
 
         {/* No search results */}
         {!loading && !error && projects.length > 0 && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-[64px] text-center">
-            <p className="font-['Inter'] text-[15px] text-[#5a626c]">
+            <p className="text-[15px] text-ink-3">
               No projects match &ldquo;{search}&rdquo;
             </p>
             <button
               onClick={() => setSearch('')}
-              className="mt-[10px] font-['Inter'] text-[13px] font-semibold text-[#b3e502] hover:underline"
+              className="mt-[10px] text-[13px] font-semibold text-accent hover:underline"
             >
               Clear search
             </button>
@@ -926,10 +834,9 @@ export default function ProjectsPage() {
         {/* Project grid */}
         {!loading && !error && filtered.length > 0 && (
           <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((project, i) => (
+            {filtered.map((project) => (
               <ProjectCard
                 key={project.id}
-                index={i}
                 project={project}
                 stats={projectStats[project.id] || { active: 0, waiting: 0, finished: 0 }}
                 onOpen={() => navigate(`/projects/${project.id}`)}

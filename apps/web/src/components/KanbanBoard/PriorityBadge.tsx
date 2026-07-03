@@ -41,7 +41,7 @@ export function PriorityBadge({ priority, size = 'sm' }: PriorityBadgeProps) {
   const pad = size === 'sm' ? 'px-[6px] py-[2px] text-[10px]' : 'px-[8px] py-[3px] text-[11px]';
   return (
     <span
-      className={`inline-flex items-center gap-[4px] rounded-[5px] border font-['Inter'] font-semibold ${pad}`}
+      className={`inline-flex items-center gap-[4px] rounded-[5px] border font-semibold ${pad}`}
       style={{ backgroundColor: meta.tint, borderColor: meta.border, color: meta.text }}
     >
       <span className="size-[5px] shrink-0 rounded-full" style={{ backgroundColor: meta.dot }} />

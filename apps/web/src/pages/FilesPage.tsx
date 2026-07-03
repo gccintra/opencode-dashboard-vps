@@ -124,11 +124,11 @@ function ProjectCard({
             strokeWidth="1.2"
           />
         </svg>
-        <span className="flex-1 truncate font-['Inter'] text-[13px] font-medium text-[#f0f0f0]">
+        <span className="flex-1 truncate text-[13px] font-medium text-[#f0f0f0]">
           {project.name}
         </span>
         {isSelected && (
-          <span className="shrink-0 rounded-[3px] bg-[#b3e502] px-1.5 py-px font-['Inter'] text-[10px] font-medium text-[#0a0a0f]">
+          <span className="shrink-0 rounded-[3px] bg-[#b3e502] px-1.5 py-px text-[10px] font-medium text-[#0a0a0f]">
             selected
           </span>
         )}
@@ -255,7 +255,7 @@ export default function FilesPage() {
     return (
       <div className="relative flex h-full flex-col items-center justify-center gap-3 overflow-hidden bg-[#0a0a0f]">
         <Atmosphere />
-        <div className="relative z-10 rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+        <div className="relative z-10 rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] text-[13px] text-red-400 backdrop-blur-md">
           {projectsError}
           <button
             onClick={() => window.location.reload()}
@@ -276,13 +276,13 @@ export default function FilesPage() {
           <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
             <FolderOpenIcon />
           </div>
-          <h3 className="font-['Syne'] text-[20px] font-bold text-white">No projects yet</h3>
-          <p className="mt-[6px] max-w-[280px] font-['Inter'] text-[13px] leading-relaxed text-[#7a828c]">
+          <h3 className="text-[20px] font-bold text-white">No projects yet</h3>
+          <p className="mt-[6px] max-w-[280px] text-[13px] leading-relaxed text-[#7a828c]">
             Create a project to start managing files.
           </p>
           <button
             onClick={() => navigate('/projects')}
-            className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+            className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
             data-testid="create-project-cta"
           >
             Create Project
@@ -307,10 +307,10 @@ export default function FilesPage() {
         {mobileView === 'projects' && (
           <div className="flex h-full flex-col">
             <div className="shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 px-[16px] py-[13px] backdrop-blur-md">
-              <h1 className="font-['Syne'] text-[24px] font-extrabold tracking-[-0.5px] text-white">
+              <h1 className="text-[24px] font-extrabold tracking-[-0.5px] text-white">
                 Files
               </h1>
-              <p className="mt-[2px] font-['Inter'] text-[12px] text-[#7a828c]">Select a project</p>
+              <p className="mt-[2px] text-[12px] text-[#7a828c]">Select a project</p>
             </div>
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
               {projects.map((p) => (
@@ -331,14 +331,14 @@ export default function FilesPage() {
             <div className="shrink-0 flex min-h-[44px] items-center gap-2 border-b border-white/[0.07] bg-[#0a0a0f] px-3 py-2">
               <button
                 onClick={() => setMobileView('projects')}
-                className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-[6px] px-2 font-['Inter'] text-[12px] text-[#9aa3ad] active:bg-[rgba(255,255,255,0.06)] active:text-[#ccd]"
+                className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-[6px] px-2 text-[12px] text-[#9aa3ad] active:bg-[rgba(255,255,255,0.06)] active:text-[#ccd]"
                 data-testid="mobile-back-to-projects"
               >
                 <ArrowLeftIcon />
                 <span>Projects</span>
               </button>
               <span className="text-[#5a626c]">/</span>
-              <span className="min-w-0 flex-1 truncate font-['Inter'] text-[12px] font-medium text-[#f0f0f0]">
+              <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#f0f0f0]">
                 {selectedProject?.name}
               </span>
             </div>
@@ -376,7 +376,7 @@ export default function FilesPage() {
         {/* Project tab bar */}
         <div className="shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 px-4 py-2.5 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <span className="shrink-0 font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
               Project
             </span>
             <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
@@ -384,7 +384,7 @@ export default function FilesPage() {
                 <button
                   key={p.id}
                   onClick={() => handleProjectSelect(p.id)}
-                  className={`shrink-0 rounded-[5px] border px-2.5 py-1 font-['Inter'] text-[12px] font-medium transition-colors ${
+                  className={`shrink-0 rounded-[5px] border px-2.5 py-1 text-[12px] font-medium transition-colors ${
                     selectedProjectId === p.id
                       ? 'border-[rgba(179,229,2,0.3)] bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
                       : 'border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
@@ -406,7 +406,7 @@ export default function FilesPage() {
         {/* Content area */}
         {!selectedProjectId ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="font-['Inter'] text-[13px] text-[#5a626c]">Select a project above</p>
+            <p className="text-[13px] text-[#5a626c]">Select a project above</p>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">

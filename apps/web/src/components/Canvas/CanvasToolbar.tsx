@@ -72,7 +72,7 @@ export function CanvasToolbar({ templateId, onTemplateChange, onResetLayout }: C
       className="flex shrink-0 items-center gap-[8px] border-b border-white/[0.07] bg-[#111118] px-[20px] py-[10px]"
       data-testid="canvas-toolbar"
     >
-      <span className="font-['Inter'] text-[11px] text-[#5a626c] shrink-0">Layout:</span>
+      <span className="text-[11px] text-[#5a626c] shrink-0">Layout:</span>
       <div className="flex items-center gap-[4px]" role="group" aria-label="Layout do canvas">
         {CANVAS_TEMPLATES.map((t) => {
           const isActive = templateId === t.id;

@@ -105,7 +105,7 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
     );
   if (projects.length === 0)
     return (
-      <div className="py-8 text-center font-['Inter'] text-[13px] text-[#5a626c]">
+      <div className="py-8 text-center text-[13px] text-[#5a626c]">
         Nenhum projeto cadastrado
       </div>
     );
@@ -118,7 +118,7 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
           className="cursor-pointer rounded-[8px] border border-white/[0.07] bg-[#111118] p-[16px] hover:border-white/[0.14] transition-colors"
           onClick={() => onSelect(p.id)}
         >
-          <h3 className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0]">{p.name}</h3>
+          <h3 className="text-[14px] font-semibold text-[#f0f0f0]">{p.name}</h3>
         </div>
       ))}
     </div>
@@ -201,13 +201,13 @@ export default function DashboardPage() {
           <span className="font-['JetBrains_Mono'] text-[16px] font-medium text-[#b3e502] opacity-75">
             {'> _'}
           </span>
-          <h1 className="font-['Syne'] text-[17px] font-bold tracking-[-0.5px] text-white hidden sm:block">
+          <h1 className="text-[17px] font-bold tracking-[-0.5px] text-white hidden sm:block">
             Dashboard
           </h1>
         </div>
         <button
           onClick={logout}
-          className="flex h-[30px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+          className="flex h-[30px] items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
         >
           Sair
         </button>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                 data-testid={`mobile-tab-${key}`}
               >
                 <Icon active={mobileTab === key} />
-                <span className="font-['Inter'] text-[10px] font-medium">{label}</span>
+                <span className="text-[10px] font-medium">{label}</span>
               </button>
             ))}
           </nav>

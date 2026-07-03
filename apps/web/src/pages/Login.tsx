@@ -126,7 +126,7 @@ export default function LoginPage() {
         {/* Banner */}
         <div className="flex items-center gap-3">
           <AlfLogo size={32} />
-          <span className="flex items-baseline gap-[5px] font-['Syne'] text-[20px] font-extrabold tracking-[-0.5px]">
+          <span className="flex items-baseline gap-[5px] text-[20px] font-extrabold tracking-[-0.5px]">
             <span className="text-[#f2f3f5]">ALF</span>
             <span className="text-[#b3e502]">code</span>
           </span>
@@ -153,10 +153,10 @@ export default function LoginPage() {
           <div className="px-10 py-10">
             {/* Header */}
             <div className="mb-4">
-              <h1 className="font-['Inter'] text-[24px] font-semibold leading-[28.8px] tracking-[-0.6px] text-[#f0f0f0]">
+              <h1 className="text-[24px] font-semibold leading-[28.8px] tracking-[-0.6px] text-[#f0f0f0]">
                 Welcome back
               </h1>
-              <p className="font-['Inter'] text-[14px] font-normal leading-[21px] text-[#9aa3ad]">
+              <p className="text-[14px] font-normal leading-[21px] text-[#9aa3ad]">
                 Your VPS sessions, under control.
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="font-['Inter'] text-[14px] font-medium leading-[21px] tracking-[0.14px] text-[#9aa3ad]"
+                  className="text-[14px] font-medium leading-[21px] tracking-[0.14px] text-[#9aa3ad]"
                 >
                   Master Password
                 </label>
@@ -198,7 +198,7 @@ export default function LoginPage() {
 
               {/* Error message */}
               {error && (
-                <p className="font-['Inter'] text-[13px] text-red-400" role="alert">
+                <p className="text-[13px] text-red-400" role="alert">
                   {error}
                 </p>
               )}
@@ -207,7 +207,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isDisabled}
-                className="relative flex w-full items-center justify-center overflow-hidden bg-[#b3e502] py-[13.5px] font-['Inter'] text-[14px] font-semibold tracking-[0.28px] text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="relative flex w-full items-center justify-center overflow-hidden bg-[#b3e502] py-[13.5px] text-[14px] font-semibold tracking-[0.28px] text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ borderRadius: '2px' }}
               >
                 {/* Shine effect */}

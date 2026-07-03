@@ -84,7 +84,7 @@ export default function ConnectionStatus() {
           }}
           data-testid="connection-dot"
         />
-        <span className="font-['Inter'] text-[11px] text-[#9aa3ad]">{DOT_LABELS[status]}</span>
+        <span className="text-[11px] text-[#9aa3ad]">{DOT_LABELS[status]}</span>
       </button>
 
       {/* Tooltip */}
@@ -112,13 +112,13 @@ export default function ConnectionStatus() {
                     boxShadow: `0px 0px 6px 0px ${DOT_COLORS[status]}99`,
                   }}
                 />
-                <span className="font-['Inter'] text-[12px] font-medium text-[#f0f0f0]">
+                <span className="text-[12px] font-medium text-[#f0f0f0]">
                   {DOT_LABELS[status]}
                 </span>
               </div>
 
               {/* Status description */}
-              <p className="font-['Inter'] text-[11px] leading-[16px] text-[#5a626c]">
+              <p className="text-[11px] leading-[16px] text-[#5a626c]">
                 {status === 'connected' &&
                   'All systems operational. Terminal and agent connections are healthy.'}
                 {status === 'reconnecting' &&

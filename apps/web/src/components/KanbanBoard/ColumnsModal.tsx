@@ -146,7 +146,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-[20px] py-[14px]">
-          <h2 className="font-['Syne'] text-[17px] font-bold tracking-[-0.2px] text-white">Kanban Columns</h2>
+          <h2 className="text-[17px] font-bold tracking-[-0.2px] text-white">Kanban Columns</h2>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -161,7 +161,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
         {/* Body */}
         <div className="kb-scroll flex-1 overflow-y-auto px-[20px] py-[16px]">
           {error && (
-            <p className="mb-[12px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+            <p className="mb-[12px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
               {error}
             </p>
           )}
@@ -186,7 +186,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                         className="size-[7px] shrink-0 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
-                      <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
                         {cat.label}
                       </span>
                     </div>
@@ -225,18 +225,18 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                     if (e.key === 'Enter') handleSaveEdit();
                                     if (e.key === 'Escape') setEditing(null);
                                   }}
-                                  className="flex-1 bg-transparent font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+                                  className="flex-1 bg-transparent text-[13px] text-[#f0f0f0] outline-none"
                                 />
                                 <button
                                   onClick={handleSaveEdit}
                                   disabled={saving}
-                                  className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] font-['Inter'] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
+                                  className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={() => setEditing(null)}
-                                  className="font-['Inter'] text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
+                                  className="text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
                                 >
                                   Cancel
                                 </button>
@@ -247,7 +247,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                   className="size-[10px] shrink-0 rounded-full"
                                   style={{ backgroundColor: col.color }}
                                 />
-                                <span className="flex-1 font-['Inter'] text-[13px] text-[#e6e8eb]">
+                                <span className="flex-1 text-[13px] text-[#e6e8eb]">
                                   {col.name}
                                 </span>
                                 {col.taskCount != null && col.taskCount > 0 && (
@@ -341,18 +341,18 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                               if (e.key === 'Enter') handleAdd();
                               if (e.key === 'Escape') setAdding(null);
                             }}
-                            className="flex-1 bg-transparent font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none"
+                            className="flex-1 bg-transparent text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none"
                           />
                           <button
                             onClick={handleAdd}
                             disabled={saving || !adding.name.trim()}
-                            className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] font-['Inter'] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
+                            className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
                           >
                             Add
                           </button>
                           <button
                             onClick={() => setAdding(null)}
-                            className="font-['Inter'] text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
+                            className="text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
                           >
                             Cancel
                           </button>
@@ -362,7 +362,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                           onClick={() =>
                             setAdding({ category: cat.id, name: '', color: cat.color })
                           }
-                          className="flex items-center gap-[6px] rounded-[9px] px-[10px] py-[6px] font-['Inter'] text-[12px] text-[#5a626c] transition-colors hover:bg-white/[0.03] hover:text-[#9aa3ad]"
+                          className="flex items-center gap-[6px] rounded-[9px] px-[10px] py-[6px] text-[12px] text-[#5a626c] transition-colors hover:bg-white/[0.03] hover:text-[#9aa3ad]"
                         >
                           <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                             <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

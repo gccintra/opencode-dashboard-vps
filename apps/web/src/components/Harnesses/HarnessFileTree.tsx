@@ -128,7 +128,7 @@ function TreeNode({
     <div>
       {/* Node row */}
       <div
-        className={`flex min-h-[32px] cursor-pointer select-none items-center gap-1 py-0.5 pr-2 font-['Inter'] text-[13px] transition-colors hover:bg-[rgba(255,255,255,0.04)] active:bg-[rgba(255,255,255,0.06)] ${
+        className={`flex min-h-[32px] cursor-pointer select-none items-center gap-1 py-0.5 pr-2 text-[13px] transition-colors hover:bg-[rgba(255,255,255,0.04)] active:bg-[rgba(255,255,255,0.06)] ${
           isConflict
             ? 'bg-red-500/20 text-red-400'
             : 'text-[#f0f0f0]'
@@ -198,7 +198,7 @@ function TreeNode({
       {/* Empty folder indicator */}
       {isDir && expanded && (!entry.children || entry.children.length === 0) && (
         <div
-          className="py-1 font-['Inter'] text-[11px] text-[#5a626c]"
+          className="py-1 text-[11px] text-[#5a626c]"
           style={{ paddingLeft: `${paddingLeft + 28}px` }}
         >
           Empty
@@ -251,7 +251,7 @@ function EmptyState() {
           strokeWidth="1.5"
         />
       </svg>
-      <p className="font-['Inter'] text-[13px] text-[#5a626c]">No files</p>
+      <p className="text-[13px] text-[#5a626c]">No files</p>
     </div>
   );
 }

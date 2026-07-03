@@ -91,14 +91,14 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
       {/* Floating button */}
       <button
         onClick={handleClick}
-        className={`flex items-center gap-[6px] rounded-[8px] border px-[12px] py-[7px] font-['Inter'] text-[12px] font-medium transition-colors ${
+        className={`flex items-center gap-[6px] rounded-[8px] border px-[12px] py-[7px] text-[12px] font-medium transition-colors ${
           activeSessionId
             ? 'border-[rgba(255,170,0,0.3)] bg-[rgba(255,170,0,0.08)] text-[#fa0] hover:bg-[rgba(255,170,0,0.15)]'
             : 'border-[rgba(255,85,68,0.2)] bg-[rgba(255,85,68,0.06)] text-[#f54] hover:bg-[rgba(255,85,68,0.12)]'
         }`}
         data-testid="emergency-terminal-button"
       >
-        <span className="font-['Inter'] text-[13px]" data-testid="emergency-terminal-label">
+        <span className="text-[13px]" data-testid="emergency-terminal-label">
           {activeSessionId ? (
             <>
               <span className="mr-[2px]">{'⚠️'}</span>
@@ -131,19 +131,19 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
             {/* Warning header */}
             <div className="mb-[16px] flex items-center gap-[8px]">
               <span className="text-[20px]">{'⚠️'}</span>
-              <h2 className="font-['Inter'] text-[16px] font-semibold text-[#f54]">
+              <h2 className="text-[16px] font-semibold text-[#f54]">
                 Terminal de Emergência
               </h2>
             </div>
 
-            <p className="mb-[20px] font-['Inter'] text-[13px] leading-[1.5] text-[#9aa3ad]">
+            <p className="mb-[20px] text-[13px] leading-[1.5] text-[#9aa3ad]">
               Esta ação abre um terminal com acesso <strong className="text-[#f54]">root</strong> ao
               sistema no diretório <code className="text-[#f0f0f0]">/root</code>. Use com cuidado.
             </p>
 
             {error && (
               <p
-                className="mb-[16px] rounded-[6px] border border-red-500/20 bg-red-500/10 px-[12px] py-[8px] font-['Inter'] text-[12px] text-red-400"
+                className="mb-[16px] rounded-[6px] border border-red-500/20 bg-red-500/10 px-[12px] py-[8px] text-[12px] text-red-400"
                 data-testid="emergency-modal-error"
               >
                 {error}
@@ -153,7 +153,7 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
             <div className="flex items-center gap-[10px]">
               <button
                 onClick={handleCancel}
-                className="flex-1 rounded-[8px] border border-white/[0.07] px-[16px] py-[10px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                className="flex-1 rounded-[8px] border border-white/[0.07] px-[16px] py-[10px] text-[13px] font-medium text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
                 data-testid="emergency-modal-cancel"
               >
                 Cancelar
@@ -161,7 +161,7 @@ export default function EmergencyTerminal({ onSessionCreated }: EmergencyTermina
               <button
                 onClick={handleConfirm}
                 disabled={creating}
-                className="flex-1 rounded-[8px] bg-[#f54] px-[16px] py-[10px] font-['Inter'] text-[13px] font-semibold text-white hover:bg-[#e43] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 rounded-[8px] bg-[#f54] px-[16px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#e43] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 data-testid="emergency-modal-confirm"
               >
                 {creating ? 'Criando…' : 'Abrir Terminal'}

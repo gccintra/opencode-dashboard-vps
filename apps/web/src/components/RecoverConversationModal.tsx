@@ -203,7 +203,7 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between px-5 pt-4 pb-3">
-          <h2 className="font-['Syne',sans-serif] text-[15px] font-bold text-[#f0f0f0]">
+          <h2 className="text-[15px] font-bold text-[#f0f0f0]">
             Recuperar Conversa
           </h2>
           <button

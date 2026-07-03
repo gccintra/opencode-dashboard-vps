@@ -572,7 +572,7 @@ function writeClipboard(text: string, onDone?: () => void): void {
 
 function CopiedToast() {
   return (
-    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(179,229,2,0.25)] bg-[#111118] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#b3e502] shadow-lg">
+    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(179,229,2,0.25)] bg-[#111118] px-[12px] py-[6px] text-[12px] font-medium text-[#b3e502] shadow-lg">
       Copiado!
     </div>
   );
@@ -2076,7 +2076,7 @@ export const XTermTerminal = memo(
 
         {/* Image upload feedback */}
         {imageUploadStatus !== 'idle' && (
-          <div className="pointer-events-none absolute bottom-10 left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#111118] px-3 py-1.5 font-['Inter'] text-[12px]">
+          <div className="pointer-events-none absolute bottom-10 left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#111118] px-3 py-1.5 text-[12px]">
             {imageUploadStatus === 'uploading' ? (
               <span className="text-[#b3e502]">⬆ Uploading image…</span>
             ) : (

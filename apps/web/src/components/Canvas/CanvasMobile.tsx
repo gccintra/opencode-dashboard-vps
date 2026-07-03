@@ -265,11 +265,11 @@ function MobileSlot({
             }}
             onBlur={saveEdit}
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[6px] py-[2px] font-['Inter'] text-[12px] text-[#f0f0f0] focus:outline-none"
+            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[6px] py-[2px] text-[12px] text-[#f0f0f0] focus:outline-none"
           />
         ) : (
           <span
-            className={`flex-1 min-w-0 truncate font-['Inter'] text-[12px] ${
+            className={`flex-1 min-w-0 truncate text-[12px] ${
               isFocused ? 'text-[#f0f0f0] font-semibold' : 'text-[#667]'
             }`}
           >
@@ -433,7 +433,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
         data-testid="add-dropdown"
       >
         <div className="px-[12px] pt-[12px] pb-[4px]">
-          <p className="font-['Inter'] text-[11px] text-[#5a626c]">Adicionar terminal</p>
+          <p className="text-[11px] text-[#5a626c]">Adicionar terminal</p>
         </div>
 
         {availableSessions.length > 0 && (
@@ -452,7 +452,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
                       s.status === 'active' ? '#2d8' : s.status === 'waiting' ? '#fa0' : '#5a626c',
                   }}
                 />
-                <span className="flex-1 min-w-0 truncate font-['Inter'] text-[13px] text-[#ccd]">
+                <span className="flex-1 min-w-0 truncate text-[13px] text-[#ccd]">
                   {s.projectName && <span className="text-[#5a626c]">{s.projectName} — </span>}
                   {s.name}
                 </span>
@@ -466,7 +466,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
           <div className="px-[8px] pb-[10px]">
             <button
               onClick={onCreate}
-              className="flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-[#b3e502] py-[10px] font-['Inter'] text-[13px] font-semibold text-black active:bg-[#c2f516] transition-colors"
+              className="flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-[#b3e502] py-[10px] text-[13px] font-semibold text-black active:bg-[#c2f516] transition-colors"
               data-testid="dropdown-new-session-btn"
             >
               <span className="text-[16px] leading-none font-light">+</span>
@@ -540,7 +540,7 @@ function TopBar({
       )}
 
       {projectName ? (
-        <span className="font-['Inter'] text-[12px] text-[#5a626c] truncate flex-1 min-w-0 ml-[2px]">
+        <span className="text-[12px] text-[#5a626c] truncate flex-1 min-w-0 ml-[2px]">
           {projectName}
         </span>
       ) : (
@@ -552,7 +552,7 @@ function TopBar({
           onClick={onToggleDropdown}
           aria-expanded={showDropdown}
           aria-label="Adicionar terminal"
-          className={`flex items-center gap-[4px] rounded-[6px] px-[8px] py-[5px] font-['Inter'] text-[12px] font-medium transition-colors shrink-0 ${
+          className={`flex items-center gap-[4px] rounded-[6px] px-[8px] py-[5px] text-[12px] font-medium transition-colors shrink-0 ${
             showDropdown
               ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502]'
               : 'bg-[rgba(179,229,2,0.08)] text-[#b3e502] active:bg-[rgba(179,229,2,0.15)]'
@@ -824,15 +824,15 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
             />
           </svg>
           <div className="text-center">
-            <p className="font-['Inter'] text-[16px] font-semibold text-[#ccd]">Canvas vazio</p>
-            <p className="mt-[4px] font-['Inter'] text-[13px] text-[#5a626c]">
+            <p className="text-[16px] font-semibold text-[#ccd]">Canvas vazio</p>
+            <p className="mt-[4px] text-[13px] text-[#5a626c]">
               Adicione um terminal para começar
             </p>
           </div>
           {(availableSessions.length > 0 || onCreateSession) && (
             <button
               onClick={() => setShowDropdown(true)}
-              className="flex items-center gap-[6px] rounded-[8px] bg-[#b3e502] px-[20px] py-[11px] font-['Inter'] text-[14px] font-semibold text-black active:bg-[#c2f516] transition-colors"
+              className="flex items-center gap-[6px] rounded-[8px] bg-[#b3e502] px-[20px] py-[11px] text-[14px] font-semibold text-black active:bg-[#c2f516] transition-colors"
               data-testid="canvas-mobile-empty-add-btn"
             >
               <span className="text-[18px] leading-none font-light">+</span>
@@ -849,8 +849,8 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
           {visibleFilledSlots.length === 0 ? (
             /* Current group is empty but other groups have slots */
             <div className="flex flex-1 flex-col items-center justify-center gap-[10px]">
-              <p className="font-['Inter'] text-[13px] text-[#5a626c]">Grupo vazio</p>
-              <p className="font-['Inter'] text-[11px] text-[#334]">
+              <p className="text-[13px] text-[#5a626c]">Grupo vazio</p>
+              <p className="text-[11px] text-[#334]">
                 Adicione uma sessão ou mude de grupo
               </p>
             </div>

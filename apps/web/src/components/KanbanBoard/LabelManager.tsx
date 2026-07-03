@@ -177,7 +177,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
   return (
     <div className="flex flex-col gap-[10px]">
       {error && (
-        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[12px] py-[8px] font-['Inter'] text-[12px] text-red-400 backdrop-blur-md">
+        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[12px] py-[8px] text-[12px] text-red-400 backdrop-blur-md">
           {error}
         </p>
       )}
@@ -189,7 +189,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
           ))}
         </div>
       ) : labels.length === 0 ? (
-        <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center font-['Inter'] text-[12px] text-[#7a828c]">
+        <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center text-[12px] text-[#7a828c]">
           No labels yet.
         </p>
       ) : (
@@ -203,7 +203,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
                 className="flex flex-col gap-[8px] rounded-[10px] border border-white/[0.06] bg-white/[0.03] px-[10px] py-[8px] backdrop-blur-md transition-colors hover:border-white/[0.12]"
               >
                 {groupStart && scope && (
-                  <span className="font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
                     {scope}
                   </span>
                 )}
@@ -292,7 +292,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               placeholder="Label name"
               autoFocus
-              className="w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[8px] font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
+              className="w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[8px] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
             />
 
             <SwatchGrid current={newColor} onPick={setNewColor} />
@@ -320,7 +320,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
                   setNewName('');
                   setError(null);
                 }}
-                className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[14px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+                className="rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[14px] py-[7px] text-[12px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
               >
                 Cancel
               </button>
@@ -328,7 +328,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
                 type="button"
                 onClick={handleCreate}
                 disabled={saving}
-                className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] py-[7px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
+                className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] py-[7px] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
               >
                 {saving ? 'Adding…' : 'Add label'}
               </button>
@@ -338,7 +338,7 @@ export function LabelManager({ appliedIds, onToggle, allowCreate = true }: Label
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex items-center gap-[6px] self-start rounded-[9px] border border-dashed border-white/[0.12] bg-white/[0.02] px-[12px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] transition-colors hover:border-[#b3e502]/40 hover:text-[#e6e8eb]"
+            className="flex items-center gap-[6px] self-start rounded-[9px] border border-dashed border-white/[0.12] bg-white/[0.02] px-[12px] py-[7px] text-[12px] font-medium text-[#9aa3ad] transition-colors hover:border-[#b3e502]/40 hover:text-[#e6e8eb]"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

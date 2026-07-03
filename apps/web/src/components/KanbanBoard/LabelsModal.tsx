@@ -35,7 +35,7 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
               />
               <circle cx="4.5" cy="4.5" r="1" fill="#b3e502" />
             </svg>
-            <h2 className="font-['Syne'] text-[17px] font-bold tracking-[-0.2px] text-white">
+            <h2 className="text-[17px] font-bold tracking-[-0.2px] text-white">
               Manage Labels
             </h2>
           </div>
@@ -70,7 +70,7 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-[9px] border border-white/[0.07] bg-white/[0.03] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="w-full rounded-[9px] border border-white/[0.07] bg-white/[0.03] py-[8px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
           >
             Done
           </button>

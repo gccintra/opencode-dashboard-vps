@@ -242,12 +242,12 @@ function SessionsSidebar({
   );
 
   return (
-    <aside className="flex flex-1 min-h-0 w-[220px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0a0a0f]">
+    <aside className="flex flex-1 min-h-0 w-[220px] shrink-0 flex-col border-r border-hairline bg-surface">
       {/* Header: back + project name */}
-      <div className="flex shrink-0 flex-col border-b border-white/[0.07] px-[16px] pt-[19px] pb-[12px] gap-[6px]">
+      <div className="flex shrink-0 flex-col border-b border-hairline px-[16px] pt-[19px] pb-[12px] gap-[6px]">
         <button
           onClick={onBack}
-          className="flex items-center gap-[4px] w-fit font-['Inter'] text-[11px] text-[#5a626c] hover:text-[#9aa3ad] transition-colors"
+          className="flex items-center gap-[4px] w-fit text-[11px] text-ink-3 hover:text-ink-2 transition-colors"
           data-testid="back-button"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -262,12 +262,12 @@ function SessionsSidebar({
           Voltar
         </button>
         <p
-          className="font-['Inter'] text-[14px] font-semibold tracking-[-0.14px] text-[#f0f0f0] truncate"
+          className="text-[14px] font-semibold tracking-[-0.14px] text-ink truncate"
           data-testid="project-name"
         >
           {projectName || '…'}
         </p>
-        <p className="font-['Inter'] text-[11px] text-[#5a626c]">
+        <p className="text-[11px] text-ink-3">
           {sessions.length} sessão{sessions.length !== 1 ? 'ões' : ''}
           {liveCount > 0 ? ` · ${liveCount} ativa${liveCount !== 1 ? 's' : ''}` : ''}
         </p>
@@ -278,7 +278,7 @@ function SessionsSidebar({
         <button
           onClick={onCreateSession}
           disabled={creating}
-          className="kb-sheen relative flex w-full items-center justify-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] py-[8px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-[6px] rounded-control bg-accent py-[7px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {creating ? (
             <svg className="animate-spin" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -305,7 +305,7 @@ function SessionsSidebar({
         {deadCount > 0 && (
           <button
             onClick={onClearFinished}
-            className="flex w-full items-center justify-center gap-[5px] rounded-[5px] border border-white/[0.06] py-[6px] font-['Inter'] text-[12px] font-medium text-[#5a626c] hover:border-[rgba(255,85,85,0.25)] hover:text-[#f54] transition-colors"
+            className="flex w-full items-center justify-center gap-[5px] rounded-control border border-hairline py-[6px] text-[12px] font-medium text-ink-3 hover:border-danger/25 hover:text-danger transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
               <path
@@ -324,7 +324,7 @@ function SessionsSidebar({
       {/* Session list */}
       <div className="flex-1 overflow-y-auto pb-[8px]">
         {sessions.length === 0 ? (
-          <p className="px-[14px] py-[12px] font-['Inter'] text-[11px] text-[#5a626c]">
+          <p className="px-[14px] py-[12px] text-[11px] text-ink-3">
             Nenhuma sessão ainda
           </p>
         ) : (
@@ -334,12 +334,12 @@ function SessionsSidebar({
               const isDead = DEAD_STATUSES.has(session.status);
               const isRenaming = renaming === session.sessionId;
               const dotColor = isDead
-                ? '#445566'
+                ? '#4a4a52'
                 : session.status === 'active'
-                  ? '#22dd88'
+                  ? '#28c840'
                   : session.status === 'waiting'
-                    ? '#ffaa00'
-                    : '#445566';
+                    ? '#febc2e'
+                    : '#4a4a52';
               const dotPulse = session.status === 'active' && !isDead;
 
               return (
@@ -348,8 +348,8 @@ function SessionsSidebar({
                   onClick={() => !isRenaming && onSelectSession(session.sessionId)}
                   className={`group relative flex cursor-pointer items-center gap-[8px] border-l-2 px-[14px] py-[8px] transition-colors ${
                     isActive
-                      ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)]'
-                      : 'border-transparent hover:bg-white/[0.03]'
+                      ? 'border-accent bg-accent/[0.08]'
+                      : 'border-transparent hover:bg-white/[0.04]'
                   } ${isDead ? 'opacity-60' : ''}`}
                   data-testid={`session-item-${session.sessionId}`}
                 >
@@ -365,25 +365,25 @@ function SessionsSidebar({
                       onKeyDown={(e) => handleRenameKeyDown(e, session.sessionId)}
                       onBlur={() => commitRename(session.sessionId)}
                       onClick={(e) => e.stopPropagation()}
-                      className="min-w-0 flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+                      className="min-w-0 flex-1 rounded-[4px] border border-accent/30 bg-black/40 px-[6px] py-[1px] text-[13px] text-ink outline-none"
                       data-testid={`rename-input-${session.sessionId}`}
                     />
                   ) : (
                     <>
                       <span
-                        className={`min-w-0 flex-1 truncate font-['Inter'] text-[13px] transition-colors ${
-                          isActive ? 'text-[#f0f0f0]' : 'text-[#9aa3ad] group-hover:text-[#e6e8eb]'
+                        className={`min-w-0 flex-1 truncate text-[13px] transition-colors ${
+                          isActive ? 'text-ink' : 'text-ink-2 group-hover:text-ink'
                         }`}
                         onDoubleClick={(e) => startRename(session, e)}
                         title="Duplo clique para renomear"
                       >
                         {session.name}
                       </span>
-                      <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">
+                      <span className="shrink-0 text-[10px] text-ink-3">
                         {formatRelativeTime(session.createdAt)}
                       </span>
                       <button
-                        className="hidden size-[16px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] group-hover:flex"
+                        className="hidden size-[16px] shrink-0 items-center justify-center rounded-[3px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink-2 group-hover:flex"
                         onClick={(e) => startRename(session, e)}
                         title="Renomear sessão"
                         data-testid={`rename-btn-${session.sessionId}`}
@@ -407,13 +407,13 @@ function SessionsSidebar({
       </div>
 
       {/* Canvas nav item — below session list */}
-      <div className="shrink-0 border-t border-white/[0.06] py-[6px]">
+      <div className="shrink-0 border-t border-hairline py-[6px]">
         <button
           onClick={onSelectCanvas}
-          className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
+          className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] text-[13px] font-medium transition-colors ${
             showCanvas
-              ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
-              : 'border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
+              ? 'border-accent bg-accent/[0.08] text-ink'
+              : 'border-transparent text-ink-2 hover:bg-white/[0.04] hover:text-ink'
           }`}
           data-testid="canvas-nav-item"
         >
@@ -471,7 +471,7 @@ function TerminalHeader({
 
   return (
     <header
-      className="flex shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111118] px-[20px] py-[10px]"
+      className="flex shrink-0 items-center justify-between border-b border-hairline bg-surface px-[20px] py-[10px]"
       data-testid="page-header"
     >
       {/* Breadcrumb + connection status */}
@@ -479,7 +479,7 @@ function TerminalHeader({
         {/* Hamburger — visible only below md breakpoint */}
         <button
           onClick={onToggleSidebar}
-          className="md:hidden flex items-center justify-center size-[32px] shrink-0 rounded-[5px] text-[#9aa3ad] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+          className="md:hidden flex items-center justify-center size-[32px] shrink-0 rounded-control text-ink-2 hover:text-ink hover:bg-hairline transition-colors"
           aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
           data-testid="sidebar-toggle"
         >
@@ -504,21 +504,21 @@ function TerminalHeader({
           )}
         </button>
 
-        <span className="font-['Inter'] text-[13px] text-[#9aa3ad] shrink-0 truncate">
+        <span className="text-[13px] text-ink-2 shrink-0 truncate">
           {projectName}
         </span>
 
         {showCanvas ? (
           <>
-            <span className="font-['Inter'] text-[13px] text-[#5a626c]">/</span>
-            <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">Canvas</span>
+            <span className="text-[13px] text-ink-3">/</span>
+            <span className="text-[13px] font-semibold text-ink">Canvas</span>
           </>
         ) : (
           <>
             {sessionName && (
               <>
-                <span className="font-['Inter'] text-[13px] text-[#5a626c]">/</span>
-                <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] truncate">
+                <span className="text-[13px] text-ink-3">/</span>
+                <span className="text-[13px] font-semibold text-ink truncate">
                   {sessionName}
                 </span>
               </>
@@ -526,11 +526,10 @@ function TerminalHeader({
             {hasActiveSession && (
               <span className="ml-[6px] hidden sm:flex items-center gap-[4px] shrink-0">
                 <span
-                  className={`size-[7px] rounded-[3.5px] ${isConnected ? 'bg-[#2d8]' : 'bg-[#fa0]'}`}
-                  style={isConnected ? { boxShadow: '0 0 6px rgba(34,221,136,0.6)' } : undefined}
-                />
+                  className={`size-[7px] rounded-[3.5px] ${isConnected ? 'bg-success' : 'bg-warning'}`}
+                                  />
                 <span
-                  className={`font-['Inter'] text-[11px] font-medium ${isConnected ? 'text-[#2d8]' : 'text-[#fa0]'}`}
+                  className={`text-[11px] font-medium ${isConnected ? 'text-success' : 'text-warning'}`}
                 >
                   {isConnected
                     ? 'Connected'
@@ -552,10 +551,10 @@ function TerminalHeader({
           {/* Files toggle */}
           <button
             onClick={onToggleCanvasFiles}
-            className={`flex items-center gap-[5px] rounded-[5px] px-[8px] py-[4px] font-['Inter'] text-[11px] font-medium transition-colors ${
+            className={`flex items-center gap-[5px] rounded-control px-[8px] py-[4px] text-[11px] font-medium transition-colors ${
               canvasShowFiles
-                ? 'bg-[rgba(179,229,2,0.12)] border border-[rgba(179,229,2,0.25)] text-[#b3e502]'
-                : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                ? 'border border-accent/25 bg-accent/12 text-accent'
+                : 'border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
             }`}
             title={canvasShowFiles ? 'Fechar arquivos' : 'Abrir arquivos'}
           >
@@ -569,7 +568,7 @@ function TerminalHeader({
             </svg>
             Files
           </button>
-          <div className="h-[14px] w-px bg-white/[0.08]" />
+          <div className="h-[14px] w-px bg-hairline" />
           {/* Single-row layouts */}
           {[
             { id: 'single', label: '1×1' },
@@ -582,16 +581,16 @@ function TerminalHeader({
               onClick={() => onTemplateChange(t.id)}
               aria-pressed={canvasTemplateId === t.id}
               data-testid={`layout-btn-${t.id}`}
-              className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+              className={`rounded-control px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                 canvasTemplateId === t.id
-                  ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                  : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                  ? 'border border-accent/30 bg-accent/12 text-accent'
+                  : 'border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
               }`}
             >
               {t.label}
             </button>
           ))}
-          <div className="h-[14px] w-px bg-white/[0.08]" />
+          <div className="h-[14px] w-px bg-hairline" />
           {/* Multi-row layouts */}
           {[
             { id: '2x2', label: '2×2' },
@@ -603,10 +602,10 @@ function TerminalHeader({
               onClick={() => onTemplateChange(t.id)}
               aria-pressed={canvasTemplateId === t.id}
               data-testid={`layout-btn-${t.id}`}
-              className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+              className={`rounded-control px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                 canvasTemplateId === t.id
-                  ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                  : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                  ? 'border border-accent/30 bg-accent/12 text-accent'
+                  : 'border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
               }`}
             >
               {t.label}
@@ -615,7 +614,7 @@ function TerminalHeader({
           <button
             onClick={onResetLayout}
             title="Restaurar tamanhos iguais"
-            className="flex items-center justify-center size-[27px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+            className="flex items-center justify-center size-[27px] rounded-control border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 6a4 4 0 1 0 .8-2.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -630,7 +629,7 @@ function TerminalHeader({
               <button
                 onClick={onReconnect}
                 title="Reconnect"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#2d8] hover:bg-[rgba(34,221,136,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-success/25 bg-success/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-success hover:bg-success/15 transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path
@@ -652,7 +651,7 @@ function TerminalHeader({
               <button
                 onClick={onRefresh}
                 title="Fit/Refresh terminal layout"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-hairline bg-surface-2 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-ink-2 hover:bg-surface-3 hover:text-ink transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <rect
@@ -677,7 +676,7 @@ function TerminalHeader({
                 onClick={onKill}
                 disabled={killing}
                 title={killing ? 'Killing…' : 'Kill'}
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(255,85,102,0.2)] bg-[rgba(255,85,102,0.15)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#f56] hover:bg-[rgba(255,85,102,0.22)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-[5px] rounded-control border border-danger/25 bg-danger/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-danger hover:bg-danger/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="close-session-button"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -715,7 +714,7 @@ function TabBar({
   const tabs: PageTab[] = ['terminal', 'files'];
   return (
     <div
-      className="flex shrink-0 items-center gap-[24px] border-b border-white/[0.07] bg-[#111118] px-[20px]"
+      className="flex shrink-0 items-center gap-[24px] border-b border-hairline bg-surface px-[20px]"
       role="tablist"
       data-testid="tab-bar"
     >
@@ -725,10 +724,10 @@ function TabBar({
           role="tab"
           aria-selected={activeTab === tab}
           onClick={() => onTabChange(tab)}
-          className={`relative py-[12px] font-['Inter'] text-[13px] font-medium capitalize transition-colors ${
+          className={`relative py-[12px] text-[13px] font-medium capitalize transition-colors ${
             activeTab === tab
-              ? 'text-[#2d8] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#2d8] after:rounded-t-[1px]'
-              : 'text-[#9aa3ad] hover:text-[#e6e8eb]'
+              ? 'text-ink after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-accent after:rounded-t-[1px]'
+              : 'text-ink-2 hover:text-ink'
           }`}
           data-testid={`tab-${tab}`}
         >
@@ -751,11 +750,11 @@ const FONT_SIZE_DEFAULT_MOBILE = 12;
 function EmptyTerminalState({ creating, onCreate }: { creating: boolean; onCreate: () => void }) {
   return (
     <div
-      className="kb-rise flex flex-1 flex-col items-center justify-center gap-[20px] p-8"
+      className="flex flex-1 flex-col items-center justify-center gap-[20px] p-8"
       data-testid="empty-state"
     >
-      <div className="flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
-        <svg width="30" height="30" viewBox="0 0 48 48" fill="none" className="text-[#b3e502]">
+      <div className="flex size-[48px] items-center justify-center rounded-panel border border-hairline bg-surface">
+        <svg width="30" height="30" viewBox="0 0 48 48" fill="none" className="text-ink-3">
           <rect x="5" y="9" width="38" height="30" rx="3" stroke="currentColor" strokeWidth="1.5" />
           <path
             d="M13 19L18 24L13 29"
@@ -776,15 +775,15 @@ function EmptyTerminalState({ creating, onCreate }: { creating: boolean; onCreat
         </svg>
       </div>
       <div className="text-center">
-        <h2 className="font-['Syne'] text-[20px] font-bold text-white">No active session</h2>
-        <p className="mt-[6px] font-['Inter'] text-[14px] text-[#9aa3ad]">
+        <h2 className="text-[15px] font-semibold tracking-[-0.2px] text-ink">No active session</h2>
+        <p className="mt-[6px] text-[13px] text-ink-2">
           Create a session to open a terminal for this project
         </p>
       </div>
       <button
         onClick={onCreate}
         disabled={creating}
-        className="kb-sheen relative flex items-center gap-[8px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516] hover:shadow-[0_8px_28px_-6px_rgba(179,229,2,0.7)] disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center gap-[8px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
         data-testid="new-session-button"
       >
         {creating ? (
@@ -1234,52 +1233,13 @@ export default function ProjectDetailPage() {
 
   return (
     <div
-      className="relative flex overflow-hidden bg-[#0a0a0f]"
+      className="relative flex overflow-hidden bg-bg"
       style={{ height: `${viewportHeight}px` }}
     >
-      {/* Atmosphere */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-180px',
-            left: '-120px',
-            width: 620,
-            height: 620,
-            opacity: 0.5,
-            background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-220px',
-            left: '38%',
-            width: 680,
-            height: 680,
-            opacity: 0.4,
-            animationDelay: '-7s',
-            background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-160px',
-            right: '-160px',
-            width: 560,
-            height: 560,
-            opacity: 0.38,
-            animationDelay: '-13s',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
-          }}
-        />
-        <div className="kb-grid" />
-      </div>
 
       {/* ── Backdrop (mobile only) ── */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 md:hidden ${
+        className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 md:hidden ${
           sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSidebarOpen(false)}
@@ -1290,7 +1250,7 @@ export default function ProjectDetailPage() {
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 flex w-[220px] shrink-0 flex-col
-          border-r border-white/[0.06] bg-[#0a0a0f]
+          border-r border-hairline bg-surface
           transition-transform duration-200 ease-out
           md:relative md:inset-auto md:z-10 md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -1366,7 +1326,7 @@ export default function ProjectDetailPage() {
                 {/* File navigation panel (desktop, collapsible) */}
                 {canvasShowFiles && (
                   <div
-                    className="flex shrink-0 border-r border-white/[0.07]"
+                    className="flex shrink-0 border-r border-hairline"
                     style={{ width: '460px' }}
                   >
                     {!canvasFilesOpenPath ? (
@@ -1378,7 +1338,7 @@ export default function ProjectDetailPage() {
                       </div>
                     ) : (
                       <div className="flex flex-1 overflow-hidden">
-                        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-white/[0.07]">
+                        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-hairline">
                           <FileTree
                             projectId={projectId}
                             onFileOpen={(_pid, filePath) => setCanvasFilesOpenPath(filePath)}
@@ -1423,7 +1383,7 @@ export default function ProjectDetailPage() {
                 className="flex flex-1 flex-col items-center justify-center gap-[16px] p-8"
                 data-testid="error-state"
               >
-                <p className="font-['Inter'] text-[15px] text-red-400" data-testid="error-message">
+                <p className="text-[15px] text-danger" data-testid="error-message">
                   {sessionsError}
                 </p>
                 <button
@@ -1431,7 +1391,7 @@ export default function ProjectDetailPage() {
                     setSessionsError(null);
                     fetchSessions();
                   }}
-                  className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors"
+                  className="rounded-[6px] border border-hairline px-[16px] py-[8px] text-[13px] text-ink-2 hover:text-ink transition-colors"
                   data-testid="retry-button"
                 >
                   Try Again
@@ -1451,7 +1411,7 @@ export default function ProjectDetailPage() {
                     data-testid="loading-state"
                   >
                     <svg
-                      className="animate-spin size-[28px] text-[#5a626c]"
+                      className="animate-spin size-[28px] text-ink-3"
                       viewBox="0 0 24 24"
                       fill="none"
                     >
@@ -1474,23 +1434,23 @@ export default function ProjectDetailPage() {
                 ) : activeSessionId ? (
                   <>
                     {creating && (
-                      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#1e1e2e]/80 backdrop-blur-sm">
+                      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-bg/80">
                         <svg className="animate-spin size-5" viewBox="0 0 24 24" fill="none">
                           <circle cx="12" cy="12" r="9" stroke="rgba(179,229,2,0.2)" strokeWidth="2" />
-                          <path d="M21 12a9 9 0 00-9-9" stroke="#aaff00" strokeWidth="2" strokeLinecap="round" />
+                          <path d="M21 12a9 9 0 00-9-9" stroke="#b3e502" strokeWidth="2" strokeLinecap="round" />
                         </svg>
-                        <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.4)]">Criando sessão…</span>
+                        <span className="font-['JetBrains_Mono'] text-[11px] text-accent/60">Criando sessão…</span>
                       </div>
                     )}
                     {closeError && (
                       <div
-                        className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-[20px] py-[8px] font-['Inter'] text-[13px] text-red-400"
+                        className="shrink-0 border-b border-danger/30 bg-danger/10 px-[20px] py-[8px] text-[13px] text-danger"
                         data-testid="error-banner"
                       >
                         {closeError}
                         <button
                           onClick={() => setCloseError(null)}
-                          className="ml-[8px] underline hover:text-red-300"
+                          className="ml-[8px] underline hover:text-danger/80"
                         >
                           Dismiss
                         </button>
@@ -1498,7 +1458,7 @@ export default function ProjectDetailPage() {
                     )}
                     <div className="relative flex flex-1 min-h-0 overflow-hidden p-1 sm:p-2">
                       <div
-                        className="relative h-full min-h-0 w-full overflow-hidden rounded-[6px] border border-white/[0.07] bg-[#0a0a0f]"
+                        className="relative h-full min-h-0 w-full overflow-hidden rounded-control border border-hairline bg-bg"
                         data-testid="terminal-container"
                       >
                         <XTermTerminal
@@ -1525,7 +1485,7 @@ export default function ProjectDetailPage() {
             {activeTab === 'files' && projectId && (
               <div className="flex flex-1 overflow-hidden" data-testid="files-panel">
                 <div className="hidden md:flex w-full">
-                  <div className="w-[260px] shrink-0 overflow-y-auto border-r border-white/[0.07]">
+                  <div className="w-[260px] shrink-0 overflow-y-auto border-r border-hairline">
                     <FileTree
                       projectId={projectId}
                       onFileOpen={(_pid, filePath) => setFilesOpenPath(filePath)}

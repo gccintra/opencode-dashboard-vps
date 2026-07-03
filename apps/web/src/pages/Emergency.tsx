@@ -167,12 +167,12 @@ export default function EmergencyPage() {
       <div className="flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
         <div className="flex items-center justify-center flex-1 p-8">
           <div className="flex max-w-[420px] flex-col items-center gap-4 text-center">
-            <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 font-['Inter'] text-[14px] text-red-400">
+            <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-[14px] text-red-400">
               {error}
             </p>
             <button
               onClick={() => navigate('/projects')}
-              className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#f0f0f0] hover:border-white/[0.14] transition-colors"
+              className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] text-[13px] font-medium text-[#f0f0f0] hover:border-white/[0.14] transition-colors"
             >
               Back to Projects
             </button>
@@ -186,7 +186,7 @@ export default function EmergencyPage() {
     return (
       <div className="flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
         <div className="flex items-center justify-center flex-1 p-8 text-center">
-          <p className="font-['Inter'] text-[14px] text-[#9aa3ad]">No emergency session active.</p>
+          <p className="text-[14px] text-[#9aa3ad]">No emergency session active.</p>
         </div>
       </div>
     );
@@ -203,13 +203,13 @@ export default function EmergencyPage() {
       <header className="relative z-10 flex shrink-0 items-center gap-[12px] border-b-2 border-[#f54] bg-[#0a0a0f] px-[24px] pb-[18px] pt-[18px] sm:px-[32px]">
         <button
           onClick={() => navigate('/projects')}
-          className="flex items-center gap-[4px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors"
+          className="flex items-center gap-[4px] text-[13px] font-medium text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors"
         >
           <BackArrowIcon />
           Projects
         </button>
 
-        <span className="flex items-center gap-[6px] font-['Inter'] text-[15px] font-semibold text-[#f54]">
+        <span className="flex items-center gap-[6px] text-[15px] font-semibold text-[#f54]">
           <span>{'⚠️'}</span>
           Emergency Terminal
         </span>
@@ -219,7 +219,7 @@ export default function EmergencyPage() {
           <button
             onClick={handleClose}
             disabled={closing}
-            className="flex items-center gap-[6px] rounded-[6px] border border-red-500/30 bg-red-500/10 px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-red-400 hover:border-red-500/50 hover:bg-red-500/15 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-[6px] rounded-[6px] border border-red-500/30 bg-red-500/10 px-[12px] py-[6px] text-[12px] font-medium text-red-400 hover:border-red-500/50 hover:bg-red-500/15 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
             {closing ? (
               <>
@@ -237,7 +237,7 @@ export default function EmergencyPage() {
       </header>
 
       {error && (
-        <div className="border-b border-red-500/30 bg-red-500/10 px-6 py-2 font-['Inter'] text-[12px] text-red-400">
+        <div className="border-b border-red-500/30 bg-red-500/10 px-6 py-2 text-[12px] text-red-400">
           {error}
         </div>
       )}

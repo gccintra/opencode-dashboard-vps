@@ -222,12 +222,12 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
         className="flex flex-col items-center justify-center gap-4 p-8 text-center"
         data-testid="resource-config-error"
       >
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 font-['Inter'] text-[13px] text-red-400">
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-[13px] text-red-400">
           {error}
         </p>
         <button
           onClick={fetchResources}
-          className="rounded-[6px] border border-white/10 px-[14px] py-[7px] font-['Inter'] text-[13px] font-medium text-[#f0f0f0] hover:border-white/20 transition-colors"
+          className="rounded-[6px] border border-white/10 px-[14px] py-[7px] text-[13px] font-medium text-[#f0f0f0] hover:border-white/20 transition-colors"
           data-testid="resource-retry-button"
         >
           Retry
@@ -248,7 +248,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             role="tab"
             aria-selected={activeTab === type}
             onClick={() => setActiveTab(type)}
-            className={`px-4 py-3 font-['Inter'] text-[13px] font-medium transition-colors border-b-2 -mb-[1px] ${
+            className={`px-4 py-3 text-[13px] font-medium transition-colors border-b-2 -mb-[1px] ${
               activeTab === type
                 ? 'border-[#b3e502] text-[#b3e502]'
                 : 'border-transparent text-[#9aa3ad] hover:text-[#e6e8eb]'
@@ -272,14 +272,14 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
               placeholder="Filter resources…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-[6px] border border-white/10 bg-[#111118] py-2 pl-9 pr-3 font-['Inter'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-white/20 transition-colors"
+              className="w-full rounded-[6px] border border-white/10 bg-[#111118] py-2 pl-9 pr-3 text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-white/20 transition-colors"
               data-testid="resource-search"
             />
           </div>
           <button
             onClick={scanResources}
             disabled={scanning}
-            className="shrink-0 rounded-[6px] border border-white/[0.07] bg-[#111118] px-3 py-2 font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
+            className="shrink-0 rounded-[6px] border border-white/[0.07] bg-[#111118] px-3 py-2 text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
             data-testid="resource-scan-button"
             title="Re-scan opencode resource directories"
           >
@@ -292,7 +292,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
       <div className="flex flex-col p-3 pt-1 gap-1" data-testid="resource-list">
         {filtered.length === 0 && !search && (
           <div
-            className="py-8 text-center font-['Inter'] text-[13px] text-[#667]"
+            className="py-8 text-center text-[13px] text-[#667]"
             data-testid="resource-empty"
           >
             No {TYPE_LABELS[activeTab].toLowerCase()} found for this project.
@@ -300,7 +300,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
         )}
         {filtered.length === 0 && search && (
           <div
-            className="py-8 text-center font-['Inter'] text-[13px] text-[#667]"
+            className="py-8 text-center text-[13px] text-[#667]"
             data-testid="resource-no-results"
           >
             No resources match &ldquo;{search}&rdquo;.{' '}
@@ -318,7 +318,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span
-                  className="font-['Inter'] text-[13px] font-medium text-[#f0f0f0] truncate"
+                  className="text-[13px] font-medium text-[#f0f0f0] truncate"
                   data-testid="resource-name"
                 >
                   {resource.name}
@@ -333,7 +333,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
                   </span>
                 )}
               </div>
-              <p className="font-['Inter'] text-[12px] text-[#667] truncate mt-0.5">
+              <p className="text-[12px] text-[#667] truncate mt-0.5">
                 {resource.description}
               </p>
             </div>
@@ -371,7 +371,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
           <button
             onClick={handleRemoveUnavailable}
             disabled={removing}
-            className="flex items-center gap-1.5 rounded-[6px] border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 font-['Inter'] text-[12px] text-yellow-400 hover:border-yellow-500/50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-[6px] border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-[12px] text-yellow-400 hover:border-yellow-500/50 transition-colors disabled:opacity-50"
             data-testid="cleanup-unavailable-button"
           >
             {removing ? 'Cleaning…' : 'Limpar indisponíveis'}

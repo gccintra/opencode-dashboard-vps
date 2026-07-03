@@ -74,7 +74,7 @@ export function FiltersModal({
                 strokeLinejoin="round"
               />
             </svg>
-            <h2 className="font-['Syne'] text-[17px] font-bold tracking-[-0.2px] text-white">Filters</h2>
+            <h2 className="text-[17px] font-bold tracking-[-0.2px] text-white">Filters</h2>
             {activeCount > 0 && (
               <span className="rounded-full border border-[#b3e502]/40 bg-[rgba(179,229,2,0.1)] px-[7px] py-[1px] font-['JetBrains_Mono'] text-[11px] text-[#b3e502] tabular-nums">
                 {activeCount}
@@ -96,7 +96,7 @@ export function FiltersModal({
         {/* Body */}
         <div className="kb-scroll flex min-h-0 flex-1 flex-col gap-[20px] overflow-y-auto px-[20px] py-[16px]">
           {isEmpty && (
-            <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center font-['Inter'] text-[12px] text-[#7a828c]">
+            <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center text-[12px] text-[#7a828c]">
               No filters available yet.
             </p>
           )}
@@ -104,7 +104,7 @@ export function FiltersModal({
           {/* Projects */}
           {projects.length > 0 && (
             <section className="flex flex-col gap-[10px]">
-              <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
                 Projects
               </span>
               <div className="flex flex-wrap gap-[8px]">
@@ -116,7 +116,7 @@ export function FiltersModal({
                       type="button"
                       onClick={() => toggleProject(project.id)}
                       aria-pressed={active}
-                      className={`rounded-[8px] border px-[11px] py-[6px] font-['Inter'] text-[12px] font-medium transition-all ${
+                      className={`rounded-[8px] border px-[11px] py-[6px] text-[12px] font-medium transition-all ${
                         active
                           ? 'border-[#b3e502]/40 bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
                           : 'border-white/[0.07] bg-white/[0.03] text-[#7a828c] hover:border-white/[0.14] hover:text-[#d1d5db]'
@@ -133,7 +133,7 @@ export function FiltersModal({
           {/* Labels */}
           {labels.length > 0 && (
             <section className="flex flex-col gap-[10px]">
-              <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
                 Labels
               </span>
               <div className="flex flex-wrap gap-[8px]">
@@ -155,7 +155,7 @@ export function FiltersModal({
                             }
                           : undefined
                       }
-                      className={`inline-flex items-center gap-[6px] rounded-[8px] border px-[10px] py-[5px] font-['Inter'] text-[12px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#b3e502]/40 ${
+                      className={`inline-flex items-center gap-[6px] rounded-[8px] border px-[10px] py-[5px] text-[12px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#b3e502]/40 ${
                         active
                           ? ''
                           : 'border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]'
@@ -192,14 +192,14 @@ export function FiltersModal({
             type="button"
             onClick={clear}
             disabled={activeCount === 0}
-            className="rounded-[9px] px-[12px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#7a828c] transition-colors hover:text-[#e6e8eb] disabled:opacity-40 disabled:hover:text-[#7a828c]"
+            className="rounded-[9px] px-[12px] py-[7px] text-[12px] font-medium text-[#7a828c] transition-colors hover:text-[#e6e8eb] disabled:opacity-40 disabled:hover:text-[#7a828c]"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[9px] bg-[#b3e502] px-[16px] py-[7px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516]"
+            className="rounded-[9px] bg-[#b3e502] px-[16px] py-[7px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516]"
           >
             Done
           </button>

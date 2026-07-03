@@ -229,7 +229,7 @@ function ContextMenu({
             item.action();
             onClose();
           }}
-          className={`block w-full px-3 py-2.5 text-left font-['Inter'] text-[13px] hover:bg-[rgba(255,255,255,0.06)] active:bg-[rgba(255,255,255,0.08)] transition-colors ${item.danger ? 'text-red-400' : 'text-[#ccd]'}`}
+          className={`block w-full px-3 py-2.5 text-left text-[13px] hover:bg-[rgba(255,255,255,0.06)] active:bg-[rgba(255,255,255,0.08)] transition-colors ${item.danger ? 'text-red-400' : 'text-[#ccd]'}`}
         >
           {item.label}
         </button>
@@ -275,7 +275,7 @@ function CreateModal({
         className="w-[280px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-[14px] font-['Syne'] text-[17px] font-bold text-white">
+        <h3 className="mb-[14px] text-[17px] font-bold text-white">
           New {type === 'directory' ? 'Folder' : 'File'}
         </h3>
         <input
@@ -294,14 +294,14 @@ function CreateModal({
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
+            className="rounded-[8px] px-3 py-[6px] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || value.trim().includes('/')}
-            className="kb-sheen relative overflow-hidden rounded-[8px] bg-[#b3e502] px-[14px] py-[6px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:opacity-40"
+            className="kb-sheen relative overflow-hidden rounded-[8px] bg-[#b3e502] px-[14px] py-[6px] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:opacity-40"
           >
             Create
           </button>
@@ -334,21 +334,21 @@ function DeleteModal({
         className="w-[300px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-[8px] font-['Syne'] text-[17px] font-bold text-white">Confirm Delete</h3>
-        <p className="mb-[16px] font-['Inter'] text-[13px] text-[#9aa3ad]">
+        <h3 className="mb-[8px] text-[17px] font-bold text-white">Confirm Delete</h3>
+        <p className="mb-[16px] text-[13px] text-[#9aa3ad]">
           Delete {isDir ? 'folder' : 'file'}{' '}
           <span className="text-[#f0f0f0] font-mono">{name}</span>?
         </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
+            className="rounded-[8px] px-3 py-[6px] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-[8px] bg-red-500/20 border border-red-500/30 px-[14px] py-[6px] font-['Inter'] text-[12px] font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
+            className="rounded-[8px] bg-red-500/20 border border-red-500/30 px-[14px] py-[6px] text-[12px] font-semibold text-red-400 hover:bg-red-500/30 transition-colors"
           >
             Delete
           </button>
@@ -380,23 +380,23 @@ function LargeFileWarning({
         className="w-[320px] rounded-[14px] border border-[#fa0]/30 bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-[8px] font-['Syne'] text-[17px] font-bold text-[#fa0]">
+        <h3 className="mb-[8px] text-[17px] font-bold text-[#fa0]">
           Large File Warning
         </h3>
-        <p className="mb-[16px] font-['Inter'] text-[13px] text-[#9aa3ad]">
+        <p className="mb-[16px] text-[13px] text-[#9aa3ad]">
           This file is {sizeKB > 1024 ? `${sizeMB} MB` : `${sizeKB} KB`}. It may be slow to edit.
           Open anyway?
         </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-[8px] px-3 py-[6px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
+            className="rounded-[8px] px-3 py-[6px] text-[12px] text-[#9aa3ad] hover:text-[#e6e8eb]"
           >
             Cancel
           </button>
           <button
             onClick={onContinue}
-            className="rounded-[8px] bg-[#fa0]/15 border border-[#fa0]/30 px-[14px] py-[6px] font-['Inter'] text-[12px] font-semibold text-[#fa0] hover:bg-[#fa0]/25 transition-colors"
+            className="rounded-[8px] bg-[#fa0]/15 border border-[#fa0]/30 px-[14px] py-[6px] text-[12px] font-semibold text-[#fa0] hover:bg-[#fa0]/25 transition-colors"
           >
             Open
           </button>
@@ -594,7 +594,7 @@ function TreeNodeItem({
   return (
     <div>
       <div
-        className={`flex min-h-[32px] items-center gap-1 cursor-pointer select-none py-0.5 pr-2 font-['Inter'] text-[13px] transition-colors ${
+        className={`flex min-h-[32px] items-center gap-1 cursor-pointer select-none py-0.5 pr-2 text-[13px] transition-colors ${
           isSelected
             ? 'bg-[rgba(179,229,2,0.08)] text-[#f0f0f0]'
             : isDragOver
@@ -643,7 +643,7 @@ function TreeNodeItem({
               if (e.key === 'Escape') onRenameConfirm(fullPath, node.entry.name);
             }}
             onBlur={() => onRenameConfirm(fullPath, renameValue)}
-            className="flex-1 rounded-[3px] border border-white/[0.12] bg-[#0a0a0f] px-1 py-px font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+            className="flex-1 rounded-[3px] border border-white/[0.12] bg-[#0a0a0f] px-1 py-px text-[13px] text-[#f0f0f0] outline-none"
             data-testid="rename-input"
             autoFocus
             onClick={(e) => e.stopPropagation()}
@@ -665,7 +665,7 @@ function TreeNodeItem({
         <div>
           {node.children.length === 0 && (
             <div
-              className="py-1 font-['Inter'] text-[11px] text-[#5a626c]"
+              className="py-1 text-[11px] text-[#5a626c]"
               style={{ paddingLeft: paddingLeft + 32 }}
             >
               Empty
@@ -717,7 +717,7 @@ function Breadcrumb({
   const parts = currentPath ? currentPath.split('/') : [];
   return (
     <div
-      className="flex items-center gap-1 overflow-x-auto py-2 font-['Inter'] text-[12px]"
+      className="flex items-center gap-1 overflow-x-auto py-2 text-[12px]"
       data-testid="breadcrumb"
     >
       <button
@@ -773,7 +773,7 @@ function SearchBar({
           if (e.key === 'Escape') onClose();
         }}
         placeholder="Search files... (Ctrl+P)"
-        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.1)] bg-[#0a0a0f] px-3 py-1.5 font-['Inter'] text-[13px] text-[#f0f0f0] outline-none focus:border-white/[0.14]"
+        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.1)] bg-[#0a0a0f] px-3 py-1.5 text-[13px] text-[#f0f0f0] outline-none focus:border-white/[0.14]"
         data-testid="search-input"
       />
       {results.length > 0 && (
@@ -794,7 +794,7 @@ function SearchBar({
                   extension={r.name.includes('.') ? r.name.substring(r.name.lastIndexOf('.')) : ''}
                 />
               )}
-              <span className="font-['Inter'] text-[12px] text-[#ccd]">{r.name}</span>
+              <span className="text-[12px] text-[#ccd]">{r.name}</span>
               <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#5a626c] truncate">
                 {r.path}
               </span>
@@ -815,7 +815,7 @@ function UploadProgress({ progress, label }: { progress: number; label: string }
       className="fixed bottom-4 right-4 z-50 w-[220px] rounded-[6px] border border-white/[0.07] bg-[#111118] p-3"
       data-testid="upload-progress"
     >
-      <div className="mb-1 flex items-center justify-between font-['Inter'] text-[11px] text-[#9aa3ad]">
+      <div className="mb-1 flex items-center justify-between text-[11px] text-[#9aa3ad]">
         <span>Uploading{label ? '...' : '...'}</span>
         {label && <span className="text-[#b3e502]">{label}</span>}
       </div>
@@ -1420,10 +1420,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   if (error && tree.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-8" data-testid="filetree-error">
-        <p className="font-['Inter'] text-[13px] text-red-400">{error}</p>
+        <p className="text-[13px] text-red-400">{error}</p>
         <button
           onClick={loadRoot}
-          className="rounded-[4px] border border-[rgba(255,255,255,0.1)] px-3 py-1 font-['Inter'] text-[12px] text-[#ccd] hover:border-white/[0.14]"
+          className="rounded-[4px] border border-[rgba(255,255,255,0.1)] px-3 py-1 text-[12px] text-[#ccd] hover:border-white/[0.14]"
         >
           Retry
         </button>
@@ -1438,10 +1438,10 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       {/* Clipboard indicator */}
       {globalClipboard && (
         <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(179,229,2,0.06)] px-3 py-1.5">
-          <span className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#b3e502]">
+          <span className="min-w-0 flex-1 truncate text-[11px] text-[#b3e502]">
             {globalClipboard.fileName} {globalClipboard.action}
           </span>
-          <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">
+          <span className="shrink-0 text-[10px] text-[#5a626c]">
             {isMobile ? 'hold to paste' : 'right-click dir to paste'}
           </span>
         </div>
@@ -1452,7 +1452,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
         {isMobile && onBack && (
           <button
             onClick={onBack}
-            className="mr-1 font-['Inter'] text-[12px] text-[#9aa3ad] active:text-[#ccd]"
+            className="mr-1 text-[12px] text-[#9aa3ad] active:text-[#ccd]"
           >
             Back
           </button>
@@ -1463,13 +1463,13 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           placeholder="Filter files..."
-          className="min-h-[30px] flex-1 rounded-[4px] border border-white/[0.07] bg-transparent px-2 py-1 font-['Inter'] text-[12px] text-[#ccd] placeholder-[#445] outline-none focus:border-white/[0.14]"
+          className="min-h-[30px] flex-1 rounded-[4px] border border-white/[0.07] bg-transparent px-2 py-1 text-[12px] text-[#ccd] placeholder-[#445] outline-none focus:border-white/[0.14]"
           data-testid="search-input"
         />
         {searchValue && (
           <button
             onClick={() => setSearchValue('')}
-            className="shrink-0 px-1 font-['Inter'] text-[12px] text-[#5a626c] hover:text-[#9aa3ad]"
+            className="shrink-0 px-1 text-[12px] text-[#5a626c] hover:text-[#9aa3ad]"
           >
             ×
           </button>
@@ -1564,7 +1564,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               );
               setUploadMenuOpen((v) => !v);
             }}
-            className={`flex min-h-[30px] items-center gap-[5px] rounded-[4px] border px-[8px] font-['Inter'] text-[12px] font-medium transition-colors ${
+            className={`flex min-h-[30px] items-center gap-[5px] rounded-[4px] border px-[8px] text-[12px] font-medium transition-colors ${
               uploadMenuOpen
                 ? 'border-[rgba(179,229,2,0.4)] bg-[rgba(179,229,2,0.08)] text-[#b3e502]'
                 : 'border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb]'
@@ -1592,7 +1592,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           {uploadMenuOpen && (
             <div className="absolute right-0 top-[calc(100%+4px)] z-50 hidden w-[168px] rounded-[8px] border border-white/[0.08] bg-[#111118] py-1 shadow-xl backdrop-blur-md sm:block">
               <button
-                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
                 onClick={() => {
                   fileInputRef.current?.click();
                   setUploadMenuOpen(false);
@@ -1616,7 +1616,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 Files
               </button>
               <button
-                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                className="flex w-full items-center gap-[10px] px-[12px] py-[9px] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
                 onClick={() => {
                   folderInputRef.current?.click();
                   setUploadMenuOpen(false);
@@ -1666,7 +1666,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       >
         {visibleTree.length === 0 && (
           <div
-            className="px-3 py-4 text-center font-['Inter'] text-[13px] text-[#5a626c]"
+            className="px-3 py-4 text-center text-[13px] text-[#5a626c]"
             data-testid="filetree-empty"
           >
             {searchValue ? 'No matches' : 'Empty project'}
@@ -1767,14 +1767,14 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
           >
             {/* Handle bar */}
             <div className="mx-auto mb-4 h-[4px] w-[36px] rounded-full bg-[rgba(255,255,255,0.12)]" />
-            <p className="mb-3 text-center font-['Inter'] text-[12px] text-[#5a626c]">
+            <p className="mb-3 text-center text-[12px] text-[#5a626c]">
               Upload para
             </p>
-            <p className="mb-4 text-center font-['Inter'] text-[13px] font-medium text-[#9aa3ad] truncate">
+            <p className="mb-4 text-center text-[13px] font-medium text-[#9aa3ad] truncate">
               /{uploadTargetDir || 'root'}
             </p>
             <button
-              className="mb-2 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
+              className="mb-2 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
               onClick={() => {
                 fileInputRef.current?.click();
                 setUploadMenuOpen(false);
@@ -1805,7 +1805,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               </div>
             </button>
             <button
-              className="mb-3 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 font-['Inter'] text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
+              className="mb-3 flex w-full items-center gap-3 rounded-[12px] bg-[rgba(255,255,255,0.05)] px-4 py-4 text-[15px] font-medium text-[#f0f0f0] active:bg-[rgba(255,255,255,0.1)] transition-colors"
               onClick={() => {
                 folderInputRef.current?.click();
                 setUploadMenuOpen(false);
@@ -1835,7 +1835,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
               </div>
             </button>
             <button
-              className="w-full rounded-[12px] py-3 font-['Inter'] text-[14px] text-[#5a626c] active:text-[#9aa3ad] transition-colors"
+              className="w-full rounded-[12px] py-3 text-[14px] text-[#5a626c] active:text-[#9aa3ad] transition-colors"
               onClick={() => setUploadMenuOpen(false)}
             >
               Cancelar
@@ -1880,7 +1880,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 strokeWidth="1"
               />
             </svg>
-            <span className="font-['Inter'] text-[10px] text-[#5a626c]">
+            <span className="text-[10px] text-[#5a626c]">
               Trash ({trashItems.length})
             </span>
           </button>
@@ -1892,7 +1892,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                   className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.02]"
                 >
                   <span
-                    className="min-w-0 flex-1 truncate font-['Inter'] text-[11px] text-[#9aa3ad]"
+                    className="min-w-0 flex-1 truncate text-[11px] text-[#9aa3ad]"
                     title={item.originalPath}
                   >
                     {item.name}
@@ -1902,7 +1902,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                   </span>
                   <button
                     onClick={() => handleRestore(item)}
-                    className="shrink-0 rounded-[3px] border border-white/[0.07] px-1.5 py-0.5 font-['Inter'] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
+                    className="shrink-0 rounded-[3px] border border-white/[0.07] px-1.5 py-0.5 text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
                   >
                     Restore
                   </button>
@@ -1912,7 +1912,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                         prev.filter((t) => t.originalPath !== item.originalPath),
                       )
                     }
-                    className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c] hover:text-red-400"
+                    className="shrink-0 text-[10px] text-[#5a626c] hover:text-red-400"
                   >
                     ×
                   </button>
@@ -1926,7 +1926,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
       {/* Error banner */}
       {error && tree.length > 0 && (
         <div
-          className="border-t border-red-500/20 bg-red-500/10 px-3 py-1.5 font-['Inter'] text-[11px] text-red-400"
+          className="border-t border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[11px] text-red-400"
           data-testid="filetree-error-banner"
         >
           {error}

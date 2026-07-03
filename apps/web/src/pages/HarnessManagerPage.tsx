@@ -131,12 +131,12 @@ export default function HarnessManagerPage() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-[14px] bg-[#0a0a0f]">
-        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] font-['Inter'] text-[13px] text-red-400 backdrop-blur-md">
+        <p className="rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] text-[13px] text-red-400 backdrop-blur-md">
           {error}
         </p>
         <button
           onClick={() => navigate('/templates')}
-          className="kb-sheen relative overflow-hidden rounded-[10px] bg-[#b3e502] px-[20px] py-[10px] font-['Inter'] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+          className="kb-sheen relative overflow-hidden rounded-[10px] bg-[#b3e502] px-[20px] py-[10px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
         >
           Back to Templates
         </button>
@@ -151,17 +151,17 @@ export default function HarnessManagerPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/templates')}
-            className="flex items-center gap-1.5 rounded-[5px] px-2 py-1 font-['Inter'] text-[12px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e6e8eb] transition-colors"
+            className="flex items-center gap-1.5 rounded-[5px] px-2 py-1 text-[12px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e6e8eb] transition-colors"
           >
             <ArrowLeftIcon />
             <span className="hidden sm:inline">Templates</span>
           </button>
           <span className="text-[#5a626c]">/</span>
-          <span className="font-['Inter'] text-[14px] font-semibold text-[#f0f0f0]">
+          <span className="text-[14px] font-semibold text-[#f0f0f0]">
             {harness?.name ?? id}
           </span>
           {harness?.description && (
-            <span className="hidden sm:block truncate font-['Inter'] text-[12px] text-[#5a626c]">
+            <span className="hidden sm:block truncate text-[12px] text-[#5a626c]">
               — {harness.description}
             </span>
           )}

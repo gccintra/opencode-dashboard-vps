@@ -64,15 +64,15 @@ export default function TaskDetailPage() {
   if (error || !task) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-[14px] bg-[#0a0a0f] px-[24px] text-center">
-        <h2 className="font-['Syne'] text-[20px] font-bold text-[#f0f0f0]">
+        <h2 className="text-[20px] font-bold text-[#f0f0f0]">
           {error ? 'Could not load task' : 'Task not found'}
         </h2>
-        <p className="max-w-[320px] font-['Inter'] text-[13px] leading-[1.55] text-[#7a828c]">
+        <p className="max-w-[320px] text-[13px] leading-[1.55] text-[#7a828c]">
           {error || 'This task may have been deleted or moved.'}
         </p>
         <button
           onClick={goBack}
-          className="rounded-[10px] bg-[#b3e502] px-[18px] py-[9px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] transition-colors hover:bg-[#c2f516]"
+          className="rounded-[10px] bg-[#b3e502] px-[18px] py-[9px] text-[13px] font-bold text-[#0a0a0f] transition-colors hover:bg-[#c2f516]"
         >
           Back to board
         </button>

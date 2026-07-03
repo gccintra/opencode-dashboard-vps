@@ -67,7 +67,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
           className={`absolute ${direction === 'up' ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'} right-0 z-50 min-w-[170px] overflow-hidden rounded-[8px] border border-[rgba(255,255,255,0.1)] bg-[#111118] py-[4px] shadow-2xl`}
           style={{ backdropFilter: 'blur(8px)' }}
         >
-          <p className="px-[12px] py-[6px] font-['Inter'] text-[10px] font-semibold uppercase tracking-[0.8px] text-[#5a626c]">
+          <p className="px-[12px] py-[6px] text-[10px] font-semibold uppercase tracking-[0.8px] text-[#5a626c]">
             Tema do terminal
           </p>
           {TERMINAL_THEMES.map((t) => {
@@ -77,7 +77,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
                 key={t.id}
                 type="button"
                 onClick={() => select(t)}
-                className={`flex w-full items-center gap-[10px] px-[12px] py-[7px] text-left font-['Inter'] text-[13px] transition-colors ${
+                className={`flex w-full items-center gap-[10px] px-[12px] py-[7px] text-left text-[13px] transition-colors ${
                   isActive
                     ? 'bg-[rgba(179,229,2,0.1)] text-[#f0f0f0]'
                     : 'text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f0f0f0]'

@@ -137,9 +137,9 @@ function estimateDims() {
 /* ── Status dot for the rail ── */
 
 function statusDot(status: string): { color: string; pulse: boolean } {
-  if (status === 'active') return { color: '#22dd88', pulse: true };
-  if (status === 'waiting') return { color: '#ffaa00', pulse: false };
-  return { color: '#445566', pulse: false };
+  if (status === 'active') return { color: '#28c840', pulse: true };
+  if (status === 'waiting') return { color: '#febc2e', pulse: false };
+  return { color: '#4a4a52', pulse: false };
 }
 
 /* ── Session rail (master list) ── */
@@ -198,14 +198,14 @@ function SessionRail({
   }, [renamingId, renameValue, renameOriginal, onRename]);
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-[#0a0a0f]">
-      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-[14px] py-[12px]">
-        <span className="font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+    <div className="flex h-full min-h-0 w-full flex-col bg-surface">
+      <div className="flex shrink-0 items-center justify-between border-b border-hairline px-[14px] py-[12px]">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
           Sessions
         </span>
         <button
           onClick={onClose}
-          className="flex size-[24px] items-center justify-center rounded-[6px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#9aa3ad]"
+          className="flex size-[24px] items-center justify-center rounded-control text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink-2"
           title={isMobile ? 'Fechar' : 'Recolher'}
           aria-label="Recolher lista de sessões"
         >
@@ -223,20 +223,20 @@ function SessionRail({
 
       <div className="min-h-0 flex-1 overflow-y-auto py-[6px]">
         {groups.length === 0 && (
-          <p className="px-[14px] py-[10px] font-['Inter'] text-[12px] text-[#5a626c]">
+          <p className="px-[14px] py-[10px] text-[12px] text-ink-3">
             Nenhuma sessão ativa.
           </p>
         )}
         {groups.map((g) => (
           <div key={g.project.id} className="mb-[6px]">
             <div className="flex items-center justify-between px-[14px] py-[5px]">
-              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-[#5a626c]">
+              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.7px] text-ink-3">
                 {g.project.name}
               </span>
               <div className="flex items-center gap-[2px]">
                 <button
                   onClick={() => onRecover(g.project.id)}
-                  className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all"
+                  className="flex size-[20px] items-center justify-center rounded-[4px] text-ink-3 hover:bg-accent/10 hover:text-accent transition-all"
                   title={`Recover conversation in ${g.project.name}`}
                 >
                   <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
@@ -247,11 +247,11 @@ function SessionRail({
                 <button
                   onClick={() => onCreateSession(g.project.id)}
                   disabled={creating === g.project.id}
-                  className="flex size-[20px] items-center justify-center rounded-[4px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.08)] hover:text-[#b3e502] transition-all disabled:opacity-40"
+                  className="flex size-[20px] items-center justify-center rounded-[4px] text-ink-3 hover:bg-accent/10 hover:text-accent transition-all disabled:opacity-40"
                   title={`New session in ${g.project.name}`}
                 >
                   {creating === g.project.id ? (
-                    <div className="size-[8px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+                    <div className="size-[8px] animate-spin rounded-full border border-accent border-t-transparent" />
                   ) : (
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                       <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -268,7 +268,7 @@ function SessionRail({
                 <div
                   key={s.sessionId}
                   className={`flex w-full items-center gap-[8px] px-[14px] py-[6px] border-l-2 ${
-                    isActive ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)]' : 'border-transparent'
+                    isActive ? 'border-accent bg-accent/[0.08]' : 'border-transparent'
                   }`}
                 >
                   <span
@@ -284,16 +284,16 @@ function SessionRail({
                       else if (e.key === 'Escape') setRenamingId(null);
                     }}
                     onBlur={commitRename}
-                    className="min-w-0 flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[2px] font-['Inter'] text-[13px] text-[#f0f0f0] outline-none"
+                    className="min-w-0 flex-1 rounded-[4px] border border-accent/30 bg-black/40 px-[6px] py-[2px] text-[13px] text-ink outline-none"
                   />
                 </div>
               ) : (
                 <div
                   key={s.sessionId}
-                  className={`group flex w-full items-center gap-[8px] pl-[14px] pr-[6px] py-[8px] font-['Inter'] text-[13px] transition-colors ${
+                  className={`group flex w-full items-center gap-[8px] pl-[14px] pr-[6px] py-[8px] text-[13px] transition-colors ${
                     isActive
-                      ? 'border-l-2 border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
-                      : 'border-l-2 border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
+                      ? 'border-l-2 border-accent bg-accent/[0.08] text-ink'
+                      : 'border-l-2 border-transparent text-ink-2 hover:bg-white/[0.04] hover:text-ink'
                   }`}
                 >
                   <button
@@ -308,7 +308,7 @@ function SessionRail({
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); startRename(s); }}
-                    className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] transition-all"
+                    className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-ink-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-white/[0.06] hover:text-ink-2 transition-all"
                     title="Renomear sessão"
                   >
                     <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
@@ -324,13 +324,13 @@ function SessionRail({
 
       {/* Canvas nav item — like ProjectDetail. Hidden on mobile: canvas multi-terminal
           is desktop-only; mobile just switches between sessions. */}
-      <div className={`shrink-0 border-t border-white/[0.06] py-[6px] ${isMobile ? 'hidden' : ''}`}>
+      <div className={`shrink-0 border-t border-hairline py-[6px] ${isMobile ? 'hidden' : ''}`}>
         <button
           onClick={onSelectCanvas}
-          className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] font-['Inter'] text-[13px] font-medium transition-colors ${
+          className={`flex w-full items-center gap-[8px] border-l-2 px-[14px] py-[9px] text-[13px] font-medium transition-colors ${
             showCanvas
-              ? 'border-[#b3e502] bg-[rgba(179,229,2,0.07)] text-[#f0f0f0]'
-              : 'border-transparent text-[#9aa3ad] hover:bg-white/[0.03] hover:text-[#e6e8eb]'
+              ? 'border-accent bg-accent/[0.08] text-ink'
+              : 'border-transparent text-ink-2 hover:bg-white/[0.04] hover:text-ink'
           }`}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -385,10 +385,10 @@ function CanvasHubCard({
   return (
     <div
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-      className="kb-rise group relative isolate flex cursor-pointer flex-col gap-[8px] overflow-hidden rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-[12px] transition-[transform,border-color,background-color] duration-200 hover:-translate-y-[2px] hover:border-[#b3e502]/25 hover:bg-white/[0.05]"
+      className="group relative flex cursor-pointer flex-col gap-[8px] rounded-panel border border-hairline bg-surface p-[12px] transition-colors duration-150 hover:border-hairline-strong"
       onClick={() => !editing && !confirmDelete && onSelect()}
     >
-      <span aria-hidden className="absolute inset-y-[10px] left-0 w-[2px] rounded-r-full bg-[#b3e502] opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
+      <span aria-hidden className="absolute inset-y-[10px] left-0 w-[2px] rounded-r-full bg-accent opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
       <div className="flex items-center gap-[6px] min-w-0">
         {editing ? (
           <input
@@ -402,10 +402,10 @@ function CanvasHubCard({
             }}
             onBlur={saveEdit}
             onClick={(e) => e.stopPropagation()}
-            className="min-w-0 flex-1 rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+            className="min-w-0 flex-1 rounded-control border border-accent/30 bg-white/[0.06] px-[6px] py-[3px] text-[13px] font-semibold text-ink outline-none"
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
             {canvas.name}
           </span>
         )}
@@ -414,7 +414,7 @@ function CanvasHubCard({
           <div className="flex shrink-0 items-center gap-[2px] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <button
               onClick={startEdit}
-              className="flex size-[22px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.1)] hover:text-[#b3e502] transition-colors"
+              className="flex size-[22px] items-center justify-center rounded-control text-ink-3 hover:bg-accent/10 hover:text-accent transition-colors"
               aria-label="Renomear canvas"
             >
               <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
@@ -423,7 +423,7 @@ function CanvasHubCard({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-              className="flex size-[22px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(255,85,68,0.1)] hover:text-[#f54] transition-colors"
+              className="flex size-[22px] items-center justify-center rounded-control text-ink-3 hover:bg-danger/10 hover:text-danger transition-colors"
               aria-label="Deletar canvas"
             >
               <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
@@ -436,13 +436,13 @@ function CanvasHubCard({
         {!editing && confirmDelete && (
           <div className="flex shrink-0 items-center gap-[5px]" onClick={(e) => e.stopPropagation()}>
             <button
-              className="rounded-[5px] bg-[#f54] px-[7px] py-[2px] font-['Inter'] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
+              className="rounded-control bg-danger px-[7px] py-[2px] text-[11px] font-medium text-white hover:bg-danger/80 transition-colors"
               onClick={(e) => { e.stopPropagation(); onDelete(canvas.id); }}
             >
               Sim
             </button>
             <button
-              className="rounded-[5px] bg-[rgba(255,255,255,0.08)] px-[7px] py-[2px] font-['Inter'] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+              className="rounded-control bg-white/[0.08] px-[7px] py-[2px] text-[11px] text-ink-2 hover:bg-white/[0.12] transition-colors"
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
             >
               Não
@@ -451,10 +451,10 @@ function CanvasHubCard({
         )}
       </div>
       <div className="flex items-center gap-[5px]">
-        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] text-[#9aa3ad]">
+        <span className="rounded-[4px] border border-hairline bg-white/[0.04] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] text-ink-2">
           {canvas.cols}×{canvas.rows}
         </span>
-        <span className="rounded-[4px] border border-white/[0.07] bg-[rgba(255,255,255,0.04)] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#667]">
+        <span className="rounded-[4px] border border-hairline bg-white/[0.04] px-[6px] py-[2px] text-[10px] text-ink-3">
           {canvas.slotCount}/{canvas.totalSlots}
         </span>
       </div>
@@ -928,24 +928,17 @@ export default function SessionTerminalPage() {
 
   return (
     <div
-      className="relative flex flex-col overflow-hidden bg-[#0a0a0f]"
+      className="relative flex flex-col overflow-hidden bg-bg"
       style={{ height: `${viewportHeight}px` }}
     >
-      {/* Aurora Glass atmosphere */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="kb-aurora" style={{ top: '-180px', left: '-120px', width: 620, height: 620, opacity: 0.5, background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)' }} />
-        <div className="kb-aurora" style={{ top: '-220px', left: '38%', width: 680, height: 680, opacity: 0.4, animationDelay: '-7s', background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)' }} />
-        <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.38, animationDelay: '-13s', background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)' }} />
-        <div className="kb-grid" />
-      </div>
 
       {/* ══ Header — adapts to mode: terminal / canvas-hub / canvas-embed ══ */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[8px] border-b border-white/[0.06] bg-[#0a0a0f]/80 px-[12px] py-[10px] backdrop-blur-md sm:px-[18px]">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[8px] border-b border-hairline bg-surface px-[12px] py-[10px] sm:px-[18px]">
         {/* Left: back + rail toggle + mode-specific breadcrumb */}
         <div className="flex min-w-0 items-center gap-[8px]">
           <button
             onClick={() => navigate('/projects')}
-            className="flex shrink-0 items-center gap-[5px] rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:text-[#f0f0f0]"
+            className="flex shrink-0 items-center gap-[5px] rounded-control border border-hairline bg-white/[0.03] px-[10px] py-[5px] text-[12px] font-medium text-ink-2 transition-colors hover:border-hairline-strong hover:text-ink"
             title="Voltar para Projects"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -957,7 +950,7 @@ export default function SessionTerminalPage() {
           {!railOpen && (
             <button
               onClick={() => persistRail(true)}
-              className="flex size-[30px] shrink-0 items-center justify-center rounded-[8px] border border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] backdrop-blur-md transition-colors hover:border-white/[0.14] hover:text-[#f0f0f0]"
+              className="flex size-[30px] shrink-0 items-center justify-center rounded-control border border-hairline bg-white/[0.03] text-ink-2 transition-colors hover:border-hairline-strong hover:text-ink"
               title="Mostrar sessões"
               aria-label="Mostrar lista de sessões"
             >
@@ -973,7 +966,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => setCanvasPickerOpen(true)}
                 title="Trocar de canvas"
-                className="flex shrink-0 items-center gap-[4px] rounded-[6px] px-[6px] py-[3px] font-['Inter'] text-[12px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#9aa3ad]"
+                className="flex shrink-0 items-center gap-[4px] rounded-control px-[6px] py-[3px] text-[12px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink-2"
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
@@ -983,7 +976,7 @@ export default function SessionTerminalPage() {
                 </svg>
                 Canvas
               </button>
-              <span className="shrink-0 font-['Inter'] text-[13px] text-[#334]">/</span>
+              <span className="shrink-0 text-[13px] text-ink-4">/</span>
               {canvasRenaming ? (
                 <input
                   autoFocus
@@ -1003,7 +996,7 @@ export default function SessionTerminalPage() {
                     if (v && v !== canvasData.name) handleRenameCanvas(canvasData.id, v);
                     setCanvasRenaming(false);
                   }}
-                  className="min-w-0 max-w-[180px] rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[2px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+                  className="min-w-0 max-w-[180px] rounded-[4px] border border-accent/30 bg-black/40 px-[6px] py-[2px] text-[13px] font-semibold text-ink outline-none"
                 />
               ) : (
                 <button
@@ -1012,7 +1005,7 @@ export default function SessionTerminalPage() {
                     setCanvasRenaming(true);
                   }}
                   title="Renomear canvas"
-                  className="min-w-0 max-w-[180px] truncate rounded-[4px] px-[4px] py-[2px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] transition-colors hover:bg-white/[0.06]"
+                  className="min-w-0 max-w-[180px] truncate rounded-[4px] px-[4px] py-[2px] text-[13px] font-semibold text-ink transition-colors hover:bg-white/[0.06]"
                 >
                   {canvasData.name}
                 </button>
@@ -1020,16 +1013,16 @@ export default function SessionTerminalPage() {
             </>
           ) : showCanvas ? (
             /* Canvas hub */
-            <span className="font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">Canvas</span>
+            <span className="text-[13px] font-semibold text-ink">Canvas</span>
           ) : (
             /* Terminal: project / session + rename + status dot */
             <>
               {projectName && (
                 <>
-                  <span className="hidden max-w-[140px] truncate font-['Inter'] text-[13px] text-[#5a626c] sm:inline">
+                  <span className="hidden max-w-[140px] truncate text-[13px] text-ink-3 sm:inline">
                     {projectName}
                   </span>
-                  <span className="hidden shrink-0 font-['Inter'] text-[13px] text-[#334] sm:inline">/</span>
+                  <span className="hidden shrink-0 text-[13px] text-ink-4 sm:inline">/</span>
                 </>
               )}
               {headerRenaming ? (
@@ -1042,17 +1035,17 @@ export default function SessionTerminalPage() {
                     else if (e.key === 'Escape') setHeaderRenaming(false);
                   }}
                   onBlur={commitHeaderRename}
-                  className="min-w-0 max-w-[160px] rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[8px] py-[3px] font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] outline-none"
+                  className="min-w-0 max-w-[160px] rounded-control border border-accent/30 bg-black/40 px-[8px] py-[3px] text-[13px] font-semibold text-ink outline-none"
                 />
               ) : (
                 <div className="group flex min-w-0 items-center gap-[4px]">
-                  <span className="min-w-0 max-w-[140px] truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0]">
+                  <span className="min-w-0 max-w-[140px] truncate text-[13px] font-semibold text-ink">
                     {sessionName || (sessionId ? 'Session' : 'Sessions')}
                   </span>
                   {sessionName && (
                     <button
                       onClick={startHeaderRename}
-                      className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.06)] hover:text-[#9aa3ad] transition-all"
+                      className="flex size-[18px] shrink-0 items-center justify-center rounded-[3px] text-ink-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-white/[0.06] hover:text-ink-2 transition-all"
                       title="Renomear sessão"
                     >
                       <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
@@ -1065,10 +1058,9 @@ export default function SessionTerminalPage() {
               {sessionId && (
                 <span
                   className={`size-[6px] shrink-0 rounded-full transition-colors ${
-                    isConnected ? 'bg-[#22dd88]' : isConnecting ? 'bg-[#ffaa00] animate-pulse' : 'bg-[#445]'
+                    isConnected ? 'bg-success' : isConnecting ? 'bg-warning animate-pulse' : 'bg-ink-4'
                   }`}
-                  style={isConnected ? { boxShadow: '0 0 6px rgba(34,221,136,0.5)' } : undefined}
-                />
+                                  />
               )}
             </>
           )}
@@ -1093,17 +1085,17 @@ export default function SessionTerminalPage() {
                       <button
                         key={opt.label}
                         onClick={() => handleCanvasLayoutChange(opt.cols, opt.rows)}
-                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+                        className={`rounded-control px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                           active
-                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                            ? 'border border-accent/30 bg-accent/12 text-accent'
+                            : 'border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
                         }`}
                       >
                         {opt.label}
                       </button>
                     );
                   })}
-                  <div className="h-[14px] w-px bg-white/[0.08]" />
+                  <div className="h-[14px] w-px bg-hairline" />
                   {/* Two-row group: growing columns */}
                   {[
                     { cols: 2, rows: 2, label: '2×2' },
@@ -1115,10 +1107,10 @@ export default function SessionTerminalPage() {
                       <button
                         key={opt.label}
                         onClick={() => handleCanvasLayoutChange(opt.cols, opt.rows)}
-                        className={`rounded-[5px] px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
+                        className={`rounded-control px-[7px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-medium transition-colors ${
                           active
-                            ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
-                            : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                            ? 'border border-accent/30 bg-accent/12 text-accent'
+                            : 'border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
                         }`}
                       >
                         {opt.label}
@@ -1128,20 +1120,20 @@ export default function SessionTerminalPage() {
                   <button
                     onClick={() => setPanelResetKey((k) => k + 1)}
                     title="Restaurar tamanhos iguais"
-                    className="flex items-center justify-center size-[27px] rounded-[5px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb] transition-colors"
+                    className="flex items-center justify-center size-[27px] rounded-control border border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink transition-colors"
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                       <path d="M2 6a4 4 0 1 0 .8-2.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                       <path d="M2 2.5v2.5h2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
-                  <div className="mx-[2px] h-[16px] w-px bg-white/[0.08]" />
+                  <div className="mx-[2px] h-[16px] w-px bg-hairline" />
                 </>
               )}
               <button
                 onClick={() => setShowProjectPicker(true)}
                 title="Nova sessão"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(179,229,2,0.2)] bg-[rgba(179,229,2,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-accent/25 bg-accent/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-accent hover:bg-accent/15 transition-colors"
               >
                 <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
                   <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -1151,7 +1143,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => handleOpenRecover(projectId ?? '')}
                 title="Recuperar conversa"
-                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-hairline bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-ink-2 hover:border-hairline-strong hover:text-ink transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
                   <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -1166,10 +1158,10 @@ export default function SessionTerminalPage() {
               <button
                 onClick={handleCreateCanvas}
                 disabled={canvasCreating}
-                className="kb-sheen relative flex items-center gap-[5px] overflow-hidden rounded-[8px] bg-[#b3e502] px-[10px] py-[4px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:opacity-50"
+                className="flex items-center gap-[5px] rounded-control bg-accent px-[10px] py-[4px] text-[12px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
               >
                 {canvasCreating ? (
-                  <div className="size-[10px] animate-spin rounded-full border-[1.5px] border-[#0a0a0f] border-t-transparent" />
+                  <div className="size-[10px] animate-spin rounded-full border-[1.5px] border-black border-t-transparent" />
                 ) : (
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                     <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -1180,7 +1172,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => setShowProjectPicker(true)}
                 title="Nova sessão"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(179,229,2,0.2)] bg-[rgba(179,229,2,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-accent/25 bg-accent/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-accent hover:bg-accent/15 transition-colors"
               >
                 <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
                   <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -1190,7 +1182,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => handleOpenRecover(projectId ?? '')}
                 title="Recuperar conversa"
-                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-hairline bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-ink-2 hover:border-hairline-strong hover:text-ink transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
                   <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -1205,7 +1197,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => setShowProjectPicker(true)}
                 title="Nova sessão"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(179,229,2,0.2)] bg-[rgba(179,229,2,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-accent/25 bg-accent/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-accent hover:bg-accent/15 transition-colors"
               >
                 <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
                   <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -1217,7 +1209,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => handleOpenRecover(projectId ?? '')}
                 title="Recuperar conversa"
-                className="flex items-center gap-[5px] rounded-[5px] border border-white/[0.07] bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#f0f0f0] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-hairline bg-white/[0.03] px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-ink-2 hover:border-hairline-strong hover:text-ink transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
                   <path d="M2.5 6.5A4 4 0 1 0 4 3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -1228,7 +1220,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={() => termRef.current?.reconnect()}
                 title="Reconnect"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(34,221,136,0.2)] bg-[rgba(34,221,136,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#2d8] hover:bg-[rgba(34,221,136,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-success/25 bg-success/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-success hover:bg-success/15 transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M10.5 6A4.5 4.5 0 1 1 7.5 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -1239,7 +1231,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={handleFit}
                 title="Fit terminal layout"
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(100,160,255,0.2)] bg-[rgba(100,160,255,0.08)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#6af] hover:bg-[rgba(100,160,255,0.14)] transition-colors"
+                className="flex items-center gap-[5px] rounded-control border border-hairline bg-surface-2 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-ink-2 hover:bg-surface-3 transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3" />
@@ -1251,7 +1243,7 @@ export default function SessionTerminalPage() {
                 onClick={handleKill}
                 disabled={killing}
                 title={killing ? 'Killing…' : 'Kill'}
-                className="flex items-center gap-[5px] rounded-[5px] border border-[rgba(255,85,102,0.2)] bg-[rgba(255,85,102,0.15)] px-[7px] sm:px-[10px] py-[4px] font-['Inter'] text-[12px] font-medium text-[#f56] hover:bg-[rgba(255,85,102,0.22)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-[5px] rounded-control border border-danger/25 bg-danger/10 px-[7px] sm:px-[10px] py-[4px] text-[12px] font-medium text-danger hover:bg-danger/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -1269,7 +1261,7 @@ export default function SessionTerminalPage() {
       <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
         {/* Desktop rail */}
         {railOpen && !isMobile && (
-          <aside className="w-[240px] shrink-0 border-r border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-sm">
+          <aside className="w-[240px] shrink-0 border-r border-hairline bg-surface">
             <SessionRail
               groups={groups}
               activeSessionId={sessionId}
@@ -1294,10 +1286,10 @@ export default function SessionTerminalPage() {
         {railOpen && isMobile && (
           <>
             <div
-              className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 z-20 bg-black/60"
               onClick={() => persistRail(false)}
             />
-            <aside className="absolute inset-y-0 left-0 z-30 w-[260px] border-r border-white/[0.06] bg-[#0a0a0f] shadow-2xl">
+            <aside className="absolute inset-y-0 left-0 z-30 w-[260px] border-r border-hairline bg-surface shadow-2xl">
               <SessionRail
                 groups={groups}
                 activeSessionId={sessionId}
@@ -1393,7 +1385,7 @@ export default function SessionTerminalPage() {
         ) : showCanvas ? (
           /* ══ Canvas loading (canvasData fetch in flight) ══ */
           <div className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden">
-            <div className="size-[22px] animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+            <div className="size-[22px] animate-spin rounded-full border-2 border-accent border-t-transparent" />
           </div>
         ) : (
           /* ══ Terminal ══ */
@@ -1412,17 +1404,17 @@ export default function SessionTerminalPage() {
             ) : (
               /* No session selected — workspace landing */
               <div className="flex h-full flex-col items-center justify-center px-[24px] text-center">
-                <div className="mb-[16px] flex size-[60px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03]">
+                <div className="mb-[16px] flex size-[60px] items-center justify-center rounded-panel border border-hairline bg-surface">
                   <svg width="26" height="26" viewBox="0 0 16 16" fill="none">
-                    <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="#b3e502" strokeWidth="1.25" />
-                    <path d="M5 13.5h6" stroke="#b3e502" strokeWidth="1.25" strokeLinecap="round" />
-                    <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="#b3e502" strokeWidth="1.25" />
+                    <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.25" />
+                    <path d="M5 13.5h6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+                    <line x1="8" y1="11.5" x2="8" y2="13.5" stroke="currentColor" strokeWidth="1.25" />
                   </svg>
                 </div>
-                <h3 className="font-['Syne'] text-[20px] font-bold text-white">
+                <h3 className="text-[15px] font-semibold tracking-[-0.2px] text-ink">
                   {sessions.length > 0 ? 'Selecione uma sessão' : 'Nenhuma sessão ativa'}
                 </h3>
-                <p className="mt-[6px] max-w-[280px] font-['Inter'] text-[13px] leading-relaxed text-[#5a626c]">
+                <p className="mt-[6px] max-w-[280px] text-[13px] leading-relaxed text-ink-3">
                   {sessions.length > 0
                     ? 'Escolha uma sessão na lista à esquerda, abra um Canvas, ou crie uma nova.'
                     : 'Crie uma sessão para começar, ou abra um Canvas.'}
@@ -1430,7 +1422,7 @@ export default function SessionTerminalPage() {
                 <div className="mt-[20px] flex flex-wrap items-center justify-center gap-[10px]">
                   <button
                     onClick={() => setShowProjectPicker(true)}
-                    className="flex items-center gap-[6px] rounded-[10px] bg-[#b3e502] px-[18px] py-[10px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+                    className="flex items-center gap-[6px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover"
                   >
                     <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
                       <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -1440,7 +1432,7 @@ export default function SessionTerminalPage() {
                   {!isMobile && (
                     <button
                       onClick={() => setCanvasPickerOpen(true)}
-                      className="flex items-center gap-[6px] rounded-[10px] border border-white/[0.08] bg-white/[0.03] px-[18px] py-[10px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:text-[#e6e8eb]"
+                      className="flex items-center gap-[6px] rounded-control border border-hairline bg-white/[0.03] px-[18px] py-[10px] text-[13px] font-medium text-ink-2 transition-all hover:border-hairline-strong hover:text-ink"
                     >
                       <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                         <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
@@ -1498,28 +1490,28 @@ export default function SessionTerminalPage() {
       {/* ══ Project Picker Modal ══ */}
       {showProjectPicker && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => setShowProjectPicker(false)}
         >
           <div
-            className="relative mx-[16px] w-full max-w-sm rounded-[16px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)]"
+            className="relative mx-[16px] w-full max-w-sm rounded-modal border border-hairline bg-surface-2 p-[20px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowProjectPicker(false)}
-              className="absolute right-[14px] top-[14px] flex size-[24px] items-center justify-center rounded-[6px] text-[#5a626c] hover:bg-white/[0.06] hover:text-[#9aa3ad] transition-colors"
+              className="absolute right-[14px] top-[14px] flex size-[24px] items-center justify-center rounded-control text-ink-3 hover:bg-white/[0.06] hover:text-ink-2 transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
             </button>
 
-            <h3 className="font-['Syne'] text-[18px] font-bold text-white">Nova Sessão</h3>
-            <p className="mt-[4px] font-['Inter'] text-[12px] text-[#5a626c]">Escolha o projeto</p>
+            <h3 className="text-[15px] font-semibold tracking-[-0.2px] text-ink">Nova Sessão</h3>
+            <p className="mt-[4px] text-[12px] text-ink-3">Escolha o projeto</p>
 
             <div className="mt-[14px] max-h-[320px] space-y-[4px] overflow-y-auto">
               {allProjects.length === 0 ? (
-                <p className="py-[20px] text-center font-['Inter'] text-[13px] text-[#5a626c]">
+                <p className="py-[20px] text-center text-[13px] text-ink-3">
                   Nenhum projeto encontrado
                 </p>
               ) : (
@@ -1534,20 +1526,20 @@ export default function SessionTerminalPage() {
                         setShowProjectPicker(false);
                       }}
                       disabled={!!creating}
-                      className="flex w-full items-center justify-between rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[14px] py-[11px] font-['Inter'] text-[13px] font-medium text-[#e6e8eb] transition-all hover:border-[#b3e502]/30 hover:bg-[rgba(179,229,2,0.05)] hover:text-white disabled:opacity-50"
+                      className="flex w-full items-center justify-between rounded-control border border-hairline bg-white/[0.02] px-[14px] py-[11px] text-[13px] font-medium text-ink transition-all hover:border-accent/30 hover:bg-accent/[0.05] hover:text-ink disabled:opacity-50"
                     >
                       <span className="min-w-0 truncate text-left">{p.name}</span>
                       <div className="ml-[8px] flex shrink-0 items-center gap-[8px]">
                         {activeSessions > 0 && (
-                          <span className="flex items-center gap-[3px] font-['JetBrains_Mono'] text-[10px] text-[#22dd88]">
-                            <span className="size-[4px] rounded-full bg-[#22dd88] animate-pulse" />
+                          <span className="flex items-center gap-[3px] font-['JetBrains_Mono'] text-[10px] text-success">
+                            <span className="size-[4px] rounded-full bg-success animate-pulse" />
                             {activeSessions}
                           </span>
                         )}
                         {isCreating ? (
-                          <div className="size-[12px] animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+                          <div className="size-[12px] animate-spin rounded-full border border-accent border-t-transparent" />
                         ) : (
-                          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="text-[#445566]">
+                          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="text-ink-4">
                             <path d="M4.5 1v7M1 4.5h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                           </svg>
                         )}
@@ -1564,7 +1556,7 @@ export default function SessionTerminalPage() {
       {/* ══ Canvas session picker (for CanvasGrid/CanvasMobile slot creation) ══ */}
       {pickerResolver && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => {
             const r = pickerResolver;
             setPickerResolver(null);
@@ -1572,7 +1564,7 @@ export default function SessionTerminalPage() {
           }}
         >
           <div
-            className="relative mx-[16px] w-full max-w-sm rounded-[16px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)]"
+            className="relative mx-[16px] w-full max-w-sm rounded-modal border border-hairline bg-surface-2 p-[20px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1581,14 +1573,14 @@ export default function SessionTerminalPage() {
                 setPickerResolver(null);
                 r(null);
               }}
-              className="absolute right-[14px] top-[14px] flex size-[24px] items-center justify-center rounded-[6px] text-[#5a626c] hover:bg-white/[0.06] hover:text-[#9aa3ad] transition-colors"
+              className="absolute right-[14px] top-[14px] flex size-[24px] items-center justify-center rounded-control text-ink-3 hover:bg-white/[0.06] hover:text-ink-2 transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
             </button>
-            <h3 className="font-['Syne'] text-[18px] font-bold text-white">Nova Sessão</h3>
-            <p className="mt-[4px] font-['Inter'] text-[12px] text-[#5a626c]">Escolha o projeto para o slot</p>
+            <h3 className="text-[15px] font-semibold tracking-[-0.2px] text-ink">Nova Sessão</h3>
+            <p className="mt-[4px] text-[12px] text-ink-3">Escolha o projeto para o slot</p>
             <div className="mt-[14px] max-h-[320px] space-y-[4px] overflow-y-auto">
               {allProjects.map((p) => (
                 <button
@@ -1598,10 +1590,10 @@ export default function SessionTerminalPage() {
                     setPickerResolver(null);
                     r(p.id);
                   }}
-                  className="flex w-full items-center justify-between rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[14px] py-[11px] font-['Inter'] text-[13px] font-medium text-[#e6e8eb] transition-all hover:border-[#b3e502]/30 hover:bg-[rgba(179,229,2,0.05)] hover:text-white"
+                  className="flex w-full items-center justify-between rounded-control border border-hairline bg-white/[0.02] px-[14px] py-[11px] text-[13px] font-medium text-ink transition-all hover:border-accent/30 hover:bg-accent/[0.05] hover:text-ink"
                 >
                   <span className="min-w-0 truncate text-left">{p.name}</span>
-                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="shrink-0 text-[#445566]">
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="shrink-0 text-ink-4">
                     <path d="M4.5 1v7M1 4.5h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                   </svg>
                 </button>

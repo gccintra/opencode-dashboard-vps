@@ -97,11 +97,11 @@ function SlotHeader({
               if (e.key === 'Escape') setEditing(false);
             }}
             onBlur={saveEdit}
-            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[5px] py-[1px] font-['Inter'] text-[11px] text-[#f0f0f0] focus:outline-none"
+            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[5px] py-[1px] text-[11px] text-[#f0f0f0] focus:outline-none"
           />
         ) : (
           <span
-            className={`font-['Inter'] text-[11px] truncate ${onRename ? 'cursor-text hover:text-[#bbc]' : ''}`}
+            className={`text-[11px] truncate ${onRename ? 'cursor-text hover:text-[#bbc]' : ''}`}
             onClick={onRename ? startEdit : undefined}
             title={onRename ? 'Clique para renomear' : undefined}
           >
@@ -206,7 +206,7 @@ function EmptySlotPlaceholder({
           <rect x="3" y="5" width="22" height="18" rx="2" stroke="currentColor" strokeWidth="1.2" />
           <path d="M14 10v8M10 14h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
-        <span className="font-['Inter'] text-[12px]">Adicionar Terminal</span>
+        <span className="text-[12px]">Adicionar Terminal</span>
       </div>
 
       {availableSessions.length > 0 && (
@@ -216,7 +216,7 @@ function EmptySlotPlaceholder({
             e.target.value = '';
           }}
           defaultValue=""
-          className="w-full max-w-[160px] rounded-[5px] border border-white/[0.07] bg-[#0a0a0f] px-[8px] py-[5px] font-['Inter'] text-[12px] text-[#9aa3ad] focus:outline-none focus:border-[rgba(179,229,2,0.3)]"
+          className="w-full max-w-[160px] rounded-[5px] border border-white/[0.07] bg-[#0a0a0f] px-[8px] py-[5px] text-[12px] text-[#9aa3ad] focus:outline-none focus:border-[rgba(179,229,2,0.3)]"
           aria-label="Selecionar sessão"
           data-testid={`slot-session-select-${slotIndex}`}
         >
@@ -232,7 +232,7 @@ function EmptySlotPlaceholder({
       {onCreateSession && (
         <button
           onClick={onCreateSession}
-          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(179,229,2,0.1)] border border-[rgba(179,229,2,0.2)] px-[12px] py-[6px] font-['Inter'] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.16)] transition-colors"
+          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(179,229,2,0.1)] border border-[rgba(179,229,2,0.2)] px-[12px] py-[6px] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.16)] transition-colors"
           data-testid={`slot-new-session-btn-${slotIndex}`}
         >
           <span className="text-[14px] leading-none font-light">+</span>

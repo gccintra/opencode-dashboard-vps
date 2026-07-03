@@ -11,7 +11,7 @@ import {
 import type { Task } from './KanbanCard';
 
 const SECTION_LABEL =
-  "font-['Inter'] text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
+  "text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
 
 const LINK_TYPE_LABELS: Record<LinkType, string> = {
   relates_to: 'Relates to',
@@ -121,14 +121,14 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
-          className="font-['Inter'] text-[11px] font-semibold text-[#b3e502] hover:underline"
+          className="text-[11px] font-semibold text-[#b3e502] hover:underline"
         >
           {adding ? 'Done' : '+ Add link'}
         </button>
       </div>
 
       {error && (
-        <p className="rounded-[8px] border border-red-500/30 bg-red-500/10 px-[12px] py-[7px] font-['Inter'] text-[12px] text-red-400">
+        <p className="rounded-[8px] border border-red-500/30 bg-red-500/10 px-[12px] py-[7px] text-[12px] text-red-400">
           {error}
         </p>
       )}
@@ -141,7 +141,7 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as LinkType)}
               aria-label="Link type"
-              className="shrink-0 appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none focus:border-[#b3e502]/40"
+              className="shrink-0 appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none focus:border-[#b3e502]/40"
             >
               {LINK_TYPE_ORDER.map((t) => (
                 <option key={t} value={t} className="bg-[#111118]">
@@ -155,7 +155,7 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks by title…"
               aria-label="Search tasks"
-              className="min-w-0 flex-1 rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] font-['Inter'] text-[12px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-[#b3e502]/40"
+              className="min-w-0 flex-1 rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-[#b3e502]/40"
             />
           </div>
           {candidates.length > 0 ? (
@@ -165,7 +165,7 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
                   <button
                     type="button"
                     onClick={() => addLink(t.id)}
-                    className="flex w-full items-center gap-[8px] rounded-[7px] px-[10px] py-[6px] text-left font-['Inter'] text-[12px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+                    className="flex w-full items-center gap-[8px] rounded-[7px] px-[10px] py-[6px] text-left text-[12px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
                   >
                     <span className="truncate">{t.title}</span>
                     {t.projectName && (
@@ -178,21 +178,21 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
               ))}
             </ul>
           ) : (
-            <p className="font-['Inter'] text-[11px] text-[#454c55]">No matching tasks.</p>
+            <p className="text-[11px] text-[#454c55]">No matching tasks.</p>
           )}
         </div>
       )}
 
       {/* Existing links grouped by type */}
       {loading ? (
-        <p className="font-['Inter'] text-[12px] text-[#5a626c]">Loading…</p>
+        <p className="text-[12px] text-[#5a626c]">Loading…</p>
       ) : links.length === 0 ? (
-        !adding && <p className="font-['Inter'] text-[12px] text-[#454c55]">No linked tasks.</p>
+        !adding && <p className="text-[12px] text-[#454c55]">No linked tasks.</p>
       ) : (
         <div className="flex flex-col gap-[12px]">
           {LINK_TYPE_ORDER.filter((t) => grouped.has(t)).map((t) => (
             <div key={t} className="flex flex-col gap-[5px]">
-              <p className="font-['Inter'] text-[11px] font-semibold text-[#7a828c]">
+              <p className="text-[11px] font-semibold text-[#7a828c]">
                 {LINK_TYPE_LABELS[t]}
               </p>
               {grouped.get(t)!.map((l) => (
@@ -201,11 +201,11 @@ export function LinkedTasks({ taskId, onChanged }: LinkedTasksProps) {
                   className="group flex items-center gap-[8px] rounded-[9px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[7px] backdrop-blur-md"
                 >
                   {l.task.columnName && (
-                    <span className="shrink-0 truncate font-['Inter'] text-[10px] text-[#5a626c]">
+                    <span className="shrink-0 truncate text-[10px] text-[#5a626c]">
                       {l.task.columnName}
                     </span>
                   )}
-                  <span className="min-w-0 flex-1 truncate font-['Inter'] text-[12px] text-[#d1d5db]">
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-[#d1d5db]">
                     {l.task.title}
                   </span>
                   <button

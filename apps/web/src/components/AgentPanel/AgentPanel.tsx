@@ -146,7 +146,7 @@ export default function AgentPanel({
       {!compact && (
         <div className="flex items-center gap-[8px] px-[16px] py-[8px]">
           <button
-            className="flex flex-1 items-center gap-[8px] rounded-[6px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[6px] font-['Inter'] text-[12px] text-[#5a626c] hover:border-white/[0.14] transition-colors"
+            className="flex flex-1 items-center gap-[8px] rounded-[6px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[6px] text-[12px] text-[#5a626c] hover:border-white/[0.14] transition-colors"
             onClick={() => setSearchOpen(true)}
             data-testid="search-trigger"
           >
@@ -169,7 +169,7 @@ export default function AgentPanel({
       {effectiveFilter && (
         <div className="px-[16px] pb-[4px]">
           <button
-            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(179,229,2,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#b3e502] hover:bg-[rgba(179,229,2,0.12)] transition-colors"
+            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(179,229,2,0.08)] px-[8px] py-[2px] text-[11px] text-[#b3e502] hover:bg-[rgba(179,229,2,0.12)] transition-colors"
             onClick={() => handleFilterClick(null)}
           >
             {effectiveFilter === 'waiting'
@@ -189,11 +189,11 @@ export default function AgentPanel({
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
           </div>
         ) : error ? (
-          <div className="py-[16px] text-center font-['Inter'] text-[12px] text-[#f54]">
+          <div className="py-[16px] text-center text-[12px] text-[#f54]">
             {error}
           </div>
         ) : filteredAgents.length === 0 ? (
-          <div className="py-[32px] text-center font-['Inter'] text-[13px] text-[#5a626c]">
+          <div className="py-[32px] text-center text-[13px] text-[#5a626c]">
             {agents.length === 0
               ? 'Nenhum agente ativo. Abra uma sessão em um projeto.'
               : 'Nenhum agente encontrado para este filtro.'}
@@ -235,7 +235,7 @@ export default function AgentPanel({
                 <path d="M11 11l4 4" stroke="#9aa3ad" strokeWidth="1.25" strokeLinecap="round" />
               </svg>
               <input
-                className="flex-1 bg-transparent font-['Inter'] text-[14px] text-[#f0f0f0] placeholder-[#556] outline-none"
+                className="flex-1 bg-transparent text-[14px] text-[#f0f0f0] placeholder-[#556] outline-none"
                 placeholder="Buscar por nome ou projeto..."
                 value={searchQuery}
                 onChange={(e) => {
@@ -250,7 +250,7 @@ export default function AgentPanel({
             </div>
             <div className="max-h-[320px] overflow-y-auto py-[4px]">
               {searchResults.length === 0 && searchQuery.trim() ? (
-                <div className="px-[16px] py-[16px] text-center font-['Inter'] text-[13px] text-[#5a626c]">
+                <div className="px-[16px] py-[16px] text-center text-[13px] text-[#5a626c]">
                   Nenhuma sessão encontrada
                 </div>
               ) : (
@@ -282,10 +282,10 @@ export default function AgentPanel({
                         size="sm"
                       />
                     </span>
-                    <span className="flex-1 truncate font-['Inter'] text-[13px] font-medium text-[#f0f0f0]">
+                    <span className="flex-1 truncate text-[13px] font-medium text-[#f0f0f0]">
                       {agent.name}
                     </span>
-                    <span className="shrink-0 truncate font-['Inter'] text-[11px] text-[#9aa3ad] max-w-[140px]">
+                    <span className="shrink-0 truncate text-[11px] text-[#9aa3ad] max-w-[140px]">
                       {agent.projectName || (agent.type === 'emergency' ? '/root' : '—')}
                     </span>
                   </div>

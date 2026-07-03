@@ -70,10 +70,10 @@ function CanvasRow({
           }}
           onBlur={save}
           onClick={(e) => e.stopPropagation()}
-          className="min-w-0 flex-1 rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] font-['Inter'] text-[13px] font-medium text-[#f0f0f0] outline-none"
+          className="min-w-0 flex-1 rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] text-[13px] font-medium text-[#f0f0f0] outline-none"
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate font-['Inter'] text-[13px] font-medium text-[#e6e8eb] group-hover:text-white">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#e6e8eb] group-hover:text-white">
           {canvas.name}
         </span>
       )}
@@ -110,15 +110,15 @@ function CanvasRow({
 
       {confirmDelete && (
         <div className="flex shrink-0 items-center gap-[6px]" onClick={(e) => e.stopPropagation()}>
-          <span className="font-['Inter'] text-[11px] text-[#9aa3ad]">Deletar?</span>
+          <span className="text-[11px] text-[#9aa3ad]">Deletar?</span>
           <button
-            className="rounded-[5px] bg-[#f54] px-[8px] py-[2px] font-['Inter'] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
+            className="rounded-[5px] bg-[#f54] px-[8px] py-[2px] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
             onClick={(e) => { e.stopPropagation(); onDelete(canvas.id); }}
           >
             Sim
           </button>
           <button
-            className="rounded-[5px] bg-[rgba(255,255,255,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+            className="rounded-[5px] bg-[rgba(255,255,255,0.08)] px-[8px] py-[2px] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
             onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
           >
             Não
@@ -209,12 +209,12 @@ export default function CanvasPickerModal({ open, onClose, onSelect }: Props) {
 
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-[18px] py-[14px]">
-          <h3 className="font-['Syne'] text-[17px] font-bold text-white">Canvas</h3>
+          <h3 className="text-[17px] font-bold text-white">Canvas</h3>
           <div className="flex items-center gap-[8px]">
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="flex items-center gap-[5px] rounded-[8px] bg-[#b3e502] px-[10px] py-[5px] font-['Inter'] text-[12px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
+              className="flex items-center gap-[5px] rounded-[8px] bg-[#b3e502] px-[10px] py-[5px] text-[12px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
             >
               {creating ? (
                 <div className="size-[10px] animate-spin rounded-full border-[1.5px] border-[#0a0a0f] border-t-transparent" />
@@ -245,11 +245,11 @@ export default function CanvasPickerModal({ open, onClose, onSelect }: Props) {
             ))
           ) : canvases.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-[10px] py-[36px] text-center">
-              <p className="font-['Inter'] text-[13px] text-[#5a626c]">Nenhum canvas ainda</p>
+              <p className="text-[13px] text-[#5a626c]">Nenhum canvas ainda</p>
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="rounded-[9px] bg-[#b3e502] px-[16px] py-[9px] font-['Inter'] text-[13px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
+                className="rounded-[9px] bg-[#b3e502] px-[16px] py-[9px] text-[13px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
               >
                 Criar primeiro canvas
               </button>

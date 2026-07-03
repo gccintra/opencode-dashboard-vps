@@ -80,20 +80,20 @@ function ConfirmDeleteFile({
         className="mx-4 w-full max-w-[360px] rounded-[12px] border border-white/[0.07] bg-[#111118] p-[22px]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h4 className="font-['Inter'] text-[15px] font-semibold text-[#f0f0f0]">Delete file?</h4>
+        <h4 className="text-[15px] font-semibold text-[#f0f0f0]">Delete file?</h4>
         <p className="mt-[6px] font-['JetBrains_Mono'] text-[12px] text-[#9aa3ad] break-all">{name}</p>
         <div className="mt-[18px] flex justify-end gap-[8px]">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="rounded-[6px] border border-white/[0.07] px-[14px] py-[7px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] transition-colors disabled:opacity-50"
+            className="rounded-[6px] border border-white/[0.07] px-[14px] py-[7px] text-[12px] font-medium text-[#9aa3ad] hover:border-white/[0.14] transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="rounded-[6px] bg-red-600 px-[14px] py-[7px] font-['Inter'] text-[12px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+            className="rounded-[6px] bg-red-600 px-[14px] py-[7px] text-[12px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
           >
             {loading ? 'Deleting...' : 'Delete'}
           </button>
@@ -261,10 +261,10 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-[20px] py-[14px]">
             <div className="min-w-0">
-              <h3 className="truncate font-['Inter'] text-[15px] font-semibold text-[#f0f0f0]">
+              <h3 className="truncate text-[15px] font-semibold text-[#f0f0f0]">
                 {harness.name}
               </h3>
-              <p className="mt-[1px] font-['Inter'] text-[12px] text-[#5a626c]">Files</p>
+              <p className="mt-[1px] text-[12px] text-[#5a626c]">Files</p>
             </div>
             <button
               onClick={onClose}
@@ -281,7 +281,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-[12px] py-[10px] font-['Inter'] text-[13px] font-medium transition-colors border-b-2 -mb-px ${
+                className={`px-[12px] py-[10px] text-[13px] font-medium transition-colors border-b-2 -mb-px ${
                   tab === t
                     ? 'border-[#b3e502] text-[#f0f0f0]'
                     : 'border-transparent text-[#5a626c] hover:text-[#9aa3ad]'
@@ -313,7 +313,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="flex h-[30px] items-center gap-[6px] rounded-[6px] bg-[#b3e502] px-[12px] font-['Inter'] text-[12px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-50"
+              className="flex h-[30px] items-center gap-[6px] rounded-[6px] bg-[#b3e502] px-[12px] text-[12px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-50"
             >
               <UploadIcon />
               {uploading ? 'Uploading…' : 'Upload files'}
@@ -321,16 +321,16 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
             <button
               onClick={() => folderInputRef.current?.click()}
               disabled={uploading}
-              className="flex h-[30px] items-center gap-[6px] rounded-[6px] border border-[rgba(255,255,255,0.10)] px-[12px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:border-[rgba(255,255,255,0.20)] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
+              className="flex h-[30px] items-center gap-[6px] rounded-[6px] border border-[rgba(255,255,255,0.10)] px-[12px] text-[12px] font-medium text-[#9aa3ad] hover:border-[rgba(255,255,255,0.20)] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
             >
               <UploadIcon />
               Upload folder
             </button>
             {uploadSuccess && (
-              <span className="font-['Inter'] text-[12px] text-[#b3e502]">{uploadSuccess}</span>
+              <span className="text-[12px] text-[#b3e502]">{uploadSuccess}</span>
             )}
             {uploadError && (
-              <span className="font-['Inter'] text-[12px] text-red-400">{uploadError}</span>
+              <span className="text-[12px] text-red-400">{uploadError}</span>
             )}
           </div>
 
@@ -343,10 +343,10 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
             )}
             {error && !loading && (
               <div className="flex flex-col items-center gap-[8px] py-[40px]">
-                <p className="font-['Inter'] text-[13px] text-red-400">{error}</p>
+                <p className="text-[13px] text-red-400">{error}</p>
                 <button
                   onClick={loadFiles}
-                  className="font-['Inter'] text-[12px] text-[#b3e502] underline hover:text-[#c2f516]"
+                  className="text-[12px] text-[#b3e502] underline hover:text-[#c2f516]"
                 >
                   Retry
                 </button>
@@ -361,8 +361,8 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
               <div className="py-[4px]">
                 {flatFiles.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-[48px]">
-                    <p className="font-['Inter'] text-[13px] text-[#5a626c]">No files yet</p>
-                    <p className="mt-[4px] font-['Inter'] text-[12px] text-[#5a626c]">
+                    <p className="text-[13px] text-[#5a626c]">No files yet</p>
+                    <p className="mt-[4px] text-[12px] text-[#5a626c]">
                       Upload files using the button above
                     </p>
                   </div>
@@ -380,7 +380,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
                       </span>
                       <button
                         onClick={() => setDeleteTarget(f.path)}
-                        className="flex shrink-0 items-center gap-[4px] rounded-[5px] px-[8px] py-[4px] font-['Inter'] text-[11px] text-[#5a626c] hover:bg-red-500/15 hover:text-red-400 transition-colors"
+                        className="flex shrink-0 items-center gap-[4px] rounded-[5px] px-[8px] py-[4px] text-[11px] text-[#5a626c] hover:bg-red-500/15 hover:text-red-400 transition-colors"
                         aria-label={`Delete ${f.path}`}
                       >
                         <TrashIcon />

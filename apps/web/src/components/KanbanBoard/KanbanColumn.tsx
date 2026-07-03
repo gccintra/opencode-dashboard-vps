@@ -23,7 +23,7 @@ export function KanbanColumn({ col, tasks, onEdit, onDelete, onDrop, onAddTask }
           className="size-[8px] shrink-0 rounded-full"
           style={{ backgroundColor: col.color, boxShadow: `0 0 8px ${col.color}66` }}
         />
-        <h3 className="font-['Syne'] text-[14px] font-bold tracking-[0.2px] text-[#e6e8eb]">
+        <h3 className="text-[14px] font-bold tracking-[0.2px] text-[#e6e8eb]">
           {col.name}
         </h3>
         <span className="ml-[2px] rounded-full border border-white/[0.07] bg-white/[0.03] px-[8px] py-[1px] font-['JetBrains_Mono'] text-[11px] font-medium text-[#7a828c] tabular-nums">
@@ -69,7 +69,7 @@ export function KanbanColumn({ col, tasks, onEdit, onDelete, onDrop, onAddTask }
             <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
-            <span className="font-['Inter'] text-[12px] font-medium">Add task</span>
+            <span className="text-[12px] font-medium">Add task</span>
           </button>
         )}
       </div>

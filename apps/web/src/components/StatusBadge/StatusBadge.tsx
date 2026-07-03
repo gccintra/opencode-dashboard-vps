@@ -106,7 +106,7 @@ export default function StatusBadge({
       />
       {isEmergency && showIcon && (
         <span
-          className={`ml-[2px] font-['Inter'] ${sizeClass.icon} font-bold text-[#f54] leading-none`}
+          className={`ml-[2px] ${sizeClass.icon} font-bold text-[#f54] leading-none`}
           aria-label="Emergency session"
           data-testid="emergency-icon"
         >

@@ -57,7 +57,7 @@ export default function GlobalClipboardToast() {
         >
           {clipboard.fileName}
         </p>
-        <p className="font-['Inter'] text-[10px] text-[#9aa3ad]">Right-click a folder to paste</p>
+        <p className="text-[10px] text-[#9aa3ad]">Right-click a folder to paste</p>
       </div>
       <button
         onClick={clear}

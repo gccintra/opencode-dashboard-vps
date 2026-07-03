@@ -73,7 +73,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-[16px]">
-          <h3 className="font-['Inter'] text-[16px] font-semibold text-[#f0f0f0]">
+          <h3 className="text-[16px] font-semibold text-[#f0f0f0]">
             Select Directory
           </h3>
           <button
@@ -88,7 +88,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="flex items-center gap-[4px] mb-[12px] flex-wrap">
           <button
             onClick={() => setCurrentPath('/')}
-            className="font-['Inter'] text-[13px] text-[#5a626c] hover:text-[#b3e502] transition-colors"
+            className="text-[13px] text-[#5a626c] hover:text-[#b3e502] transition-colors"
           >
             /
           </button>
@@ -97,7 +97,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
               <span className="text-[#5a626c] text-[13px]">/</span>
               <button
                 onClick={() => setCurrentPath(crumb.path)}
-                className="font-['Inter'] text-[13px] text-[#5a626c] hover:text-[#b3e502] truncate max-w-[120px] transition-colors"
+                className="text-[13px] text-[#5a626c] hover:text-[#b3e502] truncate max-w-[120px] transition-colors"
               >
                 {crumb.label}
               </button>
@@ -117,11 +117,11 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
               <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
             </div>
           ) : error ? (
-            <div className="px-[12px] py-[16px] font-['Inter'] text-[13px] text-red-400 text-center">
+            <div className="px-[12px] py-[16px] text-[13px] text-red-400 text-center">
               {error}
             </div>
           ) : entries.length === 0 ? (
-            <div className="px-[12px] py-[16px] font-['Inter'] text-[13px] text-[#5a626c] text-center">
+            <div className="px-[12px] py-[16px] text-[13px] text-[#5a626c] text-center">
               No directories found
             </div>
           ) : (
@@ -129,7 +129,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
               <button
                 key={entry.path}
                 onClick={() => setCurrentPath(entry.path)}
-                className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left font-['Inter'] text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.04)] transition-colors border-b border-[rgba(255,255,255,0.04)] last:border-b-0"
+                className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-[#ccd] hover:bg-[rgba(255,255,255,0.04)] transition-colors border-b border-[rgba(255,255,255,0.04)] last:border-b-0"
               >
                 <svg
                   width="14"
@@ -153,13 +153,13 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="mt-[16px] flex justify-end gap-[10px]">
           <button
             onClick={onClose}
-            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] font-['Inter'] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors"
+            className="rounded-[6px] border border-white/[0.07] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSelect}
-            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] font-['Inter'] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors"
+            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors"
           >
             Select this directory
           </button>

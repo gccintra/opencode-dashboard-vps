@@ -152,14 +152,14 @@ export default function AgentCard({
       {/* Top line: name + status */}
       <div className="flex items-center gap-[6px]">
         {isEmergency && (
-          <span className="font-['Inter'] text-[10px] font-bold text-[#f54] shrink-0">
+          <span className="text-[10px] font-bold text-[#f54] shrink-0">
             {'⚠️ Root'}
           </span>
         )}
         {renaming ? (
           <input
             ref={renameInputRef}
-            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
+            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] text-[12px] text-[#f0f0f0] outline-none"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -169,7 +169,7 @@ export default function AgentCard({
           />
         ) : (
           <span
-            className="flex-1 min-w-0 truncate font-['Inter'] text-[13px] font-semibold text-[#f0f0f0] cursor-pointer"
+            className="flex-1 min-w-0 truncate text-[13px] font-semibold text-[#f0f0f0] cursor-pointer"
             onClick={handleClick}
             data-testid={`agent-name-${agent.id}`}
           >
@@ -181,15 +181,15 @@ export default function AgentCard({
 
       {/* Middle line: project + uptime */}
       <div className="mt-[4px] flex items-center gap-[8px] cursor-pointer" onClick={handleClick}>
-        <span className="min-w-0 truncate font-['Inter'] text-[11px] text-[#9aa3ad]">
+        <span className="min-w-0 truncate text-[11px] text-[#9aa3ad]">
           {agent.projectName || (isEmergency ? '/root' : '—')}
         </span>
         <span className="shrink-0 font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">{uptime}</span>
         {isFinished && (
-          <span className="shrink-0 font-['Inter'] text-[10px] text-[#5a626c]">ended</span>
+          <span className="shrink-0 text-[10px] text-[#5a626c]">ended</span>
         )}
         {stale && !isFinished && (
-          <span className="shrink-0 font-['Inter'] text-[10px] text-[#fa0]">stale</span>
+          <span className="shrink-0 text-[10px] text-[#fa0]">stale</span>
         )}
       </div>
 
@@ -209,7 +209,7 @@ export default function AgentCard({
             navigate('/tasks');
           }}
         >
-          <span className="font-['Inter'] text-[11px] text-[#b3e502] hover:underline">
+          <span className="text-[11px] text-[#b3e502] hover:underline">
             {'📋 '}
             {agent.linkedTaskTitle}
           </span>
@@ -220,7 +220,7 @@ export default function AgentCard({
       <div className="mt-[6px] flex items-center gap-[4px]">
         {showCreateTask && !isFinished && !isEmergency && (
           <button
-            className="flex items-center gap-[3px] rounded-[4px] border border-white/[0.07] px-[6px] py-[2px] font-['Inter'] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502] transition-colors"
+            className="flex items-center gap-[3px] rounded-[4px] border border-white/[0.07] px-[6px] py-[2px] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onCreateTask?.(agent);
@@ -245,7 +245,7 @@ export default function AgentCard({
         {confirmClose ? (
           <div className="flex items-center gap-[4px]" data-testid={`confirm-close-${agent.id}`}>
             <button
-              className="rounded-[3px] bg-[#f54] px-[6px] py-[1px] font-['Inter'] text-[10px] font-medium text-white hover:bg-[#e43] transition-colors"
+              className="rounded-[3px] bg-[#f54] px-[6px] py-[1px] text-[10px] font-medium text-white hover:bg-[#e43] transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onClose(agent.id);
@@ -256,7 +256,7 @@ export default function AgentCard({
               {isEmergency ? 'End' : 'Yes'}
             </button>
             <button
-              className="rounded-[3px] bg-[rgba(255,255,255,0.08)] px-[6px] py-[1px] font-['Inter'] text-[10px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+              className="rounded-[3px] bg-[rgba(255,255,255,0.08)] px-[6px] py-[1px] text-[10px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirmClose(false);

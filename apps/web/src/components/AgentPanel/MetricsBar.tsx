@@ -51,7 +51,7 @@ export default function MetricsBar({ metrics, activeFilter, onFilterClick }: Met
       {items.map((item) => (
         <button
           key={item.status ?? '__total'}
-          className={`flex items-center gap-[6px] rounded-[6px] border px-[10px] py-[5px] font-['Inter'] text-[12px] font-medium transition-colors shrink-0 ${
+          className={`flex items-center gap-[6px] rounded-[6px] border px-[10px] py-[5px] text-[12px] font-medium transition-colors shrink-0 ${
             activeFilter === item.status
               ? 'border-[rgba(179,229,2,0.3)] bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
               : 'border-[rgba(255,255,255,0.06)] bg-transparent text-[#9aa3ad] hover:border-[rgba(255,255,255,0.12)] hover:text-[#e6e8eb]'
