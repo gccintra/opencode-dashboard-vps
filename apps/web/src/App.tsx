@@ -37,7 +37,7 @@ function LegacySessionRedirect() {
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <div className="flex min-h-[calc(100vh-0px)] items-center justify-center bg-[#0a0a0f]">
-      <p className="font-['Inter'] text-[16px] text-[#9aa3ad]">{title} — coming soon</p>
+      <p className="text-[16px] text-[#9aa3ad]">{title} — coming soon</p>
     </div>
   );
 }

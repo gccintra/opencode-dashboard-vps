@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessions, type SessionItem, type SessionGroup } from '../../hooks/useSessions';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import { Badge } from '../ui';
 
 /* ── Inline SVG icons ── */
 
@@ -131,7 +132,7 @@ export function AlfLogo({ size = 30 }: { size?: number }) {
   const glyph = Math.round(size * 0.66);
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-[9px] bg-[#b3e502] shadow-[0_4px_14px_-4px_rgba(179,229,2,0.6)]"
+      className="flex shrink-0 items-center justify-center rounded-control bg-accent"
       style={{ width: size, height: size }}
     >
       <svg
@@ -156,10 +157,48 @@ export function AlfLogo({ size = 30 }: { size?: number }) {
   );
 }
 
-/* ── Shared nav link style ── */
+/* ── Nav item (mac source-list row: selection is a tinted pill, no left bar) ── */
 
-const navLinkBase =
-  "mx-[8px] flex h-[34px] items-center gap-[10px] rounded-[8px] px-[11px] py-[9px] font-['Inter'] text-[13.5px] font-medium tracking-[0.135px]";
+function NavItem({
+  to,
+  icon,
+  label,
+  trailing,
+  onClick,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  trailing?: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <NavLink
+      to={to}
+      end
+      className={({ isActive }) =>
+        `mx-[8px] flex h-[28px] items-center gap-[8px] rounded-control px-[8px] text-[13px] font-medium transition-colors duration-150 ${
+          isActive ? 'bg-accent/12 text-ink' : 'text-ink-2 hover:bg-white/[0.04] hover:text-ink'
+        }`
+      }
+      onClick={onClick}
+    >
+      {({ isActive }) => (
+        <>
+          <span
+            className={`flex size-[16px] shrink-0 items-center justify-center ${
+              isActive ? 'text-accent' : ''
+            }`}
+          >
+            {icon}
+          </span>
+          <span>{label}</span>
+          {trailing}
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 /* ── Sidebar ── */
 
@@ -290,165 +329,68 @@ export default function Sidebar() {
   const sidebarContent = (
     <>
       {/* ══════ Banner ══════ */}
-      <div className="flex h-[68px] shrink-0 items-center gap-[11px] border-b border-white/[0.07] px-[16px] pb-[17px] pt-[20px]">
+      <div className="flex h-[68px] shrink-0 items-center gap-[11px] border-b border-hairline px-[16px] pb-[17px] pt-[20px]">
         <AlfLogo />
         <div className="flex flex-col leading-none">
-          <span className="flex items-baseline gap-[4px] font-['Syne'] text-[17px] font-extrabold leading-[18px] tracking-[-0.5px]">
-            <span className="text-[#f2f3f5]">ALF</span>
-            <span className="text-[#b3e502]">code</span>
+          <span className="flex items-baseline gap-[4px] text-[15px] font-semibold leading-[18px] tracking-[-0.3px]">
+            <span className="text-ink">ALF</span>
+            <span className="text-accent">code</span>
           </span>
-          <span className="mt-[4px] font-['JetBrains_Mono'] text-[10px] font-normal uppercase tracking-[0.6px] text-[#5a626c]">
+          <span className="mt-[4px] font-['JetBrains_Mono'] text-[10px] font-normal uppercase tracking-[0.6px] text-ink-3">
             Agent Dashboard
           </span>
         </div>
       </div>
 
       {/* ══════ Navigation ══════ */}
-      <nav className="flex flex-col py-[8px]">
-        {/* Projects */}
-        <NavLink
+      <nav className="flex flex-col gap-[2px] py-[8px]">
+        <NavItem
           to="/projects"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
+          icon={<ProjectsIcon />}
+          label="Projects"
           onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <ProjectsIcon />
-              </span>
-              <span>Projects</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Sessions */}
-        <NavLink
+        />
+        <NavItem
           to="/sessions"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
+          icon={<SessionsIcon />}
+          label="Sessions"
           onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <SessionsIcon />
-              </span>
-              <span>Sessions</span>
-              {totalActive > 0 && (
-                <span className="ml-auto rounded-[10px] border border-[rgba(255,170,0,0.2)] bg-[rgba(255,170,0,0.12)] px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] font-medium tracking-[0.135px] text-[#fa0]">
-                  {totalActive}
-                </span>
-              )}
-            </>
-          )}
-        </NavLink>
-
-        {/* Tasks */}
-        <NavLink
+          trailing={
+            totalActive > 0 ? (
+              <Badge tone="warning" mono className="ml-auto">
+                {totalActive}
+              </Badge>
+            ) : undefined
+          }
+        />
+        <NavItem
           to="/tasks"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
+          icon={<TasksIcon />}
+          label="Tasks"
           onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <TasksIcon />
-              </span>
-              <span>Tasks</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Files */}
-        <NavLink
+        />
+        <NavItem
           to="/files"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
+          icon={<FilesIcon />}
+          label="Files"
           onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <FilesIcon />
-              </span>
-              <span>Files</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Templates */}
-        <NavLink
+        />
+        <NavItem
           to="/templates"
-          end
-          className={({ isActive }) =>
-            `${navLinkBase} ${
-              isActive
-                ? 'relative border border-[rgba(0,0,0,0)] bg-[rgba(179,229,2,0.12)] text-[#f0f0f0]'
-                : 'text-[#9aa3ad]'
-            }`
-          }
+          icon={<TemplatesIcon />}
+          label="Templates"
           onClick={() => setMobileOpen(false)}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute left-0 top-[4px] h-[24px] w-[2px] rounded-br-[2px] rounded-tr-[2px] bg-[#b3e502]" />
-              )}
-              <span className="flex size-[16px] shrink-0 items-center justify-center">
-                <TemplatesIcon />
-              </span>
-              <span>Templates</span>
-            </>
-          )}
-        </NavLink>
+        />
       </nav>
 
       {/* ══════ Dynamic Session List (commented — not needed for now) ══════ */}
       {/* <div className="flex-1 overflow-y-auto border-t border-white/[0.07]">
         {loading ? (
-          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#7a828c]">
+          <div className="px-[16px] py-[12px] text-[11px] text-ink-3">
             Loading sessions…
           </div>
         ) : groups.length === 0 ? (
-          <div className="px-[16px] py-[12px] font-['Inter'] text-[11px] text-[#7a828c]">
+          <div className="px-[16px] py-[12px] text-[11px] text-ink-3">
             No projects yet
           </div>
         ) : (
@@ -483,27 +425,24 @@ export default function Sidebar() {
       <div className="flex-1" />
 
       {/* ══════ User Profile ══════ */}
-      <div className="border-t border-white/[0.07] px-[8px] pt-[11px]">
-        <div className="flex items-center gap-[10px] rounded-[8px] border border-white/[0.07] bg-[#111118] px-[11px] py-[9px]">
-          <div className="flex size-[28px] shrink-0 items-center justify-center rounded-[14px] bg-[#b3e502] font-['Inter'] text-[11px] font-bold text-black">
+      <div className="border-t border-hairline px-[8px] pt-[11px]">
+        <div className="flex items-center gap-[10px] rounded-control border border-hairline bg-surface-2 px-[11px] py-[9px]">
+          <div className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
             U
           </div>
           <div className="flex flex-col leading-none">
-            <span className="font-['JetBrains_Mono'] text-[11.5px] font-medium text-[#f0f0f0]">
+            <span className="font-['JetBrains_Mono'] text-[11.5px] font-medium text-ink">
               user@vps
             </span>
-            <span className="text-[10.5px] text-[#5a626c]">Single user</span>
+            <span className="text-[10.5px] text-ink-3">Single user</span>
           </div>
         </div>
       </div>
 
       {/* ══════ System Status ══════ */}
-      <div className="flex h-[28px] shrink-0 items-center gap-[6px] border-t border-white/[0.07] px-[18px] pb-[7px] pt-[8px]">
-        <span
-          className="size-[6px] shrink-0 rounded-full bg-[#2dd] opacity-90"
-          style={{ boxShadow: '0px 0px 6px 0px rgba(34,221,221,0.6)' }}
-        />
-        <span className="font-['JetBrains_Mono'] text-[10px] font-normal tracking-[0.4px] text-[#5a626c]">
+      <div className="flex h-[28px] shrink-0 items-center gap-[6px] border-t border-hairline px-[18px] pb-[7px] pt-[8px]">
+        <span className="size-[6px] shrink-0 rounded-full bg-success" />
+        <span className="font-['JetBrains_Mono'] text-[10px] font-normal tracking-[0.4px] text-ink-3">
           daemon online
         </span>
       </div>
@@ -523,7 +462,7 @@ export default function Sidebar() {
 
       {/* ══════ Sidebar panel ══════ */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0a0f] transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col border-r border-hairline bg-surface transition-transform duration-200 lg:static lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         data-testid="sidebar"
@@ -578,11 +517,11 @@ function ProjectSection({
   const isActive = activeProjectId === group.project.id;
 
   return (
-    <div className="border-b border-[rgba(255,255,255,0.06)]">
+    <div className="border-b border-hairline">
       {/* ══ Project header ══ */}
       <div
-        className={`flex cursor-pointer items-center gap-[8px] px-[16px] py-[10px] font-['Inter'] text-[12px] font-medium text-[#9aa3ad] hover:text-[#e6e8eb] transition-colors ${
-          isActive ? 'bg-[rgba(179,229,2,0.06)] text-[#b3e502]' : ''
+        className={`flex cursor-pointer items-center gap-[8px] px-[16px] py-[10px] text-[12px] font-medium text-ink-2 hover:text-ink transition-colors ${
+          isActive ? 'bg-accent/[0.08] text-accent' : ''
         }`}
         onClick={onToggle}
         data-testid={`project-section-${group.project.id}`}
@@ -590,7 +529,7 @@ function ProjectSection({
         <ChevronRightIcon open={expanded} />
         <span className="flex-1 truncate">{group.project.name}</span>
         <button
-          className="flex size-[20px] shrink-0 items-center justify-center rounded-[4px] text-[#7a828c] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#b3e502] transition-colors"
+          className="flex size-[20px] shrink-0 items-center justify-center rounded-[4px] text-ink-3 hover:bg-white/[0.06] hover:text-accent transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onCreate();
@@ -607,7 +546,7 @@ function ProjectSection({
       {expanded && (
         <div className="pb-[4px]">
           {group.sessions.length === 0 ? (
-            <div className="px-[24px] py-[4px] font-['Inter'] text-[11px] text-[#7a828c]">
+            <div className="px-[24px] py-[4px] text-[11px] text-ink-3">
               No sessions
             </div>
           ) : (
@@ -681,13 +620,13 @@ function SessionRow({
 
   return (
     <div
-      className={`relative group flex cursor-pointer items-center gap-[8px] pl-[36px] pr-[16px] py-[5px] font-['Inter'] text-[12px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f0f0f0] transition-colors ${
-        isRenaming ? 'bg-[rgba(179,229,2,0.06)]' : ''
-      } ${isActive ? 'bg-[rgba(179,229,2,0.06)] text-[#b3e502]' : ''}`}
+      className={`relative group flex cursor-pointer items-center gap-[8px] pl-[36px] pr-[16px] py-[5px] text-[12px] text-ink-2 hover:bg-white/[0.04] hover:text-ink transition-colors ${
+        isRenaming ? 'bg-accent/[0.08]' : ''
+      } ${isActive ? 'bg-accent/[0.08] text-accent' : ''}`}
       onClick={onNavigate}
       data-testid={`session-row-${session.sessionId}`}
     >
-      {isActive && <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#b3e502]" />}
+      {isActive && <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />}
 
       {/* Status badge */}
       <StatusBadge status={badgeStatus} size="sm" />
@@ -696,7 +635,7 @@ function SessionRow({
       {isRenaming ? (
         <input
           ref={renameInputRef as React.RefObject<HTMLInputElement>}
-          className="flex-1 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#111118] px-[6px] py-[2px] font-['Inter'] text-[12px] text-[#f0f0f0] outline-none"
+          className="flex-1 rounded-[4px] border border-accent/30 bg-surface-2 px-[6px] py-[2px] text-[12px] text-ink outline-none"
           value={renameValue}
           onChange={(e) => onRenameValueChange(e.target.value)}
           onKeyDown={onRenameKeyDown}
@@ -720,7 +659,7 @@ function SessionRow({
       {/* Close button */}
       {!isRenaming && (
         <button
-          className="flex size-[16px] shrink-0 items-center justify-center rounded-[3px] text-[#5a626c] opacity-0 group-hover:opacity-100 hover:bg-[rgba(255,50,50,0.15)] hover:text-[#f54] transition-all"
+          className="flex size-[16px] shrink-0 items-center justify-center rounded-[3px] text-ink-4 opacity-0 group-hover:opacity-100 hover:bg-danger/15 hover:text-danger transition-all"
           onClick={(e) => {
             e.stopPropagation();
             onRequestClose();
@@ -735,20 +674,20 @@ function SessionRow({
       {/* Confirmation dialog */}
       {isConfirming && (
         <div
-          className="absolute right-[8px] top-full z-50 mt-[4px] flex items-center gap-[6px] rounded-[8px] border border-white/[0.07] bg-[#16161f] px-[10px] py-[8px] shadow-lg"
+          className="absolute right-[8px] top-full z-50 mt-[4px] flex items-center gap-[6px] rounded-control border border-hairline bg-surface-3 px-[10px] py-[8px] shadow-lg"
           onClick={(e) => e.stopPropagation()}
           data-testid={`confirm-close-${session.sessionId}`}
         >
-          <span className="font-['Inter'] text-[11px] text-[#9aa3ad]">Close?</span>
+          <span className="text-[11px] text-ink-2">Close?</span>
           <button
-            className="rounded-[4px] bg-[#f54] px-[8px] py-[2px] font-['Inter'] text-[11px] font-medium text-white hover:bg-[#e43] transition-colors"
+            className="rounded-[4px] bg-danger px-[8px] py-[2px] text-[11px] font-medium text-white hover:bg-danger/80 transition-colors"
             onClick={onConfirmClose}
             data-testid={`confirm-close-yes-${session.sessionId}`}
           >
             Yes
           </button>
           <button
-            className="rounded-[4px] bg-[rgba(255,255,255,0.08)] px-[8px] py-[2px] font-['Inter'] text-[11px] text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.12)] transition-colors"
+            className="rounded-[4px] bg-white/[0.08] px-[8px] py-[2px] text-[11px] text-ink-2 hover:bg-white/[0.12] transition-colors"
             onClick={onCancelClose}
             data-testid={`confirm-close-no-${session.sessionId}`}
           >
