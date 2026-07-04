@@ -17,14 +17,14 @@ interface ColumnsModalProps {
 const CATEGORIES: { id: KanbanCategory; label: string; color: string }[] = [
   { id: 'backlog', label: 'Backlog', color: '#6b7280' },
   { id: 'unstarted', label: 'Unstarted', color: '#3b82f6' },
-  { id: 'started', label: 'Started', color: '#f59e0b' },
+  { id: 'started', label: 'Started', color: '#5e6ad2' },
   { id: 'completed', label: 'Completed', color: '#22c55e' },
   { id: 'canceled', label: 'Canceled', color: '#ef4444' },
 ];
 
 const PRESET_COLORS = [
   '#6b7280', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
-  '#22c55e', '#14b8a6', '#ef4444', '#f97316', '#b3e502',
+  '#22c55e', '#14b8a6', '#ef4444', '#f97316', '#5e6ad2',
 ];
 
 interface EditState {
@@ -141,7 +141,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
       onClick={onClose}
     >
       <div
-        className="kb-rise mx-4 flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border border-white/[0.08] bg-[#111118] shadow-2xl"
+        className="kb-rise mx-4 flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border border-white/[0.08] bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -150,7 +150,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded-[6px] p-[5px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="rounded-[6px] p-[5px] text-ink-2 transition-colors hover:bg-white/[0.06] hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -161,7 +161,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
         {/* Body */}
         <div className="kb-scroll flex-1 overflow-y-auto px-[20px] py-[16px]">
           {error && (
-            <p className="mb-[12px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
+            <p className="mb-[12px] rounded-[10px] border border-danger/30 bg-danger/10 px-[14px] py-[10px] text-[13px] text-danger backdrop-blur-md">
               {error}
             </p>
           )}
@@ -186,7 +186,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                         className="size-[7px] shrink-0 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
                         {cat.label}
                       </span>
                     </div>
@@ -225,18 +225,18 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                     if (e.key === 'Enter') handleSaveEdit();
                                     if (e.key === 'Escape') setEditing(null);
                                   }}
-                                  className="flex-1 bg-transparent text-[13px] text-[#f0f0f0] outline-none"
+                                  className="flex-1 bg-transparent text-[13px] text-ink outline-none"
                                 />
                                 <button
                                   onClick={handleSaveEdit}
                                   disabled={saving}
-                                  className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
+                                  className="rounded-[6px] bg-accent px-[8px] py-[2px] text-[11px] font-bold text-bg transition-colors hover:bg-accent-hover disabled:opacity-50"
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={() => setEditing(null)}
-                                  className="text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
+                                  className="text-[11px] text-ink-2 transition-colors hover:text-ink-2"
                                 >
                                   Cancel
                                 </button>
@@ -247,11 +247,11 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                   className="size-[10px] shrink-0 rounded-full"
                                   style={{ backgroundColor: col.color }}
                                 />
-                                <span className="flex-1 text-[13px] text-[#e6e8eb]">
+                                <span className="flex-1 text-[13px] text-ink">
                                   {col.name}
                                 </span>
                                 {col.taskCount != null && col.taskCount > 0 && (
-                                  <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a626c] tabular-nums">
+                                  <span className="font-['JetBrains_Mono'] text-[11px] text-ink-3 tabular-nums">
                                     {col.taskCount} tasks
                                   </span>
                                 )}
@@ -259,7 +259,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                 <button
                                   onClick={() => handleReorder(cols, idx, -1)}
                                   disabled={saving || idx === 0}
-                                  className="rounded-[5px] p-[3px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-30 disabled:hover:bg-transparent"
+                                  className="rounded-[5px] p-[3px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
                                   title="Move up"
                                   aria-label="Move column up"
                                 >
@@ -270,7 +270,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                 <button
                                   onClick={() => handleReorder(cols, idx, 1)}
                                   disabled={saving || idx === cols.length - 1}
-                                  className="rounded-[5px] p-[3px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb] disabled:opacity-30 disabled:hover:bg-transparent"
+                                  className="rounded-[5px] p-[3px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
                                   title="Move down"
                                   aria-label="Move column down"
                                 >
@@ -282,7 +282,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                   onClick={() =>
                                     setEditing({ id: col.id, name: col.name, color: col.color })
                                   }
-                                  className="rounded-[5px] p-[3px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+                                  className="rounded-[5px] p-[3px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink"
                                   title="Edit column"
                                 >
                                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -292,7 +292,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                                 <button
                                   onClick={() => handleDelete(col)}
                                   disabled={saving}
-                                  className="rounded-[5px] p-[3px] text-[#5a626c] transition-colors hover:bg-white/[0.06] hover:text-red-400 disabled:opacity-40"
+                                  className="rounded-[5px] p-[3px] text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-danger disabled:opacity-40"
                                   title={
                                     col.taskCount && col.taskCount > 0
                                       ? `${col.taskCount} tasks — move them first`
@@ -317,7 +317,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
 
                       {/* Add column inline */}
                       {isAddingHere ? (
-                        <div className="flex items-center gap-[8px] rounded-[9px] border border-[#b3e502]/30 bg-[rgba(179,229,2,0.06)] px-[10px] py-[7px]">
+                        <div className="flex items-center gap-[8px] rounded-[9px] border border-accent/30 bg-accent/[0.06] px-[10px] py-[7px]">
                           <div className="flex gap-[3px]">
                             {PRESET_COLORS.map((c) => (
                               <button
@@ -341,18 +341,18 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                               if (e.key === 'Enter') handleAdd();
                               if (e.key === 'Escape') setAdding(null);
                             }}
-                            className="flex-1 bg-transparent text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none"
+                            className="flex-1 bg-transparent text-[13px] text-ink placeholder:text-ink-3 outline-none"
                           />
                           <button
                             onClick={handleAdd}
                             disabled={saving || !adding.name.trim()}
-                            className="rounded-[6px] bg-[#b3e502] px-[8px] py-[2px] text-[11px] font-bold text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
+                            className="rounded-[6px] bg-accent px-[8px] py-[2px] text-[11px] font-bold text-bg transition-colors hover:bg-accent-hover disabled:opacity-50"
                           >
                             Add
                           </button>
                           <button
                             onClick={() => setAdding(null)}
-                            className="text-[11px] text-[#7a828c] transition-colors hover:text-[#9aa3ad]"
+                            className="text-[11px] text-ink-2 transition-colors hover:text-ink-2"
                           >
                             Cancel
                           </button>
@@ -362,7 +362,7 @@ export function ColumnsModal({ open, onClose, onChanged }: ColumnsModalProps) {
                           onClick={() =>
                             setAdding({ category: cat.id, name: '', color: cat.color })
                           }
-                          className="flex items-center gap-[6px] rounded-[9px] px-[10px] py-[6px] text-[12px] text-[#5a626c] transition-colors hover:bg-white/[0.03] hover:text-[#9aa3ad]"
+                          className="flex items-center gap-[6px] rounded-[9px] px-[10px] py-[6px] text-[12px] text-ink-3 transition-colors hover:bg-white/[0.03] hover:text-ink-2"
                         >
                           <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                             <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

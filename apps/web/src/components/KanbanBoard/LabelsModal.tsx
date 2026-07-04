@@ -18,7 +18,7 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
       onClick={onClose}
     >
       <div
-        className="kb-rise mx-4 flex w-full max-w-[480px] flex-col rounded-[14px] border border-white/[0.08] bg-[#111118] shadow-2xl"
+        className="kb-rise mx-4 flex w-full max-w-[480px] flex-col rounded-[14px] border border-white/[0.08] bg-surface shadow-2xl"
         style={{ maxHeight: '80vh' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
@@ -29,11 +29,11 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
               <path
                 d="M1 1h6.5l7 7a1.414 1.414 0 0 1 0 2L9 15.5a1.414 1.414 0 0 1-2 0L.5 9V1z"
-                stroke="#b3e502"
+                stroke="#5e6ad2"
                 strokeWidth="1.5"
                 strokeLinejoin="round"
               />
-              <circle cx="4.5" cy="4.5" r="1" fill="#b3e502" />
+              <circle cx="4.5" cy="4.5" r="1" fill="#5e6ad2" />
             </svg>
             <h2 className="text-[17px] font-bold tracking-[-0.2px] text-white">
               Manage Labels
@@ -43,7 +43,7 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-[6px] p-[6px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="rounded-[6px] p-[6px] text-ink-2 transition-colors hover:bg-white/[0.06] hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path
@@ -70,7 +70,7 @@ export function LabelsModal({ open, onClose }: LabelsModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-[9px] border border-white/[0.07] bg-white/[0.03] py-[8px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="w-full rounded-[9px] border border-white/[0.07] bg-white/[0.03] py-[8px] text-[13px] font-medium text-ink-2 backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink"
           >
             Done
           </button>

@@ -47,7 +47,7 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
     <div className="flex flex-wrap items-center gap-[10px]">
       {/* Search */}
       <div className="group relative min-w-[180px] flex-1">
-        <div className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-[#5a626c] transition-colors group-focus-within:text-[#b3e502]">
+        <div className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-ink-3 transition-colors group-focus-within:text-accent">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
             <path d="M8.5 8.5L12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -58,7 +58,7 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
           value={filters.query}
           onChange={(e) => onChange({ ...filters, query: e.target.value })}
           placeholder="Search tasks…"
-          className="h-[36px] w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] pl-[34px] pr-[12px] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
+          className="h-[36px] w-full rounded-[10px] border border-white/[0.07] bg-white/[0.03] pl-[34px] pr-[12px] text-[13px] text-ink placeholder:text-ink-3 outline-none backdrop-blur-md transition-colors focus:border-accent/40 focus:bg-white/[0.05]"
         />
       </div>
 
@@ -78,8 +78,8 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
               onClick={() => onChange({ ...filters, type: opt.value })}
               className={`rounded-[7px] px-[12px] py-[5px] text-[12px] font-semibold transition-all ${
                 active
-                  ? 'bg-[#b3e502] text-[#0a0a0f] shadow-[0_2px_8px_-2px_rgba(179,229,2,0.5)]'
-                  : 'text-[#7a828c] hover:text-[#d1d5db]'
+                  ? 'bg-accent text-bg'
+                  : 'text-ink-2 hover:text-[#d1d5db]'
               }`}
             >
               {opt.label}
@@ -93,15 +93,15 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
         value={filters.sort}
         onChange={(e) => onChange({ ...filters, sort: e.target.value })}
         aria-label="Sort tasks"
-        className="h-[36px] shrink-0 appearance-none rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[12px] font-medium text-[#9aa3ad] outline-none backdrop-blur-md transition-colors focus:border-[#b3e502]/40"
+        className="h-[36px] shrink-0 appearance-none rounded-[10px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[12px] font-medium text-ink-2 outline-none backdrop-blur-md transition-colors focus:border-accent/40"
       >
-        <option value="manual" className="bg-[#111118]">
+        <option value="manual" className="bg-surface">
           Manual
         </option>
-        <option value="created" className="bg-[#111118]">
+        <option value="created" className="bg-surface">
           Created
         </option>
-        <option value="updated" className="bg-[#111118]">
+        <option value="updated" className="bg-surface">
           Updated
         </option>
       </select>
@@ -114,8 +114,8 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
         aria-haspopup="dialog"
         className={`flex h-[36px] shrink-0 items-center gap-[6px] rounded-[10px] border px-[12px] text-[12px] font-medium backdrop-blur-md transition-all ${
           activeCount > 0
-            ? 'border-[#b3e502]/40 bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
-            : 'border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]'
+            ? 'border-accent/40 bg-accent/10 text-accent'
+            : 'border-white/[0.07] bg-white/[0.03] text-ink-2 hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink'
         }`}
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -128,7 +128,7 @@ export function KanbanFilters({ filters, projects, labels = [], onChange }: Kanb
         </svg>
         <span className="hidden sm:inline">Filters</span>
         {activeCount > 0 && (
-          <span className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#b3e502] px-[4px] font-['JetBrains_Mono'] text-[10px] font-bold text-[#0a0a0f] tabular-nums">
+          <span className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-accent px-[4px] font-['JetBrains_Mono'] text-[10px] font-bold text-bg tabular-nums">
             {activeCount}
           </span>
         )}

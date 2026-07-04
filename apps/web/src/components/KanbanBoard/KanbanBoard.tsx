@@ -225,58 +225,15 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
   const openTask = (task: Task) => navigate(`/tasks/${task.id}`);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#0a0a0f]">
-      {/* ══════ Ambient atmosphere ══════ */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-180px',
-            left: '-120px',
-            width: '620px',
-            height: '620px',
-            opacity: 0.5,
-            background:
-              'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-220px',
-            left: '38%',
-            width: '680px',
-            height: '680px',
-            opacity: 0.4,
-            animationDelay: '-7s',
-            background:
-              'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-160px',
-            right: '-160px',
-            width: '560px',
-            height: '560px',
-            opacity: 0.38,
-            animationDelay: '-13s',
-            background:
-              'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
-          }}
-        />
-        <div className="kb-grid" />
-      </div>
-
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-bg">
       {/* ══════ Header ══════ */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[12px] border-b border-white/[0.06] px-[20px] py-[16px] sm:px-[32px]">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[12px] border-b border-hairline px-[20px] py-[16px] sm:px-[32px]">
         <div className="flex items-baseline gap-[12px]">
-          <h1 className="text-[24px] font-extrabold leading-none tracking-[-0.5px] text-white sm:text-[26px]">
+          <h1 className="text-[24px] font-extrabold leading-none tracking-[-0.5px] text-ink sm:text-[26px]">
             Tasks
           </h1>
           {!loading && tasks.length > 0 && (
-            <span className="font-['JetBrains_Mono'] text-[12px] font-medium text-[#5a626c] tabular-nums">
+            <span className="font-['JetBrains_Mono'] text-[12px] font-medium text-ink-3 tabular-nums">
               {totalFiltered === tasks.length
                 ? `${tasks.length}`
                 : `${totalFiltered} / ${tasks.length}`}
@@ -287,7 +244,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* Columns button */}
           <button
             onClick={() => setColumnsModalOpen(true)}
-            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-ink-2 backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink"
           >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
               <rect x="1" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -300,7 +257,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* Labels button */}
           <button
             onClick={() => setLabelsModalOpen(true)}
-            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-[#9aa3ad] backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] px-[12px] text-[13px] font-medium text-ink-2 backdrop-blur-md transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <path
@@ -317,7 +274,7 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           {/* New Task button */}
           <button
             onClick={() => openCreate('backlog')}
-            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
+            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-accent px-[14px] text-[13px] font-bold text-bg transition-all hover:bg-accent-hover"
           >
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="#0a0a0f" strokeWidth="1.8" strokeLinecap="round" />
@@ -331,9 +288,9 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
       {/* ══════ Filters ══════ */}
       <div className="relative z-10 shrink-0 px-[16px] pt-[16px] sm:px-[32px] sm:pt-[20px]">
         {error && (
-          <div className="mb-[14px] flex items-center gap-[8px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
+          <div className="mb-[14px] flex items-center gap-[8px] rounded-[10px] border border-danger/30 bg-danger/10 px-[14px] py-[10px] text-[13px] text-danger backdrop-blur-md">
             <span className="flex-1">{error}</span>
-            <button onClick={fetchData} className="font-semibold underline hover:text-red-300">
+            <button onClick={fetchData} className="font-semibold underline hover:text-danger">
               Retry
             </button>
           </div>
@@ -362,23 +319,23 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           <div className="flex h-full flex-col items-center justify-center px-[24px] text-center">
             <div className="kb-rise mb-[18px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset] backdrop-blur-md">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                <rect x="5" y="2" width="14" height="19" rx="2" stroke="#b3e502" strokeWidth="1.5" />
+                <rect x="5" y="2" width="14" height="19" rx="2" stroke="#5e6ad2" strokeWidth="1.5" />
                 <path
                   d="M9 12.5l2 2 4-4"
-                  stroke="#b3e502"
+                  stroke="#5e6ad2"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
             </div>
-            <h3 className="text-[18px] font-bold text-[#f0f0f0]">No tasks yet</h3>
-            <p className="mt-[8px] max-w-[320px] text-[13px] leading-[1.55] text-[#7a828c]">
+            <h3 className="text-[18px] font-bold text-ink">No tasks yet</h3>
+            <p className="mt-[8px] max-w-[320px] text-[13px] leading-[1.55] text-ink-2">
               Create your first task or sync a GitHub repo to get started.
             </p>
             <button
               onClick={() => openCreate('backlog')}
-              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
+              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-accent px-[22px] py-[11px] text-[14px] font-bold text-bg transition-all hover:bg-accent-hover"
             >
               Create your first task
             </button>
@@ -388,10 +345,10 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
         {/* No filter results */}
         {!loading && !error && tasks.length > 0 && totalFiltered === 0 && (
           <div className="flex h-full flex-col items-center justify-center px-[24px] text-center">
-            <p className="text-[14px] text-[#9aa3ad]">No tasks match your filters</p>
+            <p className="text-[14px] text-ink-2">No tasks match your filters</p>
             <button
               onClick={() => setFilters({ ...DEFAULT_FILTERS })}
-              className="mt-[10px] text-[13px] font-semibold text-[#b3e502] hover:underline"
+              className="mt-[10px] text-[13px] font-semibold text-accent hover:underline"
             >
               Clear filters
             </button>
@@ -454,23 +411,23 @@ export default function KanbanBoard({ onFiltersChange, initialFilters }: KanbanB
           onClick={() => setDeleteTarget(null)}
         >
           <div
-            className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
+            className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-surface p-[24px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-[#f0f0f0]">Delete task?</h3>
-            <p className="mt-[8px] text-[13px] leading-[1.5] text-[#7a828c]">
+            <h3 className="text-[17px] font-bold text-ink">Delete task?</h3>
+            <p className="mt-[8px] text-[13px] leading-[1.5] text-ink-2">
               This action cannot be undone.
             </p>
             <div className="mt-[20px] flex justify-end gap-[10px]">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-[8px] border border-white/[0.08] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] transition-colors hover:border-white/[0.16] hover:text-[#e6e8eb]"
+                className="rounded-[8px] border border-white/[0.08] px-[16px] py-[8px] text-[13px] font-medium text-ink-2 transition-colors hover:border-white/[0.16] hover:text-ink"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="rounded-[8px] bg-red-600 px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors hover:bg-red-500"
+                className="rounded-[8px] bg-danger px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors hover:bg-danger/90"
               >
                 Delete
               </button>

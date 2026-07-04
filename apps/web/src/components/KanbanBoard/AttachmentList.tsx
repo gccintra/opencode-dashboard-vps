@@ -165,7 +165,7 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
       aria-label="Attachments (paste images here)"
     >
       {error && (
-        <p className="rounded-[6px] border border-red-500/30 bg-red-500/10 px-[10px] py-[6px] text-[12px] text-red-400">
+        <p className="rounded-[6px] border border-danger/30 bg-danger/10 px-[10px] py-[6px] text-[12px] text-danger">
           {error}
         </p>
       )}
@@ -175,17 +175,17 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
           {attachments.map((att) => (
             <li
               key={att.id}
-              className="group relative flex flex-col overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#0a0a0f]"
+              className="group relative flex flex-col overflow-hidden rounded-[8px] border border-white/[0.07] bg-bg"
             >
               <AttachmentThumb taskId={taskId} att={att} />
               <div className="flex items-center gap-[4px] px-[6px] py-[4px]">
                 <span
-                  className="flex-1 truncate text-[10px] text-[#9aa3ad]"
+                  className="flex-1 truncate text-[10px] text-ink-2"
                   title={att.filename}
                 >
                   {att.filename}
                 </span>
-                <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-[#5a626c]">
+                <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-ink-3">
                   {formatSize(att.size)}
                 </span>
               </div>
@@ -193,7 +193,7 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
                 type="button"
                 onClick={() => handleDelete(att.id)}
                 aria-label={`Delete attachment ${att.filename}`}
-                className="absolute right-[4px] top-[4px] flex size-[20px] items-center justify-center rounded-full bg-black/60 text-[#ccd] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                className="absolute right-[4px] top-[4px] flex size-[20px] items-center justify-center rounded-full bg-black/60 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path
@@ -223,7 +223,7 @@ export function AttachmentList({ taskId, attachments, onChange }: AttachmentList
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center justify-center gap-[6px] rounded-[8px] border border-dashed border-[rgba(255,255,255,0.12)] px-[12px] py-[10px] text-[12px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] disabled:opacity-50"
+        className="flex items-center justify-center gap-[6px] rounded-[8px] border border-dashed border-hairline-strong px-[12px] py-[10px] text-[12px] text-ink-2 hover:border-white/[0.14] hover:text-ink disabled:opacity-50"
       >
         {uploading ? (
           'Uploading…'

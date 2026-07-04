@@ -6,6 +6,7 @@ import {
 } from './TaskBadge';
 import { LabelChip } from './LabelChip';
 import { PriorityBadge } from './PriorityBadge';
+import { StatusGlyph } from '../ui';
 import type { TaskPriority } from '../../lib/api';
 
 /** Customizable label applied to a task. */
@@ -95,8 +96,7 @@ export function KanbanCard({
   onEdit,
   draggable = true,
   onMoveTo,
-  index = 0,
-  accent = '#b3e502',
+  accent = '#5e6ad2',
 }: KanbanCardProps) {
   const isGithub = task.source === 'github';
   const ghLabels = task.githubLabels || [];
@@ -146,7 +146,7 @@ export function KanbanCard({
     const el = document.createElement('div');
     el.style.cssText =
       'position:fixed;height:2px;border-radius:2px;pointer-events:none;z-index:9999;' +
-      'background:#b3e502;box-shadow:0 0 8px rgba(179,229,2,0.55);display:none;';
+      'background:#5e6ad2;box-shadow:0 0 8px rgba(94,106,210,0.6);display:none;';
     document.body.appendChild(el);
     dropLineRef.current = el;
     return () => { document.body.removeChild(el); dropLineRef.current = null; };
@@ -185,8 +185,8 @@ export function KanbanCard({
     }
     dropTarget.current = el;
     if (el) {
-      el.style.backgroundColor = 'rgba(179,229,2,0.04)';
-      el.style.boxShadow = 'inset 0 0 0 1px rgba(179,229,2,0.4)';
+      el.style.backgroundColor = 'rgba(94,106,210,0.05)';
+      el.style.boxShadow = 'inset 0 0 0 1px rgba(94,106,210,0.45)';
     }
   };
 
@@ -526,7 +526,7 @@ export function KanbanCard({
       <div className="flex flex-wrap items-center gap-[6px]">
         <PriorityBadge priority={task.priority ?? 'medium'} />
         {issueNum != null && (
-          <span className="rounded-[5px] border border-white/[0.07] bg-black/40 px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] font-bold tracking-[0.3px] text-[#9aa3ad]">
+          <span className="rounded-[5px] border border-white/[0.07] bg-black/40 px-[6px] py-[2px] font-['JetBrains_Mono'] text-[10px] font-bold tracking-[0.3px] text-ink-2">
             {isGithub ? '#' : ''}
             {issueNum}
           </span>
@@ -537,11 +537,8 @@ export function KanbanCard({
           </span>
         )}
         {task.sessionId && (
-          <span className="ml-auto flex items-center gap-[4px] rounded-[5px] bg-[rgba(179,229,2,0.1)] px-[6px] py-[2px] text-[10px] font-semibold text-[#b3e502]">
-            <span className="relative flex size-[5px]">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#b3e502] opacity-60" />
-              <span className="relative inline-flex size-[5px] rounded-full bg-[#b3e502]" />
-            </span>
+          <span className="ml-auto flex items-center gap-[5px] rounded-[5px] bg-accent/10 px-[6px] py-[2px] text-[10px] font-semibold text-accent">
+            <StatusGlyph status="active" size="sm" pulse />
             live
           </span>
         )}
@@ -636,8 +633,11 @@ export function KanbanCard({
   // handlePointerMove (scrollPanActiveRef) once they prove themselves a
   // scroll rather than a hold. shrink-0 keeps cards at their natural size —
   // without it a long column would squash every card instead of scrolling.
+  // Base/resting card is calm + flat + tonal (the Linear rule: depth lives on
+  // the floating drag ghost, not on every resting card). No backdrop-blur, no
+  // heavy inset/drop shadow — just a hairline on a slightly-raised surface.
   const baseClassName =
-    "kb-card group relative isolate flex shrink-0 touch-none select-none flex-col gap-[10px] overflow-hidden rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[14px] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md";
+    "kb-card group relative isolate flex shrink-0 touch-none select-none flex-col gap-[9px] overflow-hidden rounded-panel border border-hairline bg-surface p-[12px]";
 
   return (
     <>
@@ -648,8 +648,7 @@ export function KanbanCard({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={endDrag}
-        style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
-        className={`${baseClassName} kb-rise transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b3e502]/40 ${
+        className={`${baseClassName} transition-[border-color,background-color] duration-150 hover:border-hairline-strong hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
           dragging ? 'cursor-grabbing opacity-0' : 'cursor-pointer'
         }`}
         tabIndex={0}

@@ -296,7 +296,7 @@ describe('TaskDetail', () => {
       renderInRouter(<TaskDetail task={baseTask({ agentType: 'claude' })} onClose={vi.fn()} />);
       const claudeBtn = screen.getByRole('button', { name: /Claude/i });
       // The selected button has a different background class
-      expect(claudeBtn.className).toMatch(/bg-\[rgba/);
+      expect(claudeBtn.className).toMatch(/bg-white\/\[0\.1\]/);
     });
 
     it('shows detected hint badge when fetchAgentHint returns opencode', async () => {

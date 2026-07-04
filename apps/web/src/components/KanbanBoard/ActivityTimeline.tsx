@@ -12,7 +12,7 @@ import { Markdown } from '../Markdown';
 import { PRIORITY_META } from './PriorityBadge';
 
 const SECTION_LABEL =
-  "text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
+  "text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3";
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -166,13 +166,13 @@ export function ActivityTimeline({
       <h3 className={SECTION_LABEL}>Activity</h3>
 
       {error && (
-        <p className="rounded-[8px] border border-red-500/30 bg-red-500/10 px-[12px] py-[7px] text-[12px] text-red-400">
+        <p className="rounded-[8px] border border-danger/30 bg-danger/10 px-[12px] py-[7px] text-[12px] text-danger">
           {error}
         </p>
       )}
 
       {loading ? (
-        <p className="text-[12px] text-[#5a626c]">Loading activity…</p>
+        <p className="text-[12px] text-ink-3">Loading activity…</p>
       ) : events.length === 0 ? (
         <p className="text-[12px] text-[#454c55]">No activity yet.</p>
       ) : (
@@ -184,7 +184,7 @@ export function ActivityTimeline({
                 className="rounded-[10px] border border-white/[0.07] bg-white/[0.025] px-[14px] py-[10px] backdrop-blur-md"
               >
                 <div className="mb-[6px] flex items-center justify-between gap-[8px]">
-                  <span className="text-[11px] text-[#7a828c]">
+                  <span className="text-[11px] text-ink-2">
                     {fmtTime(ev.createdAt)}
                     {ev.updatedAt !== ev.createdAt && ' (edited)'}
                   </span>
@@ -196,14 +196,14 @@ export function ActivityTimeline({
                           setEditingId(ev.id);
                           setEditText(ev.body ?? '');
                         }}
-                        className="text-[11px] text-[#7a828c] hover:text-[#d1d5db]"
+                        className="text-[11px] text-ink-2 hover:text-[#d1d5db]"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => removeComment(ev.id)}
-                        className="text-[11px] text-[#7a828c] hover:text-red-400"
+                        className="text-[11px] text-ink-2 hover:text-danger"
                       >
                         Delete
                       </button>
@@ -216,20 +216,20 @@ export function ActivityTimeline({
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       rows={3}
-                      className="w-full resize-y rounded-[8px] border border-white/[0.07] bg-white/[0.02] px-[12px] py-[8px] font-['JetBrains_Mono'] text-[12px] text-[#f0f0f0] outline-none focus:border-[#b3e502]/40"
+                      className="w-full resize-y rounded-[8px] border border-white/[0.07] bg-white/[0.02] px-[12px] py-[8px] font-['JetBrains_Mono'] text-[12px] text-ink outline-none focus:border-accent/40"
                     />
                     <div className="flex justify-end gap-[6px]">
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className="rounded-[7px] border border-white/[0.07] px-[12px] py-[5px] text-[11px] text-[#9aa3ad] hover:text-[#e6e8eb]"
+                        className="rounded-[7px] border border-white/[0.07] px-[12px] py-[5px] text-[11px] text-ink-2 hover:text-ink"
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={() => saveEdit(ev.id)}
-                        className="rounded-[7px] bg-[#b3e502] px-[12px] py-[5px] text-[11px] font-bold text-[#0a0a0f] hover:bg-[#c2f516]"
+                        className="rounded-[7px] bg-accent px-[12px] py-[5px] text-[11px] font-bold text-bg hover:bg-accent-hover"
                       >
                         Save
                       </button>
@@ -244,8 +244,8 @@ export function ActivityTimeline({
             ) : (
               <li key={ev.id} className="flex items-start gap-[8px] px-[2px]">
                 <span className="mt-[5px] size-[6px] shrink-0 rounded-full bg-white/20" />
-                <p className="text-[12px] leading-[1.5] text-[#7a828c]">
-                  <span className="text-[#9aa3ad]">{describe(ev, columnName, projectName)}</span>
+                <p className="text-[12px] leading-[1.5] text-ink-2">
+                  <span className="text-ink-2">{describe(ev, columnName, projectName)}</span>
                   <span className="text-[#454c55]"> · {fmtTime(ev.createdAt)}</span>
                 </p>
               </li>
@@ -262,14 +262,14 @@ export function ActivityTimeline({
           rows={2}
           placeholder="Add a comment (Markdown supported)…"
           aria-label="New comment"
-          className="w-full resize-y bg-transparent text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none"
+          className="w-full resize-y bg-transparent text-[13px] text-ink placeholder:text-ink-3 outline-none"
         />
         <div className="flex justify-end">
           <button
             type="button"
             onClick={submitComment}
             disabled={posting || !newComment.trim()}
-            className="rounded-[8px] bg-[#b3e502] px-[14px] py-[6px] text-[12px] font-bold text-[#0a0a0f] transition-colors hover:bg-[#c2f516] disabled:opacity-40"
+            className="rounded-[8px] bg-accent px-[14px] py-[6px] text-[12px] font-bold text-bg transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {posting ? 'Posting…' : 'Comment'}
           </button>

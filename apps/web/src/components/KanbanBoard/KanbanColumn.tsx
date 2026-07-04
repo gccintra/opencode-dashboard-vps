@@ -20,20 +20,20 @@ export function KanbanColumn({ col, tasks, onEdit, onDelete, onDrop, onAddTask }
       {/* Column header */}
       <header className="mb-[12px] flex items-center gap-[8px] px-[6px]">
         <span
-          className="size-[8px] shrink-0 rounded-full"
-          style={{ backgroundColor: col.color, boxShadow: `0 0 8px ${col.color}66` }}
+          className="size-[7px] shrink-0 rounded-full"
+          style={{ backgroundColor: col.color }}
         />
-        <h3 className="text-[14px] font-bold tracking-[0.2px] text-[#e6e8eb]">
+        <h3 className="text-[13px] font-semibold tracking-[0.1px] text-ink">
           {col.name}
         </h3>
-        <span className="ml-[2px] rounded-full border border-white/[0.07] bg-white/[0.03] px-[8px] py-[1px] font-['JetBrains_Mono'] text-[11px] font-medium text-[#7a828c] tabular-nums">
+        <span className="mono-meta ml-[2px] text-[11px] tabular-nums text-ink-3">
           {tasks.length}
         </span>
 
         {onAddTask && (
           <button
             onClick={onAddTask}
-            className="ml-auto rounded-[7px] p-[5px] text-[#5a626c] opacity-0 transition-all duration-150 hover:bg-white/[0.06] hover:text-[#b3e502] focus-visible:opacity-100 group-hover/col:opacity-100"
+            className="ml-auto rounded-[7px] p-[5px] text-ink-3 opacity-0 transition-all duration-150 hover:bg-white/[0.06] hover:text-accent focus-visible:opacity-100 group-hover/col:opacity-100"
             aria-label={`Add task to ${col.name}`}
             title={`Add task to ${col.name}`}
           >

@@ -59,7 +59,7 @@ export function FiltersModal({
       onClick={onClose}
     >
       <div
-        className="kb-rise mx-4 flex max-h-[85vh] w-full max-w-[480px] flex-col overflow-hidden rounded-[16px] border border-white/[0.08] bg-[#111118] shadow-2xl"
+        className="kb-rise mx-4 flex max-h-[85vh] w-full max-w-[480px] flex-col overflow-hidden rounded-[16px] border border-white/[0.08] bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
       >
@@ -69,14 +69,14 @@ export function FiltersModal({
             <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
               <path
                 d="M1 2.5h12L8.5 8v4l-3 1.5V8L1 2.5Z"
-                stroke="#b3e502"
+                stroke="#5e6ad2"
                 strokeWidth="1.3"
                 strokeLinejoin="round"
               />
             </svg>
             <h2 className="text-[17px] font-bold tracking-[-0.2px] text-white">Filters</h2>
             {activeCount > 0 && (
-              <span className="rounded-full border border-[#b3e502]/40 bg-[rgba(179,229,2,0.1)] px-[7px] py-[1px] font-['JetBrains_Mono'] text-[11px] text-[#b3e502] tabular-nums">
+              <span className="rounded-full border border-accent/40 bg-accent/10 px-[7px] py-[1px] font-['JetBrains_Mono'] text-[11px] text-accent tabular-nums">
                 {activeCount}
               </span>
             )}
@@ -85,7 +85,7 @@ export function FiltersModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-[6px] p-[6px] text-[#9aa3ad] transition-colors hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+            className="rounded-[6px] p-[6px] text-ink-2 transition-colors hover:bg-white/[0.06] hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -96,7 +96,7 @@ export function FiltersModal({
         {/* Body */}
         <div className="kb-scroll flex min-h-0 flex-1 flex-col gap-[20px] overflow-y-auto px-[20px] py-[16px]">
           {isEmpty && (
-            <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center text-[12px] text-[#7a828c]">
+            <p className="rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[14px] text-center text-[12px] text-ink-2">
               No filters available yet.
             </p>
           )}
@@ -104,7 +104,7 @@ export function FiltersModal({
           {/* Projects */}
           {projects.length > 0 && (
             <section className="flex flex-col gap-[10px]">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
                 Projects
               </span>
               <div className="flex flex-wrap gap-[8px]">
@@ -118,8 +118,8 @@ export function FiltersModal({
                       aria-pressed={active}
                       className={`rounded-[8px] border px-[11px] py-[6px] text-[12px] font-medium transition-all ${
                         active
-                          ? 'border-[#b3e502]/40 bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
-                          : 'border-white/[0.07] bg-white/[0.03] text-[#7a828c] hover:border-white/[0.14] hover:text-[#d1d5db]'
+                          ? 'border-accent/40 bg-accent/10 text-accent'
+                          : 'border-white/[0.07] bg-white/[0.03] text-ink-2 hover:border-white/[0.14] hover:text-[#d1d5db]'
                       }`}
                     >
                       {project.name}
@@ -133,7 +133,7 @@ export function FiltersModal({
           {/* Labels */}
           {labels.length > 0 && (
             <section className="flex flex-col gap-[10px]">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
                 Labels
               </span>
               <div className="flex flex-wrap gap-[8px]">
@@ -155,10 +155,10 @@ export function FiltersModal({
                             }
                           : undefined
                       }
-                      className={`inline-flex items-center gap-[6px] rounded-[8px] border px-[10px] py-[5px] text-[12px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#b3e502]/40 ${
+                      className={`inline-flex items-center gap-[6px] rounded-[8px] border px-[10px] py-[5px] text-[12px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent/40 ${
                         active
                           ? ''
-                          : 'border-white/[0.07] bg-white/[0.03] text-[#9aa3ad] hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]'
+                          : 'border-white/[0.07] bg-white/[0.03] text-ink-2 hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink'
                       }`}
                     >
                       {active ? (
@@ -192,14 +192,14 @@ export function FiltersModal({
             type="button"
             onClick={clear}
             disabled={activeCount === 0}
-            className="rounded-[9px] px-[12px] py-[7px] text-[12px] font-medium text-[#7a828c] transition-colors hover:text-[#e6e8eb] disabled:opacity-40 disabled:hover:text-[#7a828c]"
+            className="rounded-[9px] px-[12px] py-[7px] text-[12px] font-medium text-ink-2 transition-colors hover:text-ink disabled:opacity-40 disabled:hover:text-ink-2"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[9px] bg-[#b3e502] px-[16px] py-[7px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516]"
+            className="rounded-[9px] bg-accent px-[16px] py-[7px] text-[13px] font-bold text-bg transition-all hover:bg-accent-hover"
           >
             Done
           </button>

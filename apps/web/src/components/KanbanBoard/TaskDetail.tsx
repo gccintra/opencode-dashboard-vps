@@ -81,7 +81,7 @@ function buildPromptPreview(task: Task): string {
 
 /** Shared section-label style. */
 const SECTION_LABEL =
-  "text-[11px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]";
+  "text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3";
 
 /**
  * Rich task detail — full-page "Aurora Glass" layout (a route, not a modal).
@@ -567,47 +567,19 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
       ? kanbanColumns
       : [
           { id: 'backlog', name: 'Backlog', color: '#6b7280' },
-          { id: 'in_progress', name: 'In Progress', color: '#f59e0b' },
+          { id: 'in_progress', name: 'In Progress', color: '#5e6ad2' },
           { id: 'done', name: 'Done', color: '#22c55e' },
         ];
 
   return (
-    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
-      {/* ══════ Ambient atmosphere ══════ */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-200px',
-            left: '-140px',
-            width: '600px',
-            height: '600px',
-            opacity: 0.4,
-            background: 'radial-gradient(circle, rgba(179,229,2,0.2), rgba(179,229,2,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-160px',
-            right: '-160px',
-            width: '560px',
-            height: '560px',
-            opacity: 0.32,
-            animationDelay: '-9s',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.16), rgba(139,92,246,0) 70%)',
-          }}
-        />
-        <div className="kb-grid" />
-      </div>
-
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-bg">
       {/* ══════ Header ══════ */}
-      <header className="relative z-10 flex shrink-0 items-center gap-[12px] border-b border-white/[0.06] px-[16px] py-[12px] backdrop-blur-md sm:px-[28px]">
+      <header className="relative z-10 flex shrink-0 items-center gap-[12px] border-b border-hairline px-[16px] py-[12px] sm:px-[28px]">
         <button
           type="button"
           onClick={onClose}
           aria-label="Back to board"
-          className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] pl-[8px] pr-[12px] text-[13px] font-medium text-[#9aa3ad] transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#e6e8eb]"
+          className="flex h-[34px] shrink-0 items-center gap-[6px] rounded-[9px] border border-white/[0.07] bg-white/[0.03] pl-[8px] pr-[12px] text-[13px] font-medium text-ink-2 transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -616,7 +588,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
         </button>
 
         <div className="flex min-w-0 flex-1 items-center gap-[8px]">
-          <span className="shrink-0 rounded-[6px] border border-white/[0.08] bg-black/40 px-[8px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-bold tracking-[0.3px] text-[#9aa3ad]">
+          <span className="shrink-0 rounded-[6px] border border-white/[0.08] bg-black/40 px-[8px] py-[3px] font-['JetBrains_Mono'] text-[11px] font-bold tracking-[0.3px] text-ink-2">
             #{task.issueNumber ?? task.githubIssueNumber ?? '?'}
           </span>
           <span
@@ -631,15 +603,15 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
             {colMeta.name}
           </span>
           {task.projectName && (
-            <span className="hidden truncate text-[12px] text-[#5a626c] sm:block">
+            <span className="hidden truncate text-[12px] text-ink-3 sm:block">
               {task.projectName}
             </span>
           )}
         </div>
 
         {task.sessionId && (
-          <span className="hidden items-center gap-[5px] rounded-[6px] bg-[rgba(179,229,2,0.1)] px-[8px] py-[3px] text-[11px] font-semibold text-[#b3e502] sm:flex">
-            <span className="size-[5px] rounded-full bg-[#b3e502]" />
+          <span className="hidden items-center gap-[5px] rounded-[6px] bg-accent/10 px-[8px] py-[3px] text-[11px] font-semibold text-accent sm:flex">
+            <span className="size-[5px] rounded-full bg-accent" />
             live session
           </span>
         )}
@@ -649,7 +621,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
       <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1080px] px-[16px] py-[20px] sm:px-[28px] sm:py-[26px]">
           {error && (
-            <p className="mb-[16px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[14px] py-[10px] text-[13px] text-red-400 backdrop-blur-md">
+            <p className="mb-[16px] rounded-[10px] border border-danger/30 bg-danger/10 px-[14px] py-[10px] text-[13px] text-danger backdrop-blur-md">
               {error}
             </p>
           )}
@@ -697,7 +669,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       onClick={() => setPreview(false)}
                       aria-pressed={!preview}
                       className={`rounded-[6px] px-[10px] py-[4px] text-[11px] font-semibold transition-colors ${
-                        !preview ? 'bg-white/[0.1] text-[#f0f0f0]' : 'text-[#7a828c] hover:text-[#d1d5db]'
+                        !preview ? 'bg-white/[0.1] text-ink' : 'text-ink-2 hover:text-[#d1d5db]'
                       }`}
                     >
                       Edit
@@ -707,7 +679,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       onClick={() => setPreview(true)}
                       aria-pressed={preview}
                       className={`rounded-[6px] px-[10px] py-[4px] text-[11px] font-semibold transition-colors ${
-                        preview ? 'bg-white/[0.1] text-[#f0f0f0]' : 'text-[#7a828c] hover:text-[#d1d5db]'
+                        preview ? 'bg-white/[0.1] text-ink' : 'text-ink-2 hover:text-[#d1d5db]'
                       }`}
                     >
                       Preview
@@ -721,7 +693,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       <Markdown>{description}</Markdown>
                     ) : (
                       <p
-                        className="cursor-text text-[13px] italic text-[#5a626c]"
+                        className="cursor-text text-[13px] italic text-ink-3"
                         onClick={() => setPreview(false)}
                       >
                         No description. Click Edit to add one.
@@ -738,7 +710,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                     rows={10}
                     aria-label="Task description (markdown)"
                     placeholder="Write task details in Markdown…"
-                    className="w-full resize-y rounded-[12px] border border-white/[0.06] bg-white/[0.02] px-[16px] py-[14px] font-['JetBrains_Mono'] text-[13px] leading-[1.6] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                    className="w-full resize-y rounded-[12px] border border-white/[0.06] bg-white/[0.02] px-[16px] py-[14px] font-['JetBrains_Mono'] text-[13px] leading-[1.6] text-ink placeholder:text-ink-3 outline-none backdrop-blur-md focus:border-accent/40"
                   />
                 )}
 
@@ -748,7 +720,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       type="button"
                       onClick={saveBody}
                       disabled={savingBody}
-                      className="rounded-[8px] bg-[#b3e502] px-[14px] py-[7px] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_14px_-4px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:opacity-50"
+                      className="rounded-[8px] bg-accent px-[14px] py-[7px] text-[12px] font-bold text-bg transition-colors hover:bg-accent-hover disabled:opacity-50"
                     >
                       {savingBody ? 'Saving…' : 'Save description'}
                     </button>
@@ -779,20 +751,20 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                         key={ev.id}
                         className="flex items-center gap-[8px] rounded-[10px] border border-white/[0.05] bg-white/[0.02] px-[12px] py-[8px] backdrop-blur-md"
                       >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#b3e502]">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0 text-accent">
                           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
                           <path d="M8 5v3l2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        <span className="text-[11px] text-[#7a828c]">
+                        <span className="text-[11px] text-ink-2">
                           {new Date(ev.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                         {ev.runtime && (
-                          <span className="rounded-[4px] bg-[rgba(179,229,2,0.1)] px-[6px] py-[1px] text-[10px] font-semibold text-[#b3e502]">
+                          <span className="rounded-[4px] bg-accent/10 px-[6px] py-[1px] text-[10px] font-semibold text-accent">
                             {ev.runtime}
                           </span>
                         )}
                         {ev.agentName && (
-                          <span className="truncate text-[11px] text-[#5a626c]">
+                          <span className="truncate text-[11px] text-ink-3">
                             {ev.agentName}
                           </span>
                         )}
@@ -833,8 +805,8 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       onClick={() => changeColumn(col.id)}
                       className={`flex items-center gap-[8px] rounded-[8px] px-[10px] py-[7px] text-left text-[12px] transition-colors ${
                         currentColumn === col.id
-                          ? 'bg-white/[0.07] text-[#f0f0f0]'
-                          : 'text-[#7a828c] hover:bg-[#111118] hover:text-[#d1d5db]'
+                          ? 'bg-white/[0.07] text-ink'
+                          : 'text-ink-2 hover:bg-surface hover:text-[#d1d5db]'
                       }`}
                     >
                       <span className="size-[7px] shrink-0 rounded-full" style={{ backgroundColor: col.color }} />
@@ -856,8 +828,8 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       onClick={() => changePriority(p)}
                       className={`flex items-center gap-[8px] rounded-[8px] px-[10px] py-[7px] text-left text-[12px] transition-colors ${
                         currentPriority === p
-                          ? 'bg-white/[0.07] text-[#f0f0f0]'
-                          : 'text-[#7a828c] hover:bg-[#111118] hover:text-[#d1d5db]'
+                          ? 'bg-white/[0.07] text-ink'
+                          : 'text-ink-2 hover:bg-surface hover:text-[#d1d5db]'
                       }`}
                     >
                       <span
@@ -878,15 +850,15 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                   onChange={(e) => changeProject(e.target.value)}
                   disabled={savingProject || projects.length === 0}
                   aria-label="Project"
-                  className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40 disabled:opacity-50"
+                  className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink outline-none backdrop-blur-md focus:border-accent/40 disabled:opacity-50"
                 >
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-[#111118]">
+                    <option key={p.id} value={p.id} className="bg-surface">
                       {p.name}
                     </option>
                   ))}
                   {!projects.some((p) => p.id === currentProjectId) && currentProjectId && (
-                    <option value={currentProjectId} className="bg-[#111118]">
+                    <option value={currentProjectId} className="bg-surface">
                       {task.projectName ?? currentProjectId.slice(0, 8)}
                     </option>
                   )}
@@ -900,7 +872,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                   <button
                     type="button"
                     onClick={() => setShowLabelManager((v) => !v)}
-                    className="text-[11px] font-semibold text-[#b3e502] hover:underline"
+                    className="text-[11px] font-semibold text-accent hover:underline"
                   >
                     {showLabelManager ? 'Done' : '+ Add'}
                   </button>
@@ -933,26 +905,26 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                   value={sessionId ?? ''}
                   onChange={(e) => changeSession(e.target.value)}
                   aria-label="Associated session"
-                  className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                  className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink outline-none backdrop-blur-md focus:border-accent/40"
                 >
-                  <option value="" className="bg-[#111118]">None</option>
+                  <option value="" className="bg-surface">None</option>
                   {sessionId && !sessions.some((s) => s.sessionId === sessionId) && (
-                    <option value={sessionId} className="bg-[#111118]">{sessionId.slice(0, 8)} (expired)</option>
+                    <option value={sessionId} className="bg-surface">{sessionId.slice(0, 8)} (expired)</option>
                   )}
                   {sessions.map((s) => (
-                    <option key={s.sessionId} value={s.sessionId} className="bg-[#111118]">
+                    <option key={s.sessionId} value={s.sessionId} className="bg-surface">
                       {s.name} · {s.status}
                     </option>
                   ))}
                 </select>
 
                 {sessionExpired && (
-                  <div className="mt-[6px] flex items-center justify-between rounded-[7px] border border-[rgba(250,160,0,0.3)] bg-[rgba(250,160,0,0.08)] px-[10px] py-[6px]">
-                    <span className="text-[11px] text-[#fa0]">Expired</span>
+                  <div className="mt-[6px] flex items-center justify-between rounded-[7px] border border-hairline bg-white/[0.03] px-[10px] py-[6px]">
+                    <span className="text-[11px] text-ink-3">Expired</span>
                     <button
                       type="button"
                       onClick={() => changeSession('')}
-                      className="text-[11px] font-semibold text-[#fa0] underline hover:text-[#fc4]"
+                      className="text-[11px] font-semibold text-ink-2 underline hover:text-ink"
                     >
                       Clear
                     </button>
@@ -964,7 +936,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                     type="button"
                     onClick={handleSpawnSession}
                     disabled={spawning}
-                    className="mt-[8px] flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-[rgba(179,229,2,0.3)] bg-[rgba(179,229,2,0.06)] px-[10px] py-[7px] text-[12px] font-semibold text-[#b3e502] transition-colors hover:bg-[rgba(179,229,2,0.12)] disabled:opacity-50"
+                    className="mt-[8px] flex w-full items-center justify-center gap-[6px] rounded-[8px] border border-accent/30 bg-accent/[0.06] px-[10px] py-[7px] text-[12px] font-semibold text-accent transition-colors hover:bg-accent/[0.12] disabled:opacity-50"
                   >
                     {spawning ? (
                       'Spawning…'
@@ -994,8 +966,8 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       aria-pressed={runtime === rt}
                       className={`flex-1 rounded-[6px] px-[6px] py-[5px] text-[11px] font-semibold transition-colors ${
                         runtime === rt
-                          ? 'bg-[rgba(255,255,255,0.1)] text-[#f0f0f0]'
-                          : 'text-[#5a626c] hover:text-[#9aa3ad]'
+                          ? 'bg-white/[0.1] text-ink'
+                          : 'text-ink-3 hover:text-ink-2'
                       }`}
                     >
                       {rt === 'opencode' ? 'Opencode' : 'Claude'}
@@ -1005,25 +977,25 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
 
                 {/* Auto-detect hint badge */}
                 {agentHint && agentHint.hint === 'both' ? (
-                  <p className="mt-[5px] text-[10px] text-[#5a626c]">
-                    Detected: <span className="text-[#b3e502]">.opencode</span> +{' '}
-                    <span className="text-[#b3e502]">.claude</span>
+                  <p className="mt-[5px] text-[10px] text-ink-3">
+                    Detected: <span className="text-accent">.opencode</span> +{' '}
+                    <span className="text-accent">.claude</span>
                   </p>
                 ) : agentHint && agentHint.hint ? (
-                  <p className="mt-[5px] text-[10px] text-[#5a626c]">
-                    Detected: <span className="text-[#b3e502]">.{agentHint.hint}</span>
+                  <p className="mt-[5px] text-[10px] text-ink-3">
+                    Detected: <span className="text-accent">.{agentHint.hint}</span>
                   </p>
                 ) : null}
                 {!localAgentType && (
                   <p className="mt-[3px] text-[10px] text-[#454c55]">
-                    Using <span className="text-[#7a828c]">{runtime}</span> (auto)
+                    Using <span className="text-ink-2">{runtime}</span> (auto)
                   </p>
                 )}
 
                 {/* Claude only: agents vs commands */}
                 {runtime === 'claude' && (
                   <div className="mt-[10px]">
-                    <p className="mb-[5px] text-[10px] text-[#7a828c]">Source</p>
+                    <p className="mb-[5px] text-[10px] text-ink-2">Source</p>
                     <div className="flex rounded-[8px] border border-white/[0.07] bg-white/[0.03] p-[3px]">
                       {(['agents', 'commands'] as const).map((src) => (
                         <button
@@ -1033,8 +1005,8 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                           aria-pressed={agentSource === src}
                           className={`flex-1 rounded-[6px] px-[6px] py-[4px] text-[11px] font-semibold capitalize transition-colors ${
                             agentSource === src
-                              ? 'bg-[rgba(255,255,255,0.1)] text-[#f0f0f0]'
-                              : 'text-[#5a626c] hover:text-[#9aa3ad]'
+                              ? 'bg-white/[0.1] text-ink'
+                              : 'text-ink-3 hover:text-ink-2'
                           }`}
                         >
                           {src}
@@ -1046,21 +1018,21 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
 
                 {/* Agent / command picker */}
                 <div className="mt-[10px]">
-                  <p className="mb-[5px] text-[10px] text-[#7a828c]">
+                  <p className="mb-[5px] text-[10px] text-ink-2">
                     {runtime === 'claude' && agentSource === 'commands' ? 'Command' : 'Agent'}
                   </p>
                   <select
                     value={agentName ?? ''}
                     onChange={(e) => changeAgentName(e.target.value)}
                     aria-label="Agent or command"
-                    className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                    className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink outline-none backdrop-blur-md focus:border-accent/40"
                   >
-                    <option value="" className="bg-[#111118]">{runtime === 'opencode' ? 'Default agent' : 'None'}</option>
+                    <option value="" className="bg-surface">{runtime === 'opencode' ? 'Default agent' : 'None'}</option>
                     {agentName && !agentList.some((a) => a.name === agentName) && (
-                      <option value={agentName} className="bg-[#111118]">{agentName}</option>
+                      <option value={agentName} className="bg-surface">{agentName}</option>
                     )}
                     {agentList.map((a) => (
-                      <option key={a.name} value={a.name} title={a.description} className="bg-[#111118]">
+                      <option key={a.name} value={a.name} title={a.description} className="bg-surface">
                         {a.name}
                       </option>
                     ))}
@@ -1074,20 +1046,20 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
 
                 {/* LLM model picker */}
                 <div className="mt-[10px]">
-                  <p className="mb-[5px] text-[10px] text-[#7a828c]">LLM model</p>
+                  <p className="mb-[5px] text-[10px] text-ink-2">LLM model</p>
                   {models.length > 0 ? (
                     <select
                       value={model ?? ''}
                       onChange={(e) => changeModel(e.target.value)}
                       aria-label="LLM model"
-                      className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                      className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink outline-none backdrop-blur-md focus:border-accent/40"
                     >
-                      <option value="" className="bg-[#111118]">Default</option>
+                      <option value="" className="bg-surface">Default</option>
                       {model && !models.some((m) => m.id === model) && (
-                        <option value={model} className="bg-[#111118]">{model}</option>
+                        <option value={model} className="bg-surface">{model}</option>
                       )}
                       {models.map((m) => (
-                        <option key={m.id} value={m.id} className="bg-[#111118]">
+                        <option key={m.id} value={m.id} className="bg-surface">
                           {m.label}
                         </option>
                       ))}
@@ -1100,28 +1072,28 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                       onBlur={(e) => changeModel(e.target.value)}
                       placeholder={modelsLoading ? 'Loading…' : 'provider/model (optional)'}
                       aria-label="LLM model"
-                      className="w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                      className="w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink placeholder:text-ink-3 outline-none backdrop-blur-md focus:border-accent/40"
                     />
                   )}
                 </div>
 
                 {/* Reasoning effort picker (claude --effort / opencode --variant) */}
                 <div className="mt-[10px]">
-                  <p className="mb-[5px] text-[10px] text-[#7a828c]">
+                  <p className="mb-[5px] text-[10px] text-ink-2">
                     Reasoning effort
                   </p>
                   <select
                     value={effort ?? ''}
                     onChange={(e) => changeEffort(e.target.value)}
                     aria-label="Reasoning effort"
-                    className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-[#f0f0f0] outline-none backdrop-blur-md focus:border-[#b3e502]/40"
+                    className="w-full appearance-none rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[10px] py-[7px] text-[12px] text-ink outline-none backdrop-blur-md focus:border-accent/40"
                   >
-                    <option value="" className="bg-[#111118]">Default</option>
+                    <option value="" className="bg-surface">Default</option>
                     {effort && !EFFORT_OPTIONS[runtime].includes(effort) && (
-                      <option value={effort} className="bg-[#111118]">{effort}</option>
+                      <option value={effort} className="bg-surface">{effort}</option>
                     )}
                     {EFFORT_OPTIONS[runtime].map((level) => (
-                      <option key={level} value={level} className="bg-[#111118]">
+                      <option key={level} value={level} className="bg-surface">
                         {level}
                       </option>
                     ))}
@@ -1134,15 +1106,15 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
       </div>
 
       {/* ══════ Footer action bar ══════ */}
-      <div className="relative z-10 flex shrink-0 flex-col gap-[10px] border-t border-white/[0.06] bg-[#0a0a0f]/80 px-[16px] py-[12px] backdrop-blur-md sm:px-[28px]">
-        {implementMsg && <p className="text-[12px] text-[#b3e502]">{implementMsg}</p>}
+      <div className="relative z-10 flex shrink-0 flex-col gap-[10px] border-t border-white/[0.06] bg-bg/80 px-[16px] py-[12px] backdrop-blur-md sm:px-[28px]">
+        {implementMsg && <p className="text-[12px] text-accent">{implementMsg}</p>}
 
         {/* Prompt preview accordion */}
         <div className="rounded-[10px] border border-white/[0.06] bg-white/[0.02]">
           <button
             type="button"
             onClick={() => setShowPromptPreview((v) => !v)}
-            className="flex w-full items-center justify-between px-[14px] py-[9px] text-[12px] text-[#7a828c] transition-colors hover:text-[#d1d5db]"
+            className="flex w-full items-center justify-between px-[14px] py-[9px] text-[12px] text-ink-2 transition-colors hover:text-[#d1d5db]"
           >
             <span>Prompt preview</span>
             <svg
@@ -1157,7 +1129,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
           </button>
           {showPromptPreview && (
             <div className="border-t border-white/[0.06] px-[14px] py-[10px]">
-              <pre className="max-h-[160px] overflow-y-auto whitespace-pre-wrap font-['JetBrains_Mono'] text-[11px] leading-[1.6] text-[#7a828c]">
+              <pre className="max-h-[160px] overflow-y-auto whitespace-pre-wrap font-['JetBrains_Mono'] text-[11px] leading-[1.6] text-ink-2">
                 {buildPromptPreview(task)}
               </pre>
             </div>
@@ -1170,7 +1142,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
             onClick={startImplement}
             disabled={implementing || spawning}
             title={canImplement ? 'Send the prompt to the live session' : `Spawn ${runtime} and start implementation`}
-            className="kb-sheen relative w-full overflow-hidden rounded-[10px] bg-[#b3e502] px-[16px] py-[10px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-colors hover:bg-[#c2f516] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:py-[8px]"
+            className="kb-sheen relative w-full overflow-hidden rounded-[10px] bg-accent px-[16px] py-[10px] text-[13px] font-bold text-bg transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:py-[8px]"
           >
             {implementing || spawning
               ? canImplement
@@ -1187,7 +1159,7 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
                 type="button"
                 onClick={() => navigate(`/projects/${task.projectId}?session=${sessionId}`)}
                 title="Open session terminal"
-                className="flex items-center gap-[5px] rounded-[8px] border border-white/[0.07] px-[12px] py-[7px] text-[12px] font-medium text-[#9aa3ad] transition-colors hover:border-white/[0.14] hover:text-[#e6e8eb]"
+                className="flex items-center gap-[5px] rounded-[8px] border border-white/[0.07] px-[12px] py-[7px] text-[12px] font-medium text-ink-2 transition-colors hover:border-white/[0.14] hover:text-ink"
               >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                   <rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -1200,11 +1172,11 @@ export function TaskDetail({ task, kanbanColumns = [], onChanged, onClose }: Tas
             <button
               type="button"
               onClick={copyPrompt}
-              className="flex items-center gap-[5px] rounded-[8px] border border-white/[0.07] px-[12px] py-[7px] text-[12px] font-medium text-[#9aa3ad] transition-colors hover:border-white/[0.14] hover:text-[#e6e8eb]"
+              className="flex items-center gap-[5px] rounded-[8px] border border-white/[0.07] px-[12px] py-[7px] text-[12px] font-medium text-ink-2 transition-colors hover:border-white/[0.14] hover:text-ink"
             >
               {copied ? (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="#b3e502" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 6l3 3 5-5" stroke="#5e6ad2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               ) : (
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none">

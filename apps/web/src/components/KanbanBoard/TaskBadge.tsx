@@ -26,7 +26,7 @@ export function TaskBadge() {
 /** Badge for GitHub issues */
 export function IssueBadge({ number }: { number: number }) {
   return (
-    <span className="inline-flex items-center gap-[4px] rounded-[4px] border border-white/[0.07] bg-[#24292e] px-[6px] py-[2px] text-[10px] font-medium text-[#f0f0f0]">
+    <span className="inline-flex items-center gap-[4px] rounded-[4px] border border-white/[0.07] bg-[#24292e] px-[6px] py-[2px] text-[10px] font-medium text-ink">
       <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
         <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1ZM4.5 8.5h7v-1h-7v1Z" />
       </svg>
@@ -110,7 +110,7 @@ export function LabelChip({
 /** Badge for project name */
 export function ProjectBadge({ name }: { name: string }) {
   return (
-    <span className="inline-flex items-center rounded-[4px] border border-[rgba(255,255,255,0.06)] bg-[rgba(179,229,2,0.08)] px-[6px] py-[1px] text-[10px] font-medium text-[#b3e502]">
+    <span className="inline-flex items-center rounded-[4px] border border-white/[0.06] bg-accent/[0.08] px-[6px] py-[1px] text-[10px] font-medium text-accent">
       {name}
     </span>
   );
@@ -120,7 +120,7 @@ export function ProjectBadge({ name }: { name: string }) {
 export function SessionBadge() {
   return (
     <span
-      className="inline-flex items-center gap-[3px] rounded-[4px] border border-[rgba(255,170,0,0.2)] bg-[rgba(255,170,0,0.08)] px-[5px] py-[1px] text-[10px] font-medium text-[#fa0]"
+      className="inline-flex items-center gap-[3px] rounded-[4px] border border-accent/25 bg-accent/10 px-[5px] py-[1px] text-[10px] font-medium text-accent"
       title="Linked to session"
     >
       <svg width="9" height="9" viewBox="0 0 16 16" fill="none">
