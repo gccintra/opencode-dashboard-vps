@@ -142,9 +142,9 @@ export interface XTermTerminalHandle {
 const TERMINAL_THEME: ITheme = {
   background: '#1e1e2e',
   foreground: '#f0f0f0',
-  cursor: '#aaff00',
+  cursor: '#5e6ad2',
   cursorAccent: '#1e1e2e',
-  selectionBackground: 'rgba(179,229,2, 0.25)',
+  selectionBackground: 'rgba(94, 106, 210, 0.25)',
   selectionForeground: '#f0f0f0',
   black: '#111118',
   red: '#ff5555',
@@ -163,9 +163,9 @@ const TERMINAL_THEME: ITheme = {
   brightCyan: '#a4ffff',
   brightWhite: '#ffffff',
   /* Scrollbar customizada com o tema escuro */
-  scrollbarSliderBackground: 'rgba(179,229,2, 0.15)',
-  scrollbarSliderHoverBackground: 'rgba(179,229,2, 0.30)',
-  scrollbarSliderActiveBackground: 'rgba(179,229,2, 0.45)',
+  scrollbarSliderBackground: 'rgba(94, 106, 210, 0.15)',
+  scrollbarSliderHoverBackground: 'rgba(94, 106, 210, 0.30)',
+  scrollbarSliderActiveBackground: 'rgba(94, 106, 210, 0.45)',
 };
 
 /* ── Transient status badge ── */
@@ -251,7 +251,7 @@ function ErrorOverlay({
             type="button"
             onClick={onCreateNewSession}
             data-testid="xterm-error-create-new-session"
-            className="rounded-md border border-[#b3e502] bg-[#b3e502] px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition hover:bg-[#c2f516]"
+            className="rounded-md border border-[#5e6ad2] bg-[#5e6ad2] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#6e79de]"
           >
             Create new session
           </button>
@@ -280,10 +280,10 @@ function LoadingOverlay() {
       className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#1e1e2e]"
     >
       <svg className="animate-spin size-5" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="rgba(179,229,2,0.2)" strokeWidth="2" />
-        <path d="M21 12a9 9 0 00-9-9" stroke="#aaff00" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="12" cy="12" r="9" stroke="rgba(94, 106, 210,0.2)" strokeWidth="2" />
+        <path d="M21 12a9 9 0 00-9-9" stroke="#5e6ad2" strokeWidth="2" strokeLinecap="round" />
       </svg>
-      <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.4)]">
+      <span className="font-['JetBrains_Mono'] text-[11px] text-[rgba(94, 106, 210,0.4)]">
         Connecting…
       </span>
     </div>
@@ -402,7 +402,7 @@ export function MobileKeyboard({
       <button
         type="button"
         onClick={openNativeKeyboard}
-        className="mb-2 w-full rounded-md px-3 py-[10px] text-sm font-semibold text-[#aaff00] bg-[rgba(170,255,0,0.08)] border border-[rgba(170,255,0,0.25)] active:bg-[rgba(170,255,0,0.2)] transition-colors select-none"
+        className="mb-2 w-full rounded-md px-3 py-[10px] text-sm font-semibold text-[#5e6ad2] bg-[rgba(94, 106, 210,0.08)] border border-[rgba(94, 106, 210,0.25)] active:bg-[rgba(94, 106, 210,0.2)] transition-colors select-none"
       >
         ⌨ Digitar texto
       </button>
@@ -457,7 +457,7 @@ export function MobileKeyboard({
               e.preventDefault();
               onKey(k.seq);
             }}
-            className="rounded-md px-2 py-[10px] text-sm font-mono font-semibold text-[#f0f0f0] bg-[#1e1e2e] border border-white/10 active:bg-[#aaff00] active:text-[#0a0a0f] transition-colors select-none"
+            className="rounded-md px-2 py-[10px] text-sm font-mono font-semibold text-[#f0f0f0] bg-[#1e1e2e] border border-white/10 active:bg-[#5e6ad2] active:text-white transition-colors select-none"
           >
             {k.label}
           </button>
@@ -479,8 +479,8 @@ export function MobileKeyboard({
           aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
           className={`flex items-center justify-center h-[20px] w-[20px] rounded-[3px] text-sm transition-colors select-none ${
             open
-              ? 'text-[#b3e502] bg-[rgba(179,229,2,0.15)]'
-              : 'text-[rgba(179,229,2,0.5)] hover:text-[rgba(179,229,2,0.9)] hover:bg-[rgba(179,229,2,0.1)]'
+              ? 'text-[#5e6ad2] bg-[rgba(94, 106, 210,0.15)]'
+              : 'text-[rgba(94, 106, 210,0.5)] hover:text-[rgba(94, 106, 210,0.9)] hover:bg-[rgba(94, 106, 210,0.1)]'
           }`}
         >
           ⌨
@@ -501,8 +501,8 @@ export function MobileKeyboard({
         aria-label={open ? 'Fechar teclado' : 'Abrir teclado especial'}
         className={`absolute bottom-2 right-2 z-30 flex size-11 items-center justify-center rounded-full border shadow-lg transition-colors text-lg select-none ${
           open
-            ? 'border-[#aaff00] bg-[#aaff00] text-[#0a0a0f]'
-            : 'border-white/20 bg-[#111118] text-[#b3e502]'
+            ? 'border-[#5e6ad2] bg-[#5e6ad2] text-white'
+            : 'border-white/20 bg-[#111118] text-[#5e6ad2]'
         }`}
       >
         ⌨
@@ -572,7 +572,7 @@ function writeClipboard(text: string, onDone?: () => void): void {
 
 function CopiedToast() {
   return (
-    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(179,229,2,0.25)] bg-[#111118] px-[12px] py-[6px] text-[12px] font-medium text-[#b3e502] shadow-lg">
+    <div className="pointer-events-none absolute top-[10px] left-1/2 z-30 -translate-x-1/2 rounded-[6px] border border-[rgba(94, 106, 210,0.25)] bg-[#111118] px-[12px] py-[6px] text-[12px] font-medium text-[#5e6ad2] shadow-lg">
       Copiado!
     </div>
   );
@@ -2078,7 +2078,7 @@ export const XTermTerminal = memo(
         {imageUploadStatus !== 'idle' && (
           <div className="pointer-events-none absolute bottom-10 left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#111118] px-3 py-1.5 text-[12px]">
             {imageUploadStatus === 'uploading' ? (
-              <span className="text-[#b3e502]">⬆ Uploading image…</span>
+              <span className="text-[#5e6ad2]">⬆ Uploading image…</span>
             ) : (
               <span className="text-red-400">✕ Image upload failed</span>
             )}

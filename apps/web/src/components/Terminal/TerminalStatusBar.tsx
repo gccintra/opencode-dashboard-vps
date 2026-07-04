@@ -74,22 +74,22 @@ export function TerminalStatusBar({
   const isDefault = fontSize === defaultFontSize;
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-[8px] border-t border-[rgba(179,229,2,0.1)] bg-[rgba(179,229,2,0.06)] px-[12px] py-[5px] sm:px-[20px]">
+    <div className="flex shrink-0 items-center justify-between gap-[8px] border-t border-hairline bg-surface px-[12px] py-[5px] sm:px-[20px]">
       {/* Left: connection · session name · CPU/RAM */}
       <div className="flex min-w-0 items-center gap-[10px]">
         {connectionStatus && connectionStatus !== 'idle' && (
           <span className="flex shrink-0 items-center gap-[6px]">
             <span
-              className={`size-[6px] rounded-[3px] ${isConnected ? 'bg-[#2d8]' : 'bg-[#445]'}`}
-              style={isConnected ? { boxShadow: '0 0 4px rgba(34,221,136,0.5)' } : undefined}
+              className={`size-[6px] rounded-full ${isConnected ? 'bg-success' : 'bg-ink-4'}`}
+              style={isConnected ? { boxShadow: '0 0 5px rgba(76,183,130,0.55)' } : undefined}
             />
-            <span className="hidden font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.6)] sm:inline">
+            <span className="mono-meta hidden text-[11px] text-ink-2 sm:inline">
               {isConnected ? 'Connected' : connectionStatus}
             </span>
           </span>
         )}
         {sessionName && (
-          <span className="hidden min-w-0 truncate font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.3)] sm:inline">
+          <span className="mono-meta hidden min-w-0 truncate text-[11px] text-ink-4 sm:inline">
             {sessionName}
           </span>
         )}
@@ -102,10 +102,7 @@ export function TerminalStatusBar({
       {/* Right: uptime · theme · zoom · keyboard */}
       <div className="flex shrink-0 items-center gap-[8px]">
         {startMs && (
-          <span
-            className="hidden font-['JetBrains_Mono'] text-[11px] text-[rgba(179,229,2,0.4)] sm:block"
-            key={tick}
-          >
+          <span className="mono-meta hidden text-[11px] text-ink-3 sm:block" key={tick}>
             uptime {formatUptime(startMs)}
           </span>
         )}
@@ -114,7 +111,7 @@ export function TerminalStatusBar({
 
         <ThemePicker themeId={themeId} onChange={onThemeChange} />
 
-        <div className="h-[14px] w-px bg-[rgba(179,229,2,0.12)]" />
+        <div className="h-[14px] w-px bg-hairline" />
 
         {/* Zoom controls */}
         <div className="flex items-center gap-[2px]">
@@ -122,7 +119,7 @@ export function TerminalStatusBar({
             onClick={onZoomOut}
             disabled={fontSize <= FONT_SIZE_MIN}
             title="Diminuir fonte (Ctrl+-)"
-            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
           >
             A<span className="relative top-[1px] text-[8px] leading-none">-</span>
           </button>
@@ -132,8 +129,8 @@ export function TerminalStatusBar({
             title={`Fonte: ${fontSize}px — clique para resetar (Ctrl+0)`}
             className={`flex h-[20px] min-w-[28px] select-none items-center justify-center rounded-[3px] px-[4px] font-['JetBrains_Mono'] text-[10px] transition-colors ${
               isDefault
-                ? 'text-[rgba(179,229,2,0.3)] hover:bg-[rgba(179,229,2,0.06)] hover:text-[rgba(179,229,2,0.6)]'
-                : 'bg-[rgba(179,229,2,0.08)] text-[rgba(179,229,2,0.8)] hover:bg-[rgba(179,229,2,0.14)] hover:text-[rgba(179,229,2,1)]'
+                ? 'text-ink-4 hover:bg-white/[0.06] hover:text-ink-2'
+                : 'bg-accent/12 text-accent hover:bg-accent/18'
             }`}
           >
             {fontSize}px
@@ -143,7 +140,7 @@ export function TerminalStatusBar({
             onClick={onZoomIn}
             disabled={fontSize >= FONT_SIZE_MAX}
             title="Aumentar fonte (Ctrl++)"
-            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-[rgba(179,229,2,0.5)] transition-colors hover:bg-[rgba(179,229,2,0.1)] hover:text-[rgba(179,229,2,0.9)] disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-[20px] w-[20px] select-none items-center justify-center rounded-[3px] text-[11px] font-semibold text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
           >
             A<span className="relative top-[1px] text-[8px] leading-none">+</span>
           </button>
@@ -151,7 +148,7 @@ export function TerminalStatusBar({
 
         {mobileKeyboard && (
           <>
-            <div className="h-[14px] w-px bg-[rgba(179,229,2,0.12)]" />
+            <div className="h-[14px] w-px bg-hairline" />
             {mobileKeyboard}
           </>
         )}

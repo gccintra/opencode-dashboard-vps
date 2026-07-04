@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar, { AlfLogo } from './Sidebar';
+import Sidebar from './Sidebar';
 import { FileClipboardProvider } from '../../context/FileClipboardContext';
 import GlobalClipboardToast from '../GlobalClipboardToast';
 
@@ -19,31 +19,27 @@ function HamburgerIcon() {
 export default function AppLayout() {
   return (
     <FileClipboardProvider>
-      <div className="flex h-dvh bg-bg">
+      <div className="app-vignette flex h-dvh">
         <Sidebar />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* ── Mobile top bar — hidden on lg+ (sidebar is static there) ── */}
-          <div className="flex h-[48px] shrink-0 items-center gap-3 border-b border-hairline bg-bg px-4 lg:hidden">
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('sidebar:open'))}
-              className="flex size-[32px] shrink-0 items-center justify-center rounded-control text-ink-2 hover:text-ink active:text-ink"
-              aria-label="Open menu"
-              data-testid="hamburger-button"
-            >
-              <HamburgerIcon />
-            </button>
-            <AlfLogo size={26} />
-            <span className="flex items-baseline gap-[3px] text-[14px] font-semibold tracking-[-0.3px]">
-              <span className="text-ink">ALF</span>
-              <span className="text-accent">code</span>
-            </span>
-          </div>
+        {/* The sidebar has NO border of its own — it sits on the app shell. The
+            content is a floating framed window (rounded + bordered) with a small
+            gap all around, so the border reads around the whole section. */}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col p-[8px] lg:py-[10px] lg:pl-[4px] lg:pr-[10px]">
+          {/* ── Floating menu button — mobile only. No standalone bar: each page
+               owns a single sticky header and reserves a left gutter (pl-[52px])
+               so this button tucks into it instead of stacking a second bar. ── */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('sidebar:open'))}
+            className="absolute left-[16px] top-[16px] z-30 flex size-[32px] shrink-0 items-center justify-center rounded-control text-ink-2 hover:bg-white/[0.06] hover:text-ink active:text-ink lg:hidden"
+            aria-label="Open menu"
+            data-testid="hamburger-button"
+          >
+            <HamburgerIcon />
+          </button>
 
-          {/* ── Page content ── */}
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col">
-              <Outlet />
-            </div>
+          {/* ── Page content (framed window) ── */}
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-hairline bg-bg">
+            <Outlet />
           </main>
         </div>
         <GlobalClipboardToast />

@@ -3,7 +3,7 @@
  *
  * Renders a colored dot with contextual glow/pulse animations:
  *  - Green (#2d8) with glow  → active
- *  - Yellow (#fa0) with pulse → waiting
+ *  - Gray with pulse → waiting
  *  - Gray (#445)              → finished
  *  - Orange/red (#f54) with ⚠️ → emergency
  *
@@ -30,8 +30,8 @@ export interface StatusBadgeProps {
 }
 
 const STATUS_COLORS: Record<BadgeStatus, string> = {
-  active: '#2d8',
-  waiting: '#fa0',
+  active: '#5e6ad2',
+  waiting: '#8a8f98',
   finished: '#5a626c',
   emergency: '#f54',
 };
@@ -78,7 +78,7 @@ export default function StatusBadge({
 
     const originalTitle = document.title;
     if (resolvedStatus === 'waiting' && !isVisible) {
-      document.title = '⏳ Aguardando — ALF code';
+      document.title = '⏳ Aguardando — ALF';
     } else {
       document.title = originalTitle;
     }

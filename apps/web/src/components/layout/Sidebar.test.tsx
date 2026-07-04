@@ -11,6 +11,11 @@ vi.mock('../../hooks/useSessions', () => ({
   useSessions: () => mockUseSessions(),
 }));
 
+// Sidebar now reads useAuth() for the workspace menu's Log out action.
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true, isLoading: false, login: vi.fn(), logout: vi.fn() }),
+}));
+
 // ── Default mock return values ──
 
 const defaultUseSessions = {
@@ -62,20 +67,14 @@ describe('Sidebar', () => {
   // ── Banner ──
 
   describe('Banner', () => {
-    it('renders the ALF code logo mark', () => {
+    it('renders the ALF logo mark', () => {
       renderSidebar();
-      expect(screen.getByRole('img', { name: /ALF code/i })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: /ALF logo/i })).toBeInTheDocument();
     });
 
-    it('renders "ALF code" title', () => {
+    it('renders "ALF" title', () => {
       renderSidebar();
       expect(screen.getByText('ALF')).toBeInTheDocument();
-      expect(screen.getByText('code')).toBeInTheDocument();
-    });
-
-    it('renders the "Agent Dashboard" subtitle', () => {
-      renderSidebar();
-      expect(screen.getByText('Agent Dashboard')).toBeInTheDocument();
     });
   });
 
@@ -103,7 +102,7 @@ describe('Sidebar', () => {
     it('highlights Projects link as active when on /projects', () => {
       renderSidebar('/projects');
       const projectsLink = screen.getByText('Projects').closest('a');
-      expect(projectsLink).toHaveClass('bg-accent/12');
+      expect(projectsLink).toHaveClass('bg-white/[0.06]');
     });
 
     it('Projects link shows inactive styling when not on /projects', () => {
@@ -141,17 +140,20 @@ describe('Sidebar', () => {
     });
   });
 
-  // ── User Profile ──
+  // ── Workspace menu ──
 
-  describe('User Profile', () => {
-    it('renders username "user@vps"', () => {
+  describe('Workspace menu', () => {
+    it('renders the workspace menu button', () => {
       renderSidebar();
-      expect(screen.getByText('user@vps')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-menu-button')).toBeInTheDocument();
     });
 
-    it('renders avatar with "U"', () => {
+    it('reveals username and Log out when the menu is opened', () => {
       renderSidebar();
-      expect(screen.getByText('U')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('workspace-menu-button'));
+      expect(screen.getByText('user@vps')).toBeInTheDocument();
+      expect(screen.getByTestId('logout-button')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
     });
   });
 

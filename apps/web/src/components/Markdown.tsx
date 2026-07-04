@@ -33,7 +33,7 @@ export function Markdown({ children, className }: MarkdownProps) {
     <div
       className={
         'prose-invert max-w-none font-["Inter"] text-[14px] leading-[1.6] text-[#d4d4dc] ' +
-        '[&_a]:text-[#b3e502] [&_a]:underline ' +
+        '[&_a]:text-[#5e6ad2] [&_a]:underline ' +
         '[&_h1]:mb-[8px] [&_h1]:mt-[16px] [&_h1]:text-[20px] [&_h1]:font-semibold [&_h1]:text-[#f0f0f0] ' +
         '[&_h2]:mb-[6px] [&_h2]:mt-[14px] [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:text-[#f0f0f0] ' +
         '[&_h3]:mb-[4px] [&_h3]:mt-[12px] [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-[#f0f0f0] ' +
@@ -41,10 +41,10 @@ export function Markdown({ children, className }: MarkdownProps) {
         '[&_ul]:my-[8px] [&_ul]:list-disc [&_ul]:pl-[20px] ' +
         '[&_ol]:my-[8px] [&_ol]:list-decimal [&_ol]:pl-[20px] ' +
         '[&_li]:my-[2px] ' +
-        '[&_code]:rounded-[4px] [&_code]:bg-[rgba(255,255,255,0.06)] [&_code]:px-[5px] [&_code]:py-[1px] [&_code]:font-["JetBrains_Mono"] [&_code]:text-[12.5px] [&_code]:text-[#b3e502] ' +
+        '[&_code]:rounded-[4px] [&_code]:bg-[rgba(255,255,255,0.06)] [&_code]:px-[5px] [&_code]:py-[1px] [&_code]:font-["JetBrains_Mono"] [&_code]:text-[12.5px] [&_code]:text-[#5e6ad2] ' +
         '[&_pre]:my-[10px] [&_pre]:overflow-x-auto [&_pre]:rounded-[8px] [&_pre]:border [&_pre]:border-white/[0.07] [&_pre]:bg-[#0a0a0f] [&_pre]:p-[12px] ' +
         '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[#d4d4dc] ' +
-        '[&_blockquote]:my-[8px] [&_blockquote]:border-l-[3px] [&_blockquote]:border-[rgba(179,229,2,0.4)] [&_blockquote]:pl-[12px] [&_blockquote]:text-[#9aa3ad] ' +
+        '[&_blockquote]:my-[8px] [&_blockquote]:border-l-[3px] [&_blockquote]:border-[rgba(94, 106, 210,0.4)] [&_blockquote]:pl-[12px] [&_blockquote]:text-[#9aa3ad] ' +
         '[&_table]:my-[10px] [&_table]:w-full [&_table]:border-collapse ' +
         '[&_th]:border [&_th]:border-white/[0.07] [&_th]:px-[8px] [&_th]:py-[4px] [&_th]:text-left [&_th]:text-[#f0f0f0] ' +
         '[&_td]:border [&_td]:border-white/[0.07] [&_td]:px-[8px] [&_td]:py-[4px] ' +

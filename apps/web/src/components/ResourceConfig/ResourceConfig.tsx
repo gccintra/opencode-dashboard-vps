@@ -250,7 +250,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             onClick={() => setActiveTab(type)}
             className={`px-4 py-3 text-[13px] font-medium transition-colors border-b-2 -mb-[1px] ${
               activeTab === type
-                ? 'border-[#b3e502] text-[#b3e502]'
+                ? 'border-[#5e6ad2] text-[#5e6ad2]'
                 : 'border-transparent text-[#9aa3ad] hover:text-[#e6e8eb]'
             }`}
             data-testid={`resource-tab-${type}`}
@@ -304,7 +304,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
             data-testid="resource-no-results"
           >
             No resources match &ldquo;{search}&rdquo;.{' '}
-            <button onClick={() => setSearch('')} className="text-[#b3e502] hover:underline">
+            <button onClick={() => setSearch('')} className="text-[#5e6ad2] hover:underline">
               Clear search
             </button>
           </div>
@@ -346,7 +346,7 @@ export default function ResourceConfig({ projectId }: ResourceConfigProps) {
                 !resource.available
                   ? 'bg-white/5 cursor-not-allowed opacity-40'
                   : resource.active
-                    ? 'bg-[#b3e502]'
+                    ? 'bg-[#5e6ad2]'
                     : 'bg-white/10'
               }`}
               role="switch"

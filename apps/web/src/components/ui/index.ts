@@ -12,3 +12,5 @@ export {
 } from './SegmentedControl';
 export { Toolbar, type ToolbarProps } from './Toolbar';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { StatusGlyph, type GlyphStatus } from './StatusGlyph';
+export { CommandPalette, useCommandPalette } from './CommandPalette';

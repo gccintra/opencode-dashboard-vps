@@ -1,51 +1,74 @@
 @import 'tailwindcss';
 
 /* ── Self-hosted Fonts (no external CDN dependency) ──
-   UI text uses the platform system stack (see --font-sans below); only the
-   terminal/code mono face is shipped. */
+   UI text uses Geist (Vercel's product/dev-tool face — geometric, crisp, more
+   character than Inter while staying neutral). Terminal/code uses JetBrains
+   Mono. Inter is kept only as a metric-compatible fallback. */
+@import '@fontsource-variable/geist';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 /* Bold weight required for terminal bold characters (e.g. opencode headers) */
 @import '@fontsource/jetbrains-mono/700.css';
 
 /* ════════════════════════════════════════════════════════════════
-   "Graphite" design tokens — mac-native developer-tool aesthetic.
-   Dark-only. Flat surfaces, hairline dividers, one lime accent.
+   Linear-inspired design tokens — cool near-black, indigo accent,
+   refined depth on interactive layers (not flat). Dark-only.
    Canonical spec: apps/web/DESIGN.md
    ════════════════════════════════════════════════════════════════ */
 @theme {
-  /* Surfaces */
-  --color-bg: #0e0e11; /* app canvas → bg-bg */
-  --color-surface: #16161a; /* sidebar, panels, cards */
-  --color-surface-2: #1c1c21; /* raised controls, inputs, modals */
-  --color-surface-3: #232329; /* hover of surface-2, menus */
+  /* ── MONOCHROME SYSTEM ──
+     The whole product is black + white + neutral gray. Every surface below is
+     strictly hue-free (R=G=B). Amber is the ONLY color and it is rationed to a
+     handful of "look here" signals (active status, focus, one highlight per
+     view). It is never a default fill. */
 
-  /* Borders */
-  --color-hairline: rgba(255, 255, 255, 0.08);
-  --color-hairline-strong: rgba(255, 255, 255, 0.14);
+  /* Surfaces — a true-black neutral ladder. void = app base; each step lifts. */
+  --color-void: #000000; /* app base, sidebar, rail — true black */
+  --color-bg: #090909; /* main content canvas */
+  --color-surface: #101010; /* panels, cards */
+  --color-surface-2: #171717; /* inputs, raised controls */
+  --color-surface-3: #202020; /* hover of surface-2, menus */
 
-  /* Text ladder (ink-* avoids collision with border-2 width utility) */
-  --color-ink: #e8e8ea;
-  --color-ink-2: #98989f;
-  --color-ink-3: #66666e;
-  --color-ink-4: #4a4a52;
+  /* Borders — crisp translucent hairlines. We read structure from lines. */
+  --color-hairline: rgba(255, 255, 255, 0.09);
+  --color-hairline-strong: rgba(255, 255, 255, 0.18);
 
-  /* Brand + semantics (mac traffic lights) */
-  --color-accent: #b3e502;
-  --color-accent-hover: #c2f516;
-  --color-danger: #ff5f57;
-  --color-warning: #febc2e;
-  --color-success: #28c840;
+  /* Text ladder — white → neutral grays. High contrast, no tint. */
+  --color-ink: #fafafa;
+  --color-ink-2: #a6a6a6;
+  --color-ink-3: #737373;
+  --color-ink-4: #4d4d4d;
 
-  /* Fonts */
+  /* Accent — amber. Signal only. accent-ink is the dark foreground for the
+     rare case something sits ON an amber fill. */
+  --color-accent: #ffb224;
+  --color-accent-hover: #ffc250;
+  --color-accent-ink: #1a1100;
+  /* Semantics */
+  --color-danger: #eb5757;
+  --color-warning: #f2c94c;
+  --color-success: #4cb782;
+
+  /* Fonts — Geist for UI, JetBrains Mono for data/terminal. Inter as fallback. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+    'Geist Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Radius */
+  /* Radius — Linear uses slightly rounder controls */
   --radius-control: 6px; /* buttons, inputs, nav pills */
   --radius-panel: 8px; /* cards, panels */
-  --radius-modal: 10px; /* modals, menus */
+  --radius-modal: 12px; /* modals, menus */
+}
+
+/* Inter tabular/optical niceties — Linear uses Inter with cv/ss features. */
+:root {
+  font-feature-settings: 'cv01', 'cv03', 'cv04', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Full-screen app — body/html must never scroll; each screen manages its own
@@ -54,6 +77,189 @@ html,
 body {
   overflow: hidden;
   height: 100%;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Linear/Orca foundations — tonal panes, warm vignette, materials,
+   density helpers. Depth ONLY on floating/interactive layers; base
+   surfaces stay flat + tonal. Amber rationed. See docs/plan-redesign-linear.md
+   ════════════════════════════════════════════════════════════════ */
+
+/* Ambient vignette — strictly neutral near-black. A faint lighter-gray lift
+   at the top gives depth without introducing any hue. */
+.app-vignette {
+  background:
+    radial-gradient(1200px 560px at 50% -10%, rgba(255, 255, 255, 0.025), transparent 60%),
+    radial-gradient(1400px 900px at 50% 35%, #101010, var(--color-void) 76%);
+}
+
+/* Flat control surface — NO gloss, NO gradient, NO drop shadow. Just a clean
+   fill that lifts on hover. Depth in this system comes from hairlines and the
+   surface ladder, never from skeuomorphic highlights. */
+.control-raised {
+  background-color: var(--color-surface-2);
+}
+.control-raised:hover {
+  background-color: var(--color-surface-3);
+}
+
+/* Primary button — the monochrome CTA: solid WHITE fill, black text, flat.
+   The highest-contrast element on a black canvas. No gradient, no glow. */
+.btn-primary {
+  background-color: #fafafa;
+  color: #0a0a0a;
+}
+.btn-primary:hover {
+  background-color: #ffffff;
+}
+
+/* Vibrancy — real material for floating/sticky layers (menus, popovers,
+   command palette, sticky toolbars, rail). Translucent, blurred, with a
+   faint 1px top highlight. NOT for resting cards/rows. */
+.vibrancy {
+  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Elevated — menus/popovers/dialogs: soft shadow + faint top highlight +
+   blur behind. The "active/floating layer is rich" Linear rule. */
+.elevated {
+  background: color-mix(in oklab, var(--color-surface-2) 82%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-hairline);
+  box-shadow:
+    0 12px 40px -8px rgba(0, 0, 0, 0.6),
+    0 2px 8px -2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Glass — the frosted material for modals & the command palette. The frost
+   comes from THREE stacked effects so it reads even over a near-black page:
+   (1) a translucent dark base you see through, (2) a top-lit white film that
+   gives the milky glass body, (3) a heavy blur + brightness lift on whatever
+   sits behind. Strictly neutral (no saturate → no hue). Crisp bright rim. */
+.glass-panel {
+  position: relative;
+  /* Same material as the command palette (see .glass-palette) — near-neutral
+     with a whisper of cool, just enough to cancel any warm cast. */
+  background: rgba(18, 19, 21, 0.93);
+  backdrop-filter: blur(16px) brightness(0.72);
+  -webkit-backdrop-filter: blur(16px) brightness(0.72);
+  box-shadow:
+    0 40px 90px -24px rgba(0, 0, 0, 0.92),
+    0 8px 24px -8px rgba(0, 0, 0, 0.65);
+}
+
+/* Command palette glass — same recipe, one step lighter. */
+.glass-palette {
+  position: relative;
+  background: rgba(18, 19, 21, 0.93);
+  backdrop-filter: blur(16px) brightness(0.72);
+  -webkit-backdrop-filter: blur(16px) brightness(0.72);
+  box-shadow:
+    0 40px 90px -24px rgba(0, 0, 0, 0.9),
+    0 8px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Light-catching rim — a 1px gradient border (bright at the top-lit edge,
+   fading toward the bottom) instead of a flat uniform hairline. Rendered as a
+   masked pseudo so it hugs the rounded corners and never fills the element.
+   Reusable across glass modals, stat tiles and panels — the signature edge of
+   the whole design system. */
+.rim-light {
+  position: relative;
+}
+.rim-light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(255, 255, 255, 0.08) 22%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0.055) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Density: mono metadata (paths, counts, IDs, agent, time, tokens). */
+.mono-meta {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-3);
+}
+
+/* Interactive-row hover — subtle tint, spring-friendly. */
+.row-hover {
+  transition:
+    background-color 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.row-hover:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Command palette / popover entrance. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Skeleton shimmer — a moving sheen, not a static gray block. */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+  }
 }
 
 .editor-syntax-ts,
@@ -71,7 +277,7 @@ body {
 }
 
 .editor-syntax-md {
-  caret-color: #b3e502;
+  caret-color: #e3a008;
 }
 
 .editor-syntax-css {
@@ -243,12 +449,12 @@ body {
   background-clip: padding-box;
 }
 .kb-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(179, 229, 2, 0.35);
+  background: rgba(227, 160, 8, 0.35);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 .kb-scroll::-webkit-scrollbar-thumb:active {
-  background: rgba(179, 229, 2, 0.55);
+  background: rgba(227, 160, 8, 0.55);
   border: 1px solid transparent;
   background-clip: padding-box;
 }

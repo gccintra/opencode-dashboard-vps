@@ -83,7 +83,7 @@ function ConversationRow({
       onClick={onClick}
       className={`mb-[5px] flex w-full items-start gap-[8px] rounded-[10px] border px-[10px] py-[9px] text-left transition-all ${
         isSelected
-          ? 'border-[rgba(170,255,0,0.45)] bg-[rgba(170,255,0,0.07)]'
+          ? 'border-[rgba(94, 106, 210,0.45)] bg-[rgba(94, 106, 210,0.07)]'
           : 'border-white/[0.05] hover:border-white/[0.12] hover:bg-white/[0.025]'
       }`}
     >
@@ -226,20 +226,20 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
         <div className="shrink-0 flex gap-[8px] px-5 pb-3">
           <button
             onClick={() => { setActiveSource('claude'); setSelectedId(null); }}
-            className={`flex flex-1 items-center justify-center gap-[8px] rounded-[12px] border py-[10px] px-3 transition-all ${
+            className={`flex flex-1 items-center justify-center gap-[8px] rounded-[10px] border py-[10px] px-3 transition-all ${
               activeSource === 'claude' && !q
-                ? 'border-[rgba(232,120,77,0.45)] bg-[rgba(232,120,77,0.08)] text-[#e8784d]'
-                : 'border-white/[0.06] text-[#556] hover:border-white/[0.12] hover:text-[#889]'
+                ? 'border-hairline-strong bg-white/[0.06] text-ink'
+                : 'border-transparent text-ink-3 hover:bg-white/[0.03] hover:text-ink-2'
             }`}
           >
             <ClaudeIcon size={18} />
             <span className="text-[12px] font-semibold">Claude Code</span>
             {!loading && (
               <span
-                className={`rounded-[5px] px-[5px] py-[1px] text-[10px] font-medium ${
+                className={`mono-meta rounded-[5px] px-[5px] py-[1px] text-[10px] font-medium ${
                   activeSource === 'claude' && !q
-                    ? 'bg-[rgba(232,120,77,0.15)] text-[#e8784d]'
-                    : 'bg-white/[0.05] text-[#445]'
+                    ? 'bg-white/[0.08] text-ink-2'
+                    : 'bg-white/[0.04] text-ink-4'
                 }`}
               >
                 {claudeConvs.length}
@@ -249,20 +249,20 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
 
           <button
             onClick={() => { setActiveSource('opencode'); setSelectedId(null); }}
-            className={`flex flex-1 items-center justify-center gap-[8px] rounded-[12px] border py-[10px] px-3 transition-all ${
+            className={`flex flex-1 items-center justify-center gap-[8px] rounded-[10px] border py-[10px] px-3 transition-all ${
               activeSource === 'opencode' && !q
-                ? 'border-[rgba(167,139,250,0.45)] bg-[rgba(167,139,250,0.08)] text-[#a78bfa]'
-                : 'border-white/[0.06] text-[#556] hover:border-white/[0.12] hover:text-[#889]'
+                ? 'border-hairline-strong bg-white/[0.06] text-ink'
+                : 'border-transparent text-ink-3 hover:bg-white/[0.03] hover:text-ink-2'
             }`}
           >
             <OpenCodeIcon size={18} />
             <span className="text-[12px] font-semibold">OpenCode</span>
             {!loading && (
               <span
-                className={`rounded-[5px] px-[5px] py-[1px] text-[10px] font-medium ${
+                className={`mono-meta rounded-[5px] px-[5px] py-[1px] text-[10px] font-medium ${
                   activeSource === 'opencode' && !q
-                    ? 'bg-[rgba(167,139,250,0.15)] text-[#a78bfa]'
-                    : 'bg-white/[0.05] text-[#445]'
+                    ? 'bg-white/[0.08] text-ink-2'
+                    : 'bg-white/[0.04] text-ink-4'
                 }`}
               >
                 {opencodeConvs.length}
@@ -278,7 +278,7 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por mensagem ou diretório…"
-            className="w-full rounded-[9px] border border-white/[0.07] bg-[#0a0a0f] px-3 py-[7px] text-[12px] text-[#e0e0e0] placeholder-[#334] outline-none transition-colors focus:border-[rgba(170,255,0,0.3)]"
+            className="w-full rounded-[9px] border border-white/[0.07] bg-[#0a0a0f] px-3 py-[7px] text-[12px] text-[#e0e0e0] placeholder-[#334] outline-none transition-colors focus:border-[rgba(94, 106, 210,0.3)]"
           />
         </div>
 
@@ -286,7 +286,7 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2 pt-1">
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <svg className="h-5 w-5 animate-spin text-[#af0]" viewBox="0 0 24 24" fill="none">
+              <svg className="h-5 w-5 animate-spin text-[#5e6ad2]" viewBox="0 0 24 24" fill="none">
                 <circle
                   className="opacity-20"
                   cx="12"
@@ -341,7 +341,7 @@ export default function RecoverConversationModal({ open, onClose, onRecover }: P
             <button
               onClick={handleConfirm}
               disabled={!selected || !selected.projectId || recovering}
-              className="rounded-[9px] bg-[#af0] px-4 py-[7px] text-[12px] font-semibold text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+              className="rounded-[9px] bg-[#5e6ad2] px-4 py-[7px] text-[12px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
             >
               {recovering ? 'Recuperando…' : 'Recuperar'}
             </button>

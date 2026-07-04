@@ -10,17 +10,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-accent font-semibold text-black hover:bg-accent-hover',
+  primary: 'btn-primary font-medium',
+  // Secondary — outline only, transparent fill, fills faintly on hover. Flat.
   default:
-    'border border-hairline bg-surface-2 text-ink shadow-[inset_0_0.5px_0_rgba(255,255,255,0.06)] hover:bg-surface-3',
-  ghost: 'text-ink-2 hover:bg-white/[0.06] hover:text-ink',
-  danger:
-    'border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20',
+    'border border-hairline-strong bg-transparent text-ink-2 hover:bg-white/[0.05] hover:text-ink',
+  ghost: 'text-ink-3 hover:bg-white/[0.05] hover:text-ink',
+  danger: 'border border-danger/40 bg-transparent text-danger hover:bg-danger/10',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-[24px] px-[8px]',
-  md: 'h-[28px] px-[12px]',
+  sm: 'h-[28px] px-[10px]',
+  md: 'h-[34px] px-[14px]',
 };
 
 export function Button({

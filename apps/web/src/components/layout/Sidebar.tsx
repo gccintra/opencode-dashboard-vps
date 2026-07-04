@@ -2,7 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessions, type SessionItem, type SessionGroup } from '../../hooks/useSessions';
 import StatusBadge from '../StatusBadge/StatusBadge';
-import { Badge } from '../ui';
+import { Badge, IconButton, useCommandPalette } from '../ui';
+import { useAuth } from '../../context/AuthContext';
 
 /* ── Inline SVG icons ── */
 
@@ -85,6 +86,15 @@ function PlusIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M8.5 8.5L12 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -126,32 +136,65 @@ function HamburgerIcon() {
   );
 }
 
-/* ── ALF brand mark — Alien Life Form on a lime glass tile ── */
+function ChevronDownIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="2.4" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5L3.4 3.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M6 14H3.5A1.5 1.5 0 0 1 2 12.5v-9A1.5 1.5 0 0 1 3.5 2H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M10.5 11L14 8l-3.5-3M14 8H6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ── ALF brand mark — friendly ghost/alien head, monochrome (black & white).
+      Dark rounded tile + hairline + a white ghost silhouette with dark eye
+      cut-outs. No brand color on the logo; the single accent stays rationed
+      to interactive/status elements only. ── */
 
 export function AlfLogo({ size = 30 }: { size?: number }) {
-  const glyph = Math.round(size * 0.66);
+  const glyph = Math.round(size * 0.72);
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-control bg-accent"
-      style={{ width: size, height: size }}
+      className="flex shrink-0 items-center justify-center rounded-[8px] border border-hairline-strong bg-surface-2"
+      style={{
+        width: size,
+        height: size,
+        boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.08), 0 1px 2px 0 rgba(0,0,0,0.35)',
+      }}
     >
       <svg
         role="img"
-        aria-label="ALF code logo"
+        aria-label="ALF logo"
         width={glyph}
         height={glyph}
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* friendly alien head — pointed chin, the Alien Life Form */}
+        {/* rounded ghost/alien head — white silhouette */}
         <path
-          d="M12 2.5c4.2 0 6.8 3 6.8 6.9 0 3-1.6 5-3.2 6.5-1.1 1-1.7 1.9-1.7 3.2 0 1.5-.8 2.4-1.9 2.4s-1.9-.9-1.9-2.4c0-1.3-.6-2.2-1.7-3.2C6.8 14.4 5.2 12.4 5.2 9.4 5.2 5.5 7.8 2.5 12 2.5Z"
-          fill="#0a0a0f"
+          d="M12 3.2c-4.1 0-6.9 2.9-6.9 6.9v6.6c0 1.5 1.7 2.4 3 1.5l.9-.6c.5-.35 1.15-.32 1.6.08l.75.66c.5.44 1.25.44 1.75 0l.75-.66c.45-.4 1.1-.43 1.6-.08l.9.6c1.3.9 3 0 3-1.5V10.1c0-4-2.8-6.9-6.9-6.9Z"
+          fill="#f7f8f8"
         />
-        {/* big almond eyes, lime cut-outs */}
-        <ellipse cx="9.4" cy="9.6" rx="1.7" ry="2.6" transform="rotate(18 9.4 9.6)" fill="#b3e502" />
-        <ellipse cx="14.6" cy="9.6" rx="1.7" ry="2.6" transform="rotate(-18 14.6 9.6)" fill="#b3e502" />
+        {/* almond alien eyes — dark cut-outs on the head */}
+        <ellipse cx="9.3" cy="10.4" rx="1.55" ry="2.5" transform="rotate(16 9.3 10.4)" fill="#141516" />
+        <ellipse cx="14.7" cy="10.4" rx="1.55" ry="2.5" transform="rotate(-16 14.7 10.4)" fill="#141516" />
       </svg>
     </span>
   );
@@ -178,7 +221,7 @@ function NavItem({
       end
       className={({ isActive }) =>
         `mx-[8px] flex h-[28px] items-center gap-[8px] rounded-control px-[8px] text-[13px] font-medium transition-colors duration-150 ${
-          isActive ? 'bg-accent/12 text-ink' : 'text-ink-2 hover:bg-white/[0.04] hover:text-ink'
+          isActive ? 'bg-white/[0.06] text-ink' : 'text-ink-2 hover:bg-white/[0.04] hover:text-ink'
         }`
       }
       onClick={onClick}
@@ -187,7 +230,7 @@ function NavItem({
         <>
           <span
             className={`flex size-[16px] shrink-0 items-center justify-center ${
-              isActive ? 'text-accent' : ''
+              isActive ? 'text-ink' : 'text-ink-3'
             }`}
           >
             {icon}
@@ -220,6 +263,28 @@ function estimateSidebarTerminalDims() {
 export default function Sidebar() {
   const { groups, loading, renameSession, closeSession, createSession } = useSessions();
   const navigate = useNavigate();
+  const cmd = useCommandPalette();
+  const { logout } = useAuth();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the workspace menu on outside click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -328,18 +393,60 @@ export default function Sidebar() {
 
   const sidebarContent = (
     <>
-      {/* ══════ Banner ══════ */}
-      <div className="flex h-[68px] shrink-0 items-center gap-[11px] border-b border-hairline px-[16px] pb-[17px] pt-[20px]">
-        <AlfLogo />
-        <div className="flex flex-col leading-none">
-          <span className="flex items-baseline gap-[4px] text-[15px] font-semibold leading-[18px] tracking-[-0.3px]">
-            <span className="text-ink">ALF</span>
-            <span className="text-accent">code</span>
+      {/* ══════ Workspace banner — menu button + search ══════ */}
+      <div ref={menuRef} className="relative flex h-[52px] shrink-0 items-center gap-[2px] px-[8px]">
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          className={`flex min-w-0 flex-1 items-center gap-[8px] rounded-control px-[6px] py-[6px] text-left transition-colors ${
+            menuOpen ? 'bg-white/[0.06]' : 'hover:bg-white/[0.05]'
+          }`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          data-testid="workspace-menu-button"
+        >
+          <AlfLogo size={26} />
+          <span className="truncate text-[14px] font-semibold tracking-[-0.2px] text-ink">ALF</span>
+          <span className="shrink-0 text-ink-3">
+            <ChevronDownIcon />
           </span>
-          <span className="mt-[4px] font-['JetBrains_Mono'] text-[10px] font-normal uppercase tracking-[0.6px] text-ink-3">
-            Agent Dashboard
-          </span>
-        </div>
+        </button>
+        <IconButton
+          onClick={() => { setMobileOpen(false); cmd.open(); }}
+          aria-label="Search"
+          title="Search — ⌘K"
+        >
+          <SearchIcon />
+        </IconButton>
+
+        {menuOpen && (
+          <div
+            role="menu"
+            className="elevated rim-light absolute left-[8px] right-[8px] top-[50px] z-50 overflow-hidden rounded-panel py-[5px] motion-safe:animate-[fadeIn_100ms_ease-out]"
+          >
+            <div className="px-[12px] py-[7px]">
+              <div className="truncate font-['JetBrains_Mono'] text-[12px] font-medium text-ink">user@vps</div>
+              <div className="text-[11px] text-ink-3">Single user</div>
+            </div>
+            <div className="my-[4px] h-px bg-hairline" />
+            <button
+              role="menuitem"
+              onClick={() => { setMenuOpen(false); setMobileOpen(false); navigate('/settings'); }}
+              className="flex w-full items-center gap-[9px] px-[12px] py-[7px] text-[13px] text-ink-2 transition-colors hover:bg-white/[0.05] hover:text-ink"
+            >
+              <SettingsIcon />
+              Settings
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => { setMenuOpen(false); logout(); }}
+              className="flex w-full items-center gap-[9px] px-[12px] py-[7px] text-[13px] text-ink-2 transition-colors hover:bg-white/[0.05] hover:text-ink"
+              data-testid="logout-button"
+            >
+              <LogoutIcon />
+              Log out
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ══════ Navigation ══════ */}
@@ -357,7 +464,7 @@ export default function Sidebar() {
           onClick={() => setMobileOpen(false)}
           trailing={
             totalActive > 0 ? (
-              <Badge tone="warning" mono className="ml-auto">
+              <Badge tone="neutral" mono className="ml-auto">
                 {totalActive}
               </Badge>
             ) : undefined
@@ -424,23 +531,8 @@ export default function Sidebar() {
       </div> */}
       <div className="flex-1" />
 
-      {/* ══════ User Profile ══════ */}
-      <div className="border-t border-hairline px-[8px] pt-[11px]">
-        <div className="flex items-center gap-[10px] rounded-control border border-hairline bg-surface-2 px-[11px] py-[9px]">
-          <div className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
-            U
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="font-['JetBrains_Mono'] text-[11.5px] font-medium text-ink">
-              user@vps
-            </span>
-            <span className="text-[10.5px] text-ink-3">Single user</span>
-          </div>
-        </div>
-      </div>
-
       {/* ══════ System Status ══════ */}
-      <div className="flex h-[28px] shrink-0 items-center gap-[6px] border-t border-hairline px-[18px] pb-[7px] pt-[8px]">
+      <div className="flex h-[30px] shrink-0 items-center gap-[6px] px-[16px] pb-[8px] pt-[8px]">
         <span className="size-[6px] shrink-0 rounded-full bg-success" />
         <span className="font-['JetBrains_Mono'] text-[10px] font-normal tracking-[0.4px] text-ink-3">
           daemon online
@@ -462,7 +554,7 @@ export default function Sidebar() {
 
       {/* ══════ Sidebar panel ══════ */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col border-r border-hairline bg-surface transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[240px] shrink-0 flex-col bg-void transition-transform duration-200 lg:static lg:translate-x-0 lg:bg-transparent ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         data-testid="sidebar"

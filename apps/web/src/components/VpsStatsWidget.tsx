@@ -7,9 +7,8 @@ function fmtBytes(bytes: number): string {
 }
 
 function statColor(pct: number): string {
-  if (pct >= 85) return '#f54';
-  if (pct >= 70) return '#fa0';
-  return '#2d8';
+  if (pct >= 85) return '#eb5757';
+  return '#4cb782';
 }
 
 export function VpsStatsWidget() {

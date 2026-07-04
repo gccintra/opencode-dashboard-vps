@@ -17,14 +17,14 @@ describe('StatusBadge', () => {
       render(<StatusBadge status="active" />);
       const dot = screen.getByTestId('status-dot-active');
       expect(dot).toBeInTheDocument();
-      expect(dot.style.backgroundColor).toBe('rgb(34, 221, 136)');
+      expect(dot.style.backgroundColor).toBe('rgb(94, 106, 210)');
     });
 
     it('renders yellow dot for waiting status', () => {
       render(<StatusBadge status="waiting" />);
       const dot = screen.getByTestId('status-dot-waiting');
       expect(dot).toBeInTheDocument();
-      expect(dot.style.backgroundColor).toBe('rgb(255, 170, 0)');
+      expect(dot.style.backgroundColor).toBe('rgb(138, 143, 152)');
     });
 
     it('renders gray dot for finished status', () => {

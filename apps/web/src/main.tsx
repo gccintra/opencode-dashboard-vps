@@ -26,7 +26,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ff9c9c' }}>{error.message}</pre>
           <button
             onClick={() => this.setState({ error: null })}
-            style={{ marginTop: 16, padding: '6px 14px', background: '#b3e502', color: '#0a0a0f', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+            style={{ marginTop: 16, padding: '6px 14px', background: '#5e6ad2', color: '#0a0a0f', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
           >
             Try again
           </button>

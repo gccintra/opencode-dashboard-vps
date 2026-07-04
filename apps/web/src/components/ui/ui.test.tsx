@@ -30,7 +30,7 @@ describe('Button', () => {
 
   it('applies primary variant classes', () => {
     render(<Button variant="primary">Go</Button>);
-    expect(screen.getByRole('button').className).toContain('bg-accent');
+    expect(screen.getByRole('button').className).toContain('btn-primary');
   });
 
   it('applies danger variant classes', () => {
@@ -40,7 +40,7 @@ describe('Button', () => {
 
   it('applies sm size height', () => {
     render(<Button size="sm">S</Button>);
-    expect(screen.getByRole('button').className).toContain('h-[24px]');
+    expect(screen.getByRole('button').className).toContain('h-[28px]');
   });
 
   it('fires onClick', () => {

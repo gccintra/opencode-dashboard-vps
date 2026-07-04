@@ -40,8 +40,8 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
         title={`Tema: ${current.name}`}
         className={`flex items-center gap-[5px] rounded-[3px] px-[6px] h-[20px] font-['JetBrains_Mono'] text-[10px] transition-colors select-none ${
           open
-            ? 'bg-[rgba(179,229,2,0.15)] text-[rgba(179,229,2,0.9)]'
-            : 'text-[rgba(179,229,2,0.45)] hover:text-[rgba(179,229,2,0.8)] hover:bg-[rgba(179,229,2,0.08)]'
+            ? 'bg-[rgba(94, 106, 210,0.15)] text-[rgba(94, 106, 210,0.9)]'
+            : 'text-[rgba(94, 106, 210,0.45)] hover:text-[rgba(94, 106, 210,0.8)] hover:bg-[rgba(94, 106, 210,0.08)]'
         }`}
       >
         {/* Two-dot swatch */}
@@ -79,7 +79,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
                 onClick={() => select(t)}
                 className={`flex w-full items-center gap-[10px] px-[12px] py-[7px] text-left text-[13px] transition-colors ${
                   isActive
-                    ? 'bg-[rgba(179,229,2,0.1)] text-[#f0f0f0]'
+                    ? 'bg-[rgba(94, 106, 210,0.1)] text-[#f0f0f0]'
                     : 'text-[#9aa3ad] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f0f0f0]'
                 }`}
               >
@@ -97,7 +97,7 @@ export function ThemePicker({ themeId, onChange, direction = 'up' }: ThemePicker
                 <span className="flex-1">{t.name}</span>
                 {isActive && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-5" stroke="#aaff00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 6l3 3 5-5" stroke="#5e6ad2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </button>
