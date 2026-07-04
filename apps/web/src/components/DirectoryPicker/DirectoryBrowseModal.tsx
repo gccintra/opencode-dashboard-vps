@@ -88,7 +88,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="flex items-center gap-[4px] mb-[12px] flex-wrap">
           <button
             onClick={() => setCurrentPath('/')}
-            className="text-[13px] text-[#5a626c] hover:text-[#b3e502] transition-colors"
+            className="text-[13px] text-[#5a626c] hover:text-[#5e6ad2] transition-colors"
           >
             /
           </button>
@@ -97,7 +97,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
               <span className="text-[#5a626c] text-[13px]">/</span>
               <button
                 onClick={() => setCurrentPath(crumb.path)}
-                className="text-[13px] text-[#5a626c] hover:text-[#b3e502] truncate max-w-[120px] transition-colors"
+                className="text-[13px] text-[#5a626c] hover:text-[#5e6ad2] truncate max-w-[120px] transition-colors"
               >
                 {crumb.label}
               </button>
@@ -114,7 +114,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
         <div className="max-h-[240px] overflow-y-auto rounded-[8px] border border-[rgba(255,255,255,0.06)] bg-[#0a0a0f]">
           {loading ? (
             <div className="flex items-center justify-center py-[24px]">
-              <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+              <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#5e6ad2] border-t-transparent" />
             </div>
           ) : error ? (
             <div className="px-[12px] py-[16px] text-[13px] text-red-400 text-center">
@@ -159,7 +159,7 @@ export default function DirectoryBrowseModal({ isOpen, onClose, onSelect, initia
           </button>
           <button
             onClick={handleSelect}
-            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors"
+            className="rounded-[6px] bg-[#5e6ad2] px-[16px] py-[8px] text-[13px] font-semibold text-white hover:bg-[#6e79de] transition-colors"
           >
             Select this directory
           </button>

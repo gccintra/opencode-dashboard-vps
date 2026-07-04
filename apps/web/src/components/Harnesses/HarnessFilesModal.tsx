@@ -283,7 +283,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
                 onClick={() => setTab(t)}
                 className={`px-[12px] py-[10px] text-[13px] font-medium transition-colors border-b-2 -mb-px ${
                   tab === t
-                    ? 'border-[#b3e502] text-[#f0f0f0]'
+                    ? 'border-[#5e6ad2] text-[#f0f0f0]'
                     : 'border-transparent text-[#5a626c] hover:text-[#9aa3ad]'
                 }`}
               >
@@ -313,7 +313,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="flex h-[30px] items-center gap-[6px] rounded-[6px] bg-[#b3e502] px-[12px] text-[12px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-50"
+              className="flex h-[30px] items-center gap-[6px] rounded-[6px] bg-[#5e6ad2] px-[12px] text-[12px] font-semibold text-white hover:bg-[#6e79de] transition-colors disabled:opacity-50"
             >
               <UploadIcon />
               {uploading ? 'Uploading…' : 'Upload files'}
@@ -327,7 +327,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
               Upload folder
             </button>
             {uploadSuccess && (
-              <span className="text-[12px] text-[#b3e502]">{uploadSuccess}</span>
+              <span className="text-[12px] text-[#5e6ad2]">{uploadSuccess}</span>
             )}
             {uploadError && (
               <span className="text-[12px] text-red-400">{uploadError}</span>
@@ -338,7 +338,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
           <div className="min-h-0 flex-1 overflow-y-auto">
             {loading && (
               <div className="flex items-center justify-center py-[48px]">
-                <div className="size-[20px] animate-spin rounded-full border-2 border-[rgba(255,255,255,0.1)] border-t-[#b3e502]" />
+                <div className="size-[20px] animate-spin rounded-full border-2 border-[rgba(255,255,255,0.1)] border-t-[#5e6ad2]" />
               </div>
             )}
             {error && !loading && (
@@ -346,7 +346,7 @@ export function HarnessFilesModal({ open, harness, onClose }: HarnessFilesModalP
                 <p className="text-[13px] text-red-400">{error}</p>
                 <button
                   onClick={loadFiles}
-                  className="text-[12px] text-[#b3e502] underline hover:text-[#c2f516]"
+                  className="text-[12px] text-[#5e6ad2] underline hover:text-[#6e79de]"
                 >
                   Retry
                 </button>

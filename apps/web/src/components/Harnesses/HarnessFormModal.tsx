@@ -81,7 +81,7 @@ export function HarnessFormModal({
                 }
                 setNameError('');
               }}
-              className="w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
+              className="w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#5e6ad2]/40 focus:bg-white/[0.05]"
               placeholder="Template name"
               maxLength={NAME_MAX_LENGTH}
               autoFocus
@@ -111,7 +111,7 @@ export function HarnessFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-[8px] border border-white/[0.07] bg-white/[0.02] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.04]"
+              className="w-full resize-none rounded-[8px] border border-white/[0.07] bg-white/[0.02] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none transition-colors focus:border-[#5e6ad2]/40 focus:bg-white/[0.04]"
               placeholder="Optional description"
             />
           </div>
@@ -134,7 +134,7 @@ export function HarnessFormModal({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#b3e502] px-[16px] py-[8px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)] disabled:opacity-50"
+            className="kb-sheen relative overflow-hidden rounded-[9px] bg-[#5e6ad2] px-[16px] py-[8px] text-[13px] font-bold text-white shadow-[0_4px_16px_-4px_rgba(94, 106, 210,0.5)] transition-all hover:bg-[#6e79de] hover:shadow-[0_6px_22px_-4px_rgba(94, 106, 210,0.65)] disabled:opacity-50"
           >
             {loading ? 'Saving...' : submitLabel}
           </button>

@@ -47,7 +47,7 @@ export default function GlobalClipboardToast() {
         sm:bottom-4 sm:left-4 sm:translate-x-0"
       data-testid="global-clipboard-toast"
     >
-      <span className="text-[#b3e502]">
+      <span className="text-[#5e6ad2]">
         {clipboard.action === 'cut' ? <ScissorsIcon /> : <CopyIcon />}
       </span>
       <div className="min-w-0 flex-1">

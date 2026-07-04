@@ -138,7 +138,9 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            className="flex-1 rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] placeholder:text-[#5a626c] outline-none focus:border-white/[0.14] disabled:opacity-50"
+            className={`h-[38px] flex-1 rounded-control border bg-white/[0.03] px-[11px] font-['JetBrains_Mono'] text-[13px] text-ink placeholder:text-ink-4 outline-none transition-colors hover:bg-white/[0.05] focus:bg-white/[0.04] focus:ring-1 focus:ring-white/20 disabled:opacity-50 ${
+              error ? 'border-danger/60 focus:border-danger/60' : 'border-hairline focus:border-white/70'
+            }`}
             placeholder={placeholder || '/home/user/projects/my-project'}
             autoComplete="off"
           />
@@ -146,24 +148,24 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
             type="button"
             onClick={() => setBrowseModalOpen(true)}
             disabled={disabled}
-            className="rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] text-[13px] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="h-[38px] whitespace-nowrap rounded-control border border-hairline-strong bg-transparent px-[14px] text-[13px] text-ink-2 transition-colors hover:bg-white/[0.05] hover:text-ink disabled:opacity-50"
           >
             Browse
           </button>
         </div>
 
         {showDropdown && (
-          <div className="absolute left-0 right-0 top-full mt-[4px] max-h-[200px] overflow-y-auto rounded-[8px] border border-white/[0.07] bg-[#111118] z-50 shadow-lg">
+          <div className="elevated absolute left-0 right-0 top-full z-50 mt-[4px] max-h-[200px] overflow-y-auto rounded-panel">
             {suggestions.map((entry, idx) => (
               <button
                 key={entry.path}
                 type="button"
                 onClick={() => handleSuggestionClick(entry)}
                 onMouseEnter={() => setHighlightedIdx(idx)}
-                className={`w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left font-['JetBrains_Mono'] text-[12px] transition-colors ${
+                className={`flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left font-['JetBrains_Mono'] text-[12px] transition-colors ${
                   idx === highlightedIdx
-                    ? 'bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
-                    : 'text-[#ccd] hover:bg-[rgba(255,255,255,0.04)]'
+                    ? 'bg-white/[0.08] text-ink'
+                    : 'text-ink-2 hover:bg-white/[0.05]'
                 }`}
               >
                 <svg
@@ -171,10 +173,11 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#5a626c"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  className={idx === highlightedIdx ? 'text-ink' : 'text-ink-4'}
                 >
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
@@ -184,7 +187,7 @@ export default function DirectoryPicker({ value, onChange, error, disabled, plac
           </div>
         )}
 
-        {error && <p className="mt-[4px] text-[12px] text-red-400">{error}</p>}
+        {error && <p className="mt-[5px] text-[12px] text-danger">{error}</p>}
       </div>
 
       <DirectoryBrowseModal

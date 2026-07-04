@@ -77,7 +77,7 @@ function FileIcon({ extension }: { extension: string }) {
         js: '#f0db4f',
         jsx: '#f0db4f',
         json: '#f0db4f',
-        md: '#b3e502',
+        md: '#5e6ad2',
         css: '#42a5f5',
         html: '#e65100',
         svg: '#ff9800',
@@ -123,7 +123,7 @@ function ChevronRightIcon({ open = false }: { open?: boolean }) {
 
 function Spinner() {
   return (
-    <div className="h-3 w-3 animate-spin rounded-full border border-[#b3e502] border-t-transparent" />
+    <div className="h-3 w-3 animate-spin rounded-full border border-[#5e6ad2] border-t-transparent" />
   );
 }
 
@@ -288,7 +288,7 @@ function CreateModal({
             if (e.key === 'Enter') handleSubmit();
             if (e.key === 'Escape') onCancel();
           }}
-          className="mb-[14px] w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-3 py-[8px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] outline-none transition-colors focus:border-[#b3e502]/40 focus:bg-white/[0.05]"
+          className="mb-[14px] w-full rounded-[8px] border border-white/[0.07] bg-white/[0.03] px-3 py-[8px] font-['JetBrains_Mono'] text-[13px] text-[#f0f0f0] outline-none transition-colors focus:border-[#5e6ad2]/40 focus:bg-white/[0.05]"
           data-testid="create-input"
         />
         <div className="flex justify-end gap-2">
@@ -301,7 +301,7 @@ function CreateModal({
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || value.trim().includes('/')}
-            className="kb-sheen relative overflow-hidden rounded-[8px] bg-[#b3e502] px-[14px] py-[6px] text-[12px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] disabled:opacity-40"
+            className="kb-sheen relative overflow-hidden rounded-[8px] bg-[#5e6ad2] px-[14px] py-[6px] text-[12px] font-bold text-white shadow-[0_4px_16px_-4px_rgba(94, 106, 210,0.5)] transition-all hover:bg-[#6e79de] disabled:opacity-40"
           >
             Create
           </button>
@@ -377,10 +377,10 @@ function LargeFileWarning({
       onClick={onCancel}
     >
       <div
-        className="w-[320px] rounded-[14px] border border-[#fa0]/30 bg-[#111118] p-[20px] shadow-2xl"
+        className="w-[320px] rounded-[14px] border border-[#eb5757]/30 bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-[8px] text-[17px] font-bold text-[#fa0]">
+        <h3 className="mb-[8px] text-[17px] font-bold text-[#eb5757]">
           Large File Warning
         </h3>
         <p className="mb-[16px] text-[13px] text-[#9aa3ad]">
@@ -396,7 +396,7 @@ function LargeFileWarning({
           </button>
           <button
             onClick={onContinue}
-            className="rounded-[8px] bg-[#fa0]/15 border border-[#fa0]/30 px-[14px] py-[6px] text-[12px] font-semibold text-[#fa0] hover:bg-[#fa0]/25 transition-colors"
+            className="rounded-[8px] bg-[#eb5757]/15 border border-[#eb5757]/30 px-[14px] py-[6px] text-[12px] font-semibold text-[#eb5757] hover:bg-[#eb5757]/25 transition-colors"
           >
             Open
           </button>
@@ -596,9 +596,9 @@ function TreeNodeItem({
       <div
         className={`flex min-h-[32px] items-center gap-1 cursor-pointer select-none py-0.5 pr-2 text-[13px] transition-colors ${
           isSelected
-            ? 'bg-[rgba(179,229,2,0.08)] text-[#f0f0f0]'
+            ? 'bg-[rgba(94, 106, 210,0.08)] text-[#f0f0f0]'
             : isDragOver
-              ? 'bg-[rgba(179,229,2,0.12)]'
+              ? 'bg-[rgba(94, 106, 210,0.12)]'
               : 'hover:bg-[rgba(255,255,255,0.04)] active:bg-[rgba(255,255,255,0.06)]'
         } ${draggingPath === fullPath ? 'opacity-40' : ''}`}
         style={{ paddingLeft }}
@@ -722,7 +722,7 @@ function Breadcrumb({
     >
       <button
         onClick={() => onNavigate('')}
-        className={`shrink-0 hover:text-[#f0f0f0] transition-colors ${currentPath === '' ? 'text-[#b3e502]' : 'text-[#9aa3ad]'}`}
+        className={`shrink-0 hover:text-[#f0f0f0] transition-colors ${currentPath === '' ? 'text-[#5e6ad2]' : 'text-[#9aa3ad]'}`}
       >
         root
       </button>
@@ -731,7 +731,7 @@ function Breadcrumb({
           <BreadcrumbIcon />
           <button
             onClick={() => onNavigate(parts.slice(0, i + 1).join('/'))}
-            className={`hover:text-[#f0f0f0] transition-colors ${i === parts.length - 1 ? 'text-[#b3e502]' : 'text-[#9aa3ad]'}`}
+            className={`hover:text-[#f0f0f0] transition-colors ${i === parts.length - 1 ? 'text-[#5e6ad2]' : 'text-[#9aa3ad]'}`}
           >
             {part}
           </button>
@@ -817,11 +817,11 @@ function UploadProgress({ progress, label }: { progress: number; label: string }
     >
       <div className="mb-1 flex items-center justify-between text-[11px] text-[#9aa3ad]">
         <span>Uploading{label ? '...' : '...'}</span>
-        {label && <span className="text-[#b3e502]">{label}</span>}
+        {label && <span className="text-[#5e6ad2]">{label}</span>}
       </div>
       <div className="h-1 rounded-full bg-[rgba(255,255,255,0.08)] overflow-hidden">
         <div
-          className="h-full rounded-full bg-[#b3e502] transition-all"
+          className="h-full rounded-full bg-[#5e6ad2] transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -1412,7 +1412,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8" data-testid="filetree-loading">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#5e6ad2] border-t-transparent" />
       </div>
     );
   }
@@ -1437,8 +1437,8 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
     <div ref={containerRef} className="flex h-full flex-col" data-testid="filetree-container">
       {/* Clipboard indicator */}
       {globalClipboard && (
-        <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(179,229,2,0.06)] px-3 py-1.5">
-          <span className="min-w-0 flex-1 truncate text-[11px] text-[#b3e502]">
+        <div className="flex min-h-[36px] items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(94, 106, 210,0.06)] px-3 py-1.5">
+          <span className="min-w-0 flex-1 truncate text-[11px] text-[#5e6ad2]">
             {globalClipboard.fileName} {globalClipboard.action}
           </span>
           <span className="shrink-0 text-[10px] text-[#5a626c]">
@@ -1487,7 +1487,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 : currentPath,
             })
           }
-          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#b3e502]"
+          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#5e6ad2]"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
@@ -1511,7 +1511,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 : currentPath,
             })
           }
-          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#b3e502]"
+          className="flex min-h-[30px] w-[28px] shrink-0 items-center justify-center rounded-[4px] border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#5e6ad2]"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path
@@ -1566,7 +1566,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
             }}
             className={`flex min-h-[30px] items-center gap-[5px] rounded-[4px] border px-[8px] text-[12px] font-medium transition-colors ${
               uploadMenuOpen
-                ? 'border-[rgba(179,229,2,0.4)] bg-[rgba(179,229,2,0.08)] text-[#b3e502]'
+                ? 'border-[rgba(94, 106, 210,0.4)] bg-[rgba(94, 106, 210,0.08)] text-[#5e6ad2]'
                 : 'border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb]'
             }`}
           >
@@ -1650,7 +1650,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
 
       {/* Tree — also an external drop zone for files/folders */}
       <div
-        className={`flex-1 overflow-y-auto py-1 ${draggingPath ? 'outline-dashed outline-1 outline-[rgba(179,229,2,0.15)]' : ''}`}
+        className={`flex-1 overflow-y-auto py-1 ${draggingPath ? 'outline-dashed outline-1 outline-[rgba(94, 106, 210,0.15)]' : ''}`}
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = draggingPath ? 'move' : 'copy';
@@ -1780,17 +1780,17 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 setUploadMenuOpen(false);
               }}
             >
-              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(179,229,2,0.1)]">
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(94, 106, 210,0.1)]">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path
                     d="M4 3h7l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"
-                    stroke="#b3e502"
+                    stroke="#5e6ad2"
                     strokeWidth="1.4"
                   />
-                  <path d="M11 3v4h4" stroke="#b3e502" strokeWidth="1.4" />
+                  <path d="M11 3v4h4" stroke="#5e6ad2" strokeWidth="1.4" />
                   <path
                     d="M9 8.5v5M6.5 11l2.5-2.5 2.5 2.5"
-                    stroke="#b3e502"
+                    stroke="#5e6ad2"
                     strokeWidth="1.3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1811,16 +1811,16 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                 setUploadMenuOpen(false);
               }}
             >
-              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(179,229,2,0.1)]">
+              <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(94, 106, 210,0.1)]">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path
                     d="M2 5.5A2 2 0 014 3.5h4.172a1 1 0 01.707.293L10.5 5.5H15a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1V5.5z"
-                    stroke="#b3e502"
+                    stroke="#5e6ad2"
                     strokeWidth="1.4"
                   />
                   <path
                     d="M9 8v5M6.5 10.5L9 8l2.5 2.5"
-                    stroke="#b3e502"
+                    stroke="#5e6ad2"
                     strokeWidth="1.3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1902,7 +1902,7 @@ const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
                   </span>
                   <button
                     onClick={() => handleRestore(item)}
-                    className="shrink-0 rounded-[3px] border border-white/[0.07] px-1.5 py-0.5 text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
+                    className="shrink-0 rounded-[3px] border border-white/[0.07] px-1.5 py-0.5 text-[10px] text-[#9aa3ad] hover:border-[rgba(94, 106, 210,0.3)] hover:text-[#5e6ad2]"
                   >
                     Restore
                   </button>

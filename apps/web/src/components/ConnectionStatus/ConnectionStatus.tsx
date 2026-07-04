@@ -16,7 +16,7 @@ export type ConnectionState = 'connected' | 'reconnecting' | 'offline';
 
 const DOT_COLORS: Record<ConnectionState, string> = {
   connected: '#2d8',
-  reconnecting: '#fa0',
+  reconnecting: '#8a8f98',
   offline: '#f54',
 };
 

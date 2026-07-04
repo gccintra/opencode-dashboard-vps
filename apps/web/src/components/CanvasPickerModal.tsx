@@ -54,9 +54,9 @@ function CanvasRow({
   return (
     <div
       onClick={() => !editing && !confirmDelete && onSelect(canvas.id)}
-      className="group flex cursor-pointer items-center gap-[10px] rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[10px] transition-all hover:border-[#b3e502]/30 hover:bg-[rgba(179,229,2,0.05)]"
+      className="group flex cursor-pointer items-center gap-[10px] rounded-[10px] border border-white/[0.06] bg-white/[0.02] px-[12px] py-[10px] transition-all hover:border-[#5e6ad2]/30 hover:bg-[rgba(94, 106, 210,0.05)]"
     >
-      <span className="shrink-0 size-[8px] rounded-full bg-[rgba(179,229,2,0.5)]" />
+      <span className="shrink-0 size-[8px] rounded-full bg-[rgba(94, 106, 210,0.5)]" />
 
       {editing ? (
         <input
@@ -70,7 +70,7 @@ function CanvasRow({
           }}
           onBlur={save}
           onClick={(e) => e.stopPropagation()}
-          className="min-w-0 flex-1 rounded-[5px] border border-[rgba(179,229,2,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] text-[13px] font-medium text-[#f0f0f0] outline-none"
+          className="min-w-0 flex-1 rounded-[5px] border border-[rgba(94, 106, 210,0.3)] bg-[rgba(255,255,255,0.06)] px-[6px] py-[3px] text-[13px] font-medium text-[#f0f0f0] outline-none"
         />
       ) : (
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#e6e8eb] group-hover:text-white">
@@ -89,7 +89,7 @@ function CanvasRow({
         <div className="flex shrink-0 items-center gap-[2px] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button
             onClick={startEdit}
-            className="flex size-[24px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(179,229,2,0.1)] hover:text-[#b3e502] transition-colors"
+            className="flex size-[24px] items-center justify-center rounded-[5px] text-[#5a626c] hover:bg-[rgba(94, 106, 210,0.1)] hover:text-[#5e6ad2] transition-colors"
             aria-label="Renomear canvas"
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
@@ -214,7 +214,7 @@ export default function CanvasPickerModal({ open, onClose, onSelect }: Props) {
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="flex items-center gap-[5px] rounded-[8px] bg-[#b3e502] px-[10px] py-[5px] text-[12px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
+              className="flex items-center gap-[5px] rounded-[8px] bg-[#5e6ad2] px-[10px] py-[5px] text-[12px] font-bold text-white transition-all hover:bg-[#6e79de] disabled:opacity-50"
             >
               {creating ? (
                 <div className="size-[10px] animate-spin rounded-full border-[1.5px] border-[#0a0a0f] border-t-transparent" />
@@ -249,7 +249,7 @@ export default function CanvasPickerModal({ open, onClose, onSelect }: Props) {
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="rounded-[9px] bg-[#b3e502] px-[16px] py-[9px] text-[13px] font-bold text-[#0a0a0f] transition-all hover:bg-[#c2f516] disabled:opacity-50"
+                className="rounded-[9px] bg-[#5e6ad2] px-[16px] py-[9px] text-[13px] font-bold text-white transition-all hover:bg-[#6e79de] disabled:opacity-50"
               >
                 Criar primeiro canvas
               </button>

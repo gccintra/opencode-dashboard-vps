@@ -81,7 +81,7 @@ function FileTabIcon({ extension }: { extension: string }) {
         '.js': '#f0db4f',
         '.jsx': '#f0db4f',
         '.json': '#f0db4f',
-        '.md': '#b3e502',
+        '.md': '#5e6ad2',
         '.css': '#42a5f5',
         '.html': '#e65100',
       } as Record<string, string>
@@ -123,7 +123,7 @@ function UnsavedModal({
         className="w-[300px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[20px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-[8px] text-[17px] font-bold text-[#fa0]">
+        <h3 className="mb-[8px] text-[17px] font-bold text-[#eb5757]">
           Unsaved Changes
         </h3>
         <p className="mb-4 text-[13px] text-[#9aa3ad]">
@@ -144,7 +144,7 @@ function UnsavedModal({
           </button>
           <button
             onClick={onSave}
-            className="rounded-[4px] bg-[#b3e502] px-3 py-1 text-[12px] font-medium text-[#0a0a0f]"
+            className="rounded-[4px] bg-[#5e6ad2] px-3 py-1 text-[12px] font-medium text-white"
           >
             Save
           </button>
@@ -195,7 +195,7 @@ function ThemePicker({
                   onChange(t);
                   setOpen(false);
                 }}
-                className={`block w-full px-3 py-1.5 text-left text-[12px] hover:bg-[rgba(255,255,255,0.06)] ${t === current ? 'text-[#b3e502]' : 'text-[#ccd]'}`}
+                className={`block w-full px-3 py-1.5 text-left text-[12px] hover:bg-[rgba(255,255,255,0.06)] ${t === current ? 'text-[#5e6ad2]' : 'text-[#ccd]'}`}
               >
                 {t}
               </button>
@@ -561,10 +561,10 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               d="M6 3h7l5 5v12a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"
-              stroke="#b3e502"
+              stroke="#5e6ad2"
               strokeWidth="1.5"
             />
-            <path d="M13 3v5h5" stroke="#b3e502" strokeWidth="1.5" />
+            <path d="M13 3v5h5" stroke="#5e6ad2" strokeWidth="1.5" />
           </svg>
         </div>
         <p className="text-[13px] text-[#7a828c]">Select a file to edit</p>
@@ -593,7 +593,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
           <button
             onClick={() => saveFile(activeTab!, activeTabIndex)}
             disabled={saving}
-            className="flex min-h-[44px] shrink-0 items-center gap-1 px-3 text-[12px] font-medium text-[#b3e502] active:opacity-70 disabled:opacity-40"
+            className="flex min-h-[44px] shrink-0 items-center gap-1 px-3 text-[12px] font-medium text-[#5e6ad2] active:opacity-70 disabled:opacity-40"
           >
             {saving ? '…' : 'Save'}
           </button>
@@ -607,7 +607,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                 <span className="ml-1.5 text-[13px] text-[#f0f0f0] truncate">
                   {activeTab.fileName}
                 </span>
-                {activeTab.modified && <span className="ml-1.5 text-[#b3e502] text-[10px]">●</span>}
+                {activeTab.modified && <span className="ml-1.5 text-[#5e6ad2] text-[10px]">●</span>}
               </>
             )}
           </div>
@@ -631,14 +631,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                   onClick={() => setActiveTabIndex(i)}
                   className={`flex min-h-[40px] items-center gap-1.5 border-r border-[rgba(255,255,255,0.06)] px-3 py-2 text-left text-[12px] transition-colors shrink-0 cursor-pointer ${
                     i === activeTabIndex
-                      ? 'border-b-2 border-b-[#b3e502] bg-[#0a0a0f] text-[#f0f0f0]'
+                      ? 'border-b-2 border-b-[#5e6ad2] bg-[#0a0a0f] text-[#f0f0f0]'
                       : 'text-[#9aa3ad] hover:text-[#e6e8eb]'
-                  } ${isDragTarget ? 'border-l-2 border-l-[#b3e502]' : ''}`}
+                  } ${isDragTarget ? 'border-l-2 border-l-[#5e6ad2]' : ''}`}
                   data-testid={`tab-${i}`}
                 >
                   <FileTabIcon extension={tabExt} />
                   <span className="max-w-[120px] truncate">{tab.fileName}</span>
-                  {tab.modified && <span className="text-[#b3e502] text-[10px]">●</span>}
+                  {tab.modified && <span className="text-[#5e6ad2] text-[10px]">●</span>}
                   <span
                     role="button"
                     tabIndex={-1}
@@ -659,12 +659,12 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
         {activeTab && (
           <div className="flex shrink-0 items-center gap-2 px-3">
             {saving && <span className="text-[10px] text-[#9aa3ad]">Saving…</span>}
-            {!saving && activeTab.modified && <span className="text-[#b3e502] text-[10px]">●</span>}
+            {!saving && activeTab.modified && <span className="text-[#5e6ad2] text-[10px]">●</span>}
             {extension && <LanguageBadge extension={extension} />}
             <button
               onClick={toggleWordWrap}
               title="Toggle word wrap"
-              className={`rounded-[3px] px-1.5 py-px text-[10px] transition-colors ${wordWrap ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502]' : 'bg-[rgba(255,255,255,0.05)] text-[#5a626c] hover:text-[#9aa3ad]'}`}
+              className={`rounded-[3px] px-1.5 py-px text-[10px] transition-colors ${wordWrap ? 'bg-[rgba(94, 106, 210,0.15)] text-[#5e6ad2]' : 'bg-[rgba(255,255,255,0.05)] text-[#5a626c] hover:text-[#9aa3ad]'}`}
             >
               wrap
             </button>
@@ -856,7 +856,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
                     </span>
                     <button
                       onClick={() => restoreSnapshot(entry.content)}
-                      className="rounded-[3px] border border-white/[0.07] px-2 py-0.5 text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502]"
+                      className="rounded-[3px] border border-white/[0.07] px-2 py-0.5 text-[10px] text-[#9aa3ad] hover:border-[rgba(94, 106, 210,0.3)] hover:text-[#5e6ad2]"
                     >
                       Restore
                     </button>

@@ -120,7 +120,7 @@ export default function HarnessPreviewModal({
               onChange={(e) =>
                 onHarnessChange(e.target.value || null)
               }
-              className="w-full rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#b3e502] transition-colors"
+              className="w-full rounded-[8px] border border-white/[0.07] bg-[#0a0a0f] px-[12px] py-[9px] text-[14px] text-[#f0f0f0] appearance-none cursor-pointer focus:outline-none focus:border-[#5e6ad2] transition-colors"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
@@ -168,7 +168,7 @@ export default function HarnessPreviewModal({
               height="16"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#fc0"
+              stroke="#eb5757"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -178,7 +178,7 @@ export default function HarnessPreviewModal({
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
-            <span className="text-[13px] text-[#fc0]">
+            <span className="text-[13px] text-danger">
               {preview!.conflicts.length} file(s) already exist in this project.
               Enable overwrite to replace them.
             </span>
@@ -192,7 +192,7 @@ export default function HarnessPreviewModal({
               type="checkbox"
               checked={overwrite}
               onChange={(e) => setOverwrite(e.target.checked)}
-              className="h-[16px] w-[16px] rounded-[3px] border border-[rgba(255,255,255,0.12)] bg-[#0a0a0f] accent-[#b3e502] cursor-pointer"
+              className="h-[16px] w-[16px] rounded-[3px] border border-[rgba(255,255,255,0.12)] bg-[#0a0a0f] accent-[#5e6ad2] cursor-pointer"
             />
             <span className="text-[13px] text-[#ccd]">
               Overwrite existing files
@@ -236,7 +236,7 @@ export default function HarnessPreviewModal({
           <button
             onClick={() => onApply(overwrite)}
             disabled={!selectedHarnessId || applying}
-            className="rounded-[6px] bg-[#b3e502] px-[16px] py-[8px] text-[13px] font-semibold text-[#0a0a0f] hover:bg-[#c2f516] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
+            className="rounded-[6px] bg-[#5e6ad2] px-[16px] py-[8px] text-[13px] font-semibold text-white hover:bg-[#6e79de] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
           >
             {applying ? (
               <>

@@ -96,14 +96,14 @@ describe('DirectoryPicker', () => {
     render(<DirectoryPicker {...defaultProps} error="Invalid path" />);
     const errorElement = screen.getByText('Invalid path');
     expect(errorElement).toBeInTheDocument();
-    expect(errorElement.className).toContain('text-red-400');
+    expect(errorElement.className).toContain('text-danger');
   });
 
   it('shows error styling when error prop is provided', () => {
     render(<DirectoryPicker {...defaultProps} error="Invalid path" />);
     const errorElement = screen.getByText('Invalid path');
     expect(errorElement).toBeInTheDocument();
-    expect(errorElement.className).toContain('text-red-400');
+    expect(errorElement.className).toContain('text-danger');
   });
 
   it('opens browse modal on Browse click', async () => {
