@@ -1,212 +1,177 @@
-# Graphite — Visual Identity
+# ALF — Visual Identity
 
-Mac-native developer-tool aesthetic. This document is the source of truth for the app's visual language and for migrating the remaining Aurora Glass screens.
+Monochrome, glass-accented developer-tool aesthetic. This document is the source of truth for the app's visual language and for migrating the remaining screens to it. Benchmark: **Linear** (restraint, framed content window, dark glass) — but strictly black/white with a single amber signal.
 
-Stack: React + Tailwind v4 (`@theme` tokens in `src/index.css`), system font stack, JetBrains Mono via `@fontsource`. No CSS-in-JS, no external UI kit. Shared primitives live in `src/components/ui/`.
+Stack: React + Tailwind v4 (`@theme` tokens in `src/index.css`), **Geist** (UI) + **JetBrains Mono** (data/terminal) via `@fontsource`. No CSS-in-JS, no external UI kit. Shared primitives live in `src/components/ui/`.
 
 ---
 
 ## 1. Concept
 
-**Dark graphite mac chrome — dense, flat, quiet.**
+**Monochrome. Glass. One amber signal.**
 
-- Two-tone chrome like Finder/Xcode: sidebar and panels sit on a slightly lighter neutral (`surface`) than the content canvas (`bg`).
-- **Hairline dividers** (1px, low-alpha white) do the structural work — not shadows, not blur.
-- Controls are small and dense: 28px default height, 24px compact, 13px text, 6px radius.
-- A single **electric-lime** accent (`#b3e502`) used sparingly — primary buttons, active nav selection, focus rings, live dots.
-- Semantic colors are the mac traffic lights: danger `#ff5f57`, warning `#febc2e`, success `#28c840`.
+- The entire interface is **black + white + neutral gray**. Every surface is strictly hue-free (R = G = B).
+- **Amber `#ffb224` is the only color, and it is a SIGNAL, never chrome.** It appears only to say *look here*: a live/active session, a warning. It is never a button fill, a focus ring, a hover, or a selection.
+- **Flat.** No glossy gradients, no drop-shadow "3D" on buttons. Depth comes from the **surface ladder**, **hairlines**, **dark frosted glass**, and a **light-catching rim** — never from skeuomorphic highlights.
+- **Framed content window**: the sidebar sits borderless on the app shell; the content is a floating rounded panel whose border reads around the whole section (Linear).
+- **Dense, quiet controls**: 34px default button/field height, 13px text, 6px radius. Mono for all data (paths, counts, IDs, timestamps).
 
-**What died with Aurora Glass** (do not reintroduce): aurora blooms, grid overlay, `backdrop-blur` glassmorphism, `kb-sheen` sweeps, `kb-rise` entrances, hover `-translate-y` lifts, lime glow shadows, Syne display font.
+**Do not reintroduce** (died across earlier iterations): the electric-lime/indigo accents, warm grays, aurora blooms, glossy `.control-raised` button gradients, `saturate()` on glass (it warms the neutral), amber anywhere in chrome.
 
-North star references: macOS system apps (Finder, Xcode source lists), Orca (stablyai), Linear (restraint).
+North star: Linear (content window, dark glass popovers, monochrome), macOS vibrancy (frosted materials).
 
 ---
 
 ## 2. Design Tokens
 
-Defined in `src/index.css` `@theme`. **Always use the token class, never the raw hex.**
+Defined in `src/index.css` `@theme`. **Always use the token class, never the raw hex.** All color flows from these vars — recoloring the whole app is a one-file change.
 
-### 2.1 Surfaces
+### 2.1 Surfaces — neutral near-black ladder (hue-free)
 
 | Class | Value | Use |
 |-------|-------|-----|
-| `bg-bg` | `#0e0e11` | App canvas, page roots, toolbars. |
-| `bg-surface` | `#16161a` | Sidebar, panels, cards, section headers. |
-| `bg-surface-2` | `#1c1c21` | Raised controls, modals, profile tiles. |
-| `bg-surface-3` | `#232329` | Hover of surface-2, menus, active segmented item. |
-| `bg-black/20`–`/25` | — | Inset fields (inputs, segmented track). |
+| `bg-void` | `#000000` | App shell base, behind the framed window; sidebar ground. |
+| `bg-bg` | `#090909` | The framed content window canvas. |
+| `bg-surface` | `#101010` | Panels, cards. |
+| `bg-surface-2` | `#171717` | Menus, raised surfaces. |
+| `bg-surface-3` | `#242424` | Hover of surface-2. |
+| `bg-white/[0.02]`–`[0.05]` | — | Preferred **translucent** fills for tiles & fields — settle onto any surface (glass or solid) instead of reading as a heavy block. |
 
 ### 2.2 Borders
 
-| Class | Use |
-|-------|-----|
-| `border-hairline` | Default 1px divider everywhere (`rgba(255,255,255,0.08)`). |
-| `border-hairline-strong` | Hover emphasis (`0.14`). |
-| `border-accent/30`–`/40` | Focus / active / drag-over. |
+| Class | Value | Use |
+|-------|-------|-----|
+| `border-hairline` | `rgba(255,255,255,0.09)` | Default 1px divider / field & panel border. |
+| `border-hairline-strong` | `rgba(255,255,255,0.18)` | Secondary-button outline, emphasis edges. |
+| `.rim-light` | gradient `::before` | The **signature edge** — see §3.2. Use instead of a flat border on floating elements. |
 
-### 2.3 Text ladder
+### 2.3 Text — white → neutral gray
 
 | Class | Value | Use |
 |-------|-------|-----|
-| `text-ink` | `#e8e8ea` | Titles, primary text, active nav. |
-| `text-ink-2` | `#98989f` | Secondary text, inactive nav, descriptions. |
-| `text-ink-3` | `#66666e` | Muted labels, timestamps, section headers. |
-| `text-ink-4` | `#4a4a52` | Faint (dead-session dots, decorative glyphs). |
+| `text-ink` | `#fafafa` | Primary text, numbers, active nav. |
+| `text-ink-2` | `#a6a6a6` | Secondary text, default control labels. |
+| `text-ink-3` | `#737373` | Metadata, uppercase labels, muted. |
+| `text-ink-4` | `#4d4d4d` | Placeholders, faint counts, disabled. |
 
-### 2.4 Brand + semantics
+### 2.4 Accent — amber (signal only)
 
-| Class | Value | Use |
+| Token | Value | Use |
 |-------|-------|-----|
-| `accent` | `#b3e502` | Primary buttons (`bg-accent text-black`), active selection tint (`bg-accent/12`), focus ring (`ring-accent/50`), live dots. |
-| `accent-hover` | `#c2f516` | Hover of lime fills. |
-| `danger` | `#ff5f57` | Destructive actions, errors. Tint pattern: `border-danger/25 bg-danger/10 text-danger`. |
-| `warning` | `#febc2e` | Waiting states, counts. Same tint pattern. |
-| `success` | `#28c840` | Connected/active/online. Same tint pattern. |
+| `--color-accent` / `text-accent` / `bg-accent` | `#ffb224` | **Signal only**: active status glyph, live counts, warnings. |
+| `--color-accent-hover` | `#ffc250` | Hover of an amber signal. |
+| `--color-accent-ink` | `#1a1100` | Dark foreground for the rare element sitting ON an amber fill. |
 
-### 2.5 Radius
+### 2.5 Semantics
 
-| Class | Value | Use |
+| Token | Value | Use |
 |-------|-------|-----|
-| `rounded-control` | 6px | Buttons, inputs, nav pills, chips-with-height. |
-| `rounded-panel` | 8px | Cards, panels, empty-state tiles. |
-| `rounded-modal` | 10px | Modals, menus. |
-| `rounded-[4px]` | 4px | Badges, tiny chips. |
+| `--color-danger` | `#eb5757` | Errors, destructive actions, conflict. |
+| `--color-warning` | `#f2c94c` | Warnings (amber family). |
+| `--color-success` | `#4cb782` | Done / success / health only (the one place green is allowed). |
 
-### 2.6 Elevation
+### 2.6 Radius & fonts
 
-Flat by default. Only two exceptions:
-- Raised controls (default Button, active segmented item): `shadow-[inset_0_0.5px_0_rgba(255,255,255,0.06)]` — a subtle top bevel.
-- Modals/menus: real drop shadow (`shadow-2xl`), scrim `bg-black/60` (no blur).
-
-Nothing else gets a shadow. No glows.
+`--radius-control 6px` · `--radius-panel 8px` · `--radius-modal 12px`.
+`--font-sans` = `'Geist Variable'` (fallback Inter). `--font-mono` = `'JetBrains Mono'`.
 
 ---
 
-## 3. Typography
+## 3. Materials & depth
 
-- **UI:** system stack (`--font-sans`: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto`). Body inherits automatically — no font class needed.
-- **Mono:** `font-['JetBrains_Mono']` for IDs, counts, paths, code, terminal, badges with numerals.
-- Scale: `text-[11px]` captions/labels (uppercase + `tracking-[0.5px]` for section labels), `text-[12px]` compact controls, `text-[13px]` default UI, `text-[15px]` section/modal titles, `text-[17px] sm:text-[20px]` page titles. Titles use `font-semibold tracking-[-0.2px]` — never extrabold, never Syne.
+Depth lives ONLY on floating/interactive layers. Base surfaces stay flat + tonal.
 
----
+### 3.1 Glass (modals & command palette)
 
-## 4. Motion
+`.glass-panel` (modals) and `.glass-palette` (⌘K) — **identical material** (the New Project modal must match the command palette exactly):
 
-- `transition-colors duration-150` — the only standard transition.
-- Drawers/slides keep their existing `transition-transform duration-200`.
-- `animate-pulse` allowed for live dots; `animate-spin` for spinners. No `animate-ping` halos.
-- No entrance animations, no hover lifts, no sheens. Keep everything ≤ 300ms and respect `prefers-reduced-motion`.
+- **Base**: `rgba(18,19,21,0.93)` — near-opaque dark, with a whisper of cool (B a hair above R) that cancels any warm cast without reading blue.
+- **Filter**: `backdrop-filter: blur(16px) brightness(0.72)` — subtle blur, darkened backdrop.
+- **No** white "milky" film, **no** `saturate()`.
+- Pair with `.rim-light` for the edge and a deep drop shadow (`0 40px 90px -24px rgba(0,0,0,0.9)`).
+- Scrims are light (`bg-black/35`–`/40`) with **no** blur of their own, so the glass does the frosting.
 
----
+### 3.2 Light-catching rim — `.rim-light`
 
-## 5. Layout primitives
+The signature edge of the system: a 1px **gradient** border (bright at the top-lit corner, fading down, a faint catch at the opposite corner) instead of a flat uniform hairline. Implemented as a masked `::before` so it hugs rounded corners and never fills the element.
 
-### 5.1 Page shell
+Apply to: glass modals/palette, **stat tiles**, **list panels**, menu popovers. Reusable — add `rim-light` alongside the element's `rounded-*` class.
 
-```tsx
-<div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-bg">
-  <header className="shrink-0 border-b border-hairline bg-bg">…</header>
-  <div className="min-h-0 flex-1 overflow-y-auto">…scroll region…</div>
-</div>
-```
+### 3.3 Flat rule
 
-No atmosphere layer, no `relative z-10` wrappers — content sits directly on `bg-bg`.
-
-### 5.2 Scroll chain (unchanged, still critical)
-
-- The page shell fills its parent with `h-full` + `min-h-0`. **Never** `min-h-screen` inside the app shell.
-- Header/footer are `shrink-0`; the middle is `flex-1 min-h-0` and owns the scroll.
-- **Every flex ancestor in a scroll subtree needs `min-h-0`** (and `min-w-0` for horizontal).
-
-### 5.3 Structural dimensions (do not change)
-
-Terminal-dimension estimators hard-code chrome sizes: global sidebar 240px, ProjectDetail sessions sidebar 220px, mobile top bar 48px, terminal header ~50px, tab bar ~42px, status bar ~26px. See `estimateSidebarTerminalDims` (Sidebar.tsx) and `estimateTerminalDims` (ProjectDetail.tsx). Changing any of these requires updating the estimators.
-
-### 5.4 Terminal resize timing (unchanged)
-
-Any `fit()` call must happen ≥300ms after a layout change (200ms CSS transition + 100ms buffer). Dual-shot pattern: 500ms + 1800ms after session switch.
+`.control-raised` is a plain fill (no gradient/gloss). `.btn-primary` is a flat white fill. Inputs are a flat translucent fill. No inset gloss, no button drop shadows.
 
 ---
 
-## 6. Components — import from `src/components/ui`
+## 4. Buttons (`ui/Button.tsx`)
 
-```ts
-import { Button, IconButton, Panel, Modal, Input, Textarea, Select, Badge, SegmentedControl, Toolbar, EmptyState, cx } from '../components/ui';
-```
+| Variant | Look |
+|---------|------|
+| `primary` | **Solid white `#fafafa` fill, black text, flat** (`.btn-primary`). The single high-contrast action per view. No gradient/glow. |
+| `default` (secondary) | **Outline only** — `border-hairline-strong`, transparent, hover `bg-white/[0.05]`. |
+| `ghost` | No border, `text-ink-3`, hover `bg-white/[0.05]`. |
+| `danger` | Red outline, transparent, hover `bg-danger/10`. |
 
-| Component | Props | Notes |
-|-----------|-------|-------|
-| `Button` | `variant: 'primary'\|'default'\|'ghost'\|'danger'`, `size: 'sm'(24px)\|'md'(28px)` | primary = flat lime, text-black; default = mac push button (surface-2 + bevel); ghost = transparent; danger = red tint. |
-| `IconButton` | `size`, **`aria-label` required** | Square ghost button for icons. |
-| `Panel` | `padding: 'none'\|'sm'\|'md'`, `interactive` | The card. `interactive` adds hover border + focus ring — no lift. |
-| `Modal` | `open, onClose, title?, footer?, maxWidth?` | Scrim without blur, Escape-to-close built in. |
-| `Input`/`Textarea`/`Select` | native props | 28px, inset dark fill, accent focus. `<option className="bg-surface-2">`. |
-| `Badge` | `tone: neutral\|accent\|success\|warning\|danger`, `dot?`, `mono?` | Tint chip. Static dot (no ping). |
-| `SegmentedControl` | `items, value, onChange` | `role="tablist"`; active item is neutral (surface-3), not lime. |
-| `Toolbar` | `end?` | 44px header row with bottom hairline. |
-| `EmptyState` | `icon?, title, description?, action?` | Neutral icon tile; accent only on the action button. |
-
-**Raw recipes** (not componentized):
-
-- Source-list row (sidebars): `h-[28px] mx-[8px] rounded-control px-[8px] text-[13px]`; active = `bg-accent/12 text-ink` + icon `text-accent`; inactive = `text-ink-2 hover:bg-white/[0.04] hover:text-ink`. Selection is a pill — no left bar.
-- Section label: `text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3`.
-- Error banner: `rounded-control border border-danger/30 bg-danger/10 px-[16px] py-[12px] text-[13px] text-danger`.
-- Status dots: `size-[6px] rounded-full` + `bg-success`/`bg-warning`/`bg-ink-4` (dead). `animate-pulse` when live. No glow shadows.
+Sizes: `sm` = h-28 / px-10, `md` = h-34 / px-14. Focus-visible ring is neutral white.
 
 ---
 
-## 7. States
+## 5. Fields (`ui/Input.tsx`, DirectoryPicker)
 
-- **Loading:** flat skeletons — `animate-pulse` blocks of `bg-white/[0.04]`–`[0.06]` inside a `Panel`. Spinners: `animate-spin` circle in `text-ink-3` or `border-accent`.
-- **Empty:** `EmptyState` component.
-- **Error:** danger banner (above) with inline Retry.
-- **Focus:** `focus-visible:ring-2 ring-accent/50` on all interactive elements.
-
----
-
-## 8. Responsiveness & accessibility
-
-- Mobile-first: everything works at 375px. Breakpoints `sm` 640 / `md` 768 / `lg` 1024.
-- Touch targets ≥ 44px on mobile (visual size may be smaller; extend hit area with padding).
-- Contrast: `ink` on `bg`/`surface` ≥ 12:1; `ink-2` ≥ 5:1; `ink-3` only for non-essential text. Lime `#b3e502` on black passes AA at all sizes.
-- `aria-label` on all icon-only buttons; `role="tablist"`/`aria-selected` on tabs/segments.
+- Fill = **`bg-white/[0.03]`** (hover `0.05`, focus `0.04`) + `border-hairline`. Never a solid `surface-2` block (too heavy on glass).
+- **Focus = white**: `border-white/70` + `ring-1 ring-white/20`. (Amber is signal-only, never focus.)
+- Height 34 default (38 in the New Project modal for a more generous form). Mono font for path fields.
+- Labels: uppercase mono `text-ink-3`; append an "Optional" tag as a **sibling** (not inside the `<label>`, so the accessible name stays clean).
 
 ---
 
-## 9. Migration map (Aurora → Graphite)
+## 6. App shell (`layout/AppLayout.tsx`, `layout/Sidebar.tsx`)
 
-Remaining waves: KanbanBoard cluster, FilesPage, HarnessesPage, Dashboard, Emergency, Login, TaskDetail, and shared modals (CanvasPickerModal, RecoverConversationModal, Harnesses modals). Apply this table, then hand-polish:
+**Framed content window (Linear):**
+- Root = `app-vignette` on `bg-void`.
+- **Sidebar has no border/bg of its own** on desktop: `bg-void lg:bg-transparent`, no `border-r`. It sits on the shell.
+- **Content = floating framed window**: `main` = `rounded-[12px] border border-hairline bg-bg overflow-hidden`, with a gap around it (column `p-[8px] lg:py-[10px] lg:pl-[4px] lg:pr-[10px]`). The border reads around the whole section — not as a sidebar divider.
 
-| Aurora | Graphite |
-|---|---|
-| `bg-[#0a0a0f]` page root | `bg-bg` |
-| Atmosphere block (`kb-aurora` + `kb-grid` + wrapper) | delete; drop now-useless `relative z-10` |
-| `bg-[#111118]` | `bg-surface-2` |
-| Glass (`bg-white/[0.02-0.04]` + `backdrop-blur-md` + inset shadow) | `bg-surface border border-hairline`, no blur |
-| `border-white/[0.06-0.08]` / `[0.12-0.14]` | `border-hairline` / `border-hairline-strong` |
-| `#f0f0f0`/`#f2f3f5`/`#e6e8eb`/`text-white` | `text-ink` |
-| `#9aa3ad` | `text-ink-2` |
-| `#7a828c`, `#5a626c` | `text-ink-3` |
-| `#454c55`, `#445566` | `text-ink-4` |
-| `#b3e502` arbitrary classes | `accent` tokens |
-| `kb-sheen`, glow shadows, `hover:-translate-y`, `kb-rise` | delete; `transition-colors duration-150` |
-| `rounded-[14-18px]` / `[8-10px]` | `rounded-panel`(cards) or `rounded-modal`(modals) / `rounded-control` |
-| `red-500/*`, `#f54`, `#f56` | `danger` |
-| `#fa0`, `#ffaa00` | `warning` |
-| `#2dd`, `#2d8`, `#22dd88` | `success` |
-| Syne/extrabold headings | `text-[17px] sm:text-[20px] font-semibold tracking-[-0.2px] text-ink` |
-| Local Modal/button/input markup | `ui/` primitives |
+**One header per screen** (no stacked bars):
+- AppLayout renders NO mobile top bar. Instead a **floating hamburger** (`absolute left-[16px] top-[16px] z-30 lg:hidden`) dispatches `sidebar:open`.
+- Each page owns a single sticky header that reserves a left gutter so the hamburger tucks in. The gutter must persist until `lg` (where the hamburger hides): `pl-[52px] pr-[16px] sm:pr-[24px] lg:pl-[24px]`. **Do not** use `sm:px-*` — it wipes the gutter between sm–lg and the hamburger overlaps the title.
 
-Per-screen checklist:
-- [ ] Root → Graphite page shell; delete atmosphere.
-- [ ] Apply the mapping table.
-- [ ] Replace local modals/buttons/inputs with `ui/` primitives.
-- [ ] Fix scroll chain (`min-h-0`).
-- [ ] Update any class-string test assertions in the same commit.
-- [ ] Eyeball at 375px and desktop.
+**Sidebar contents:**
+- Top = **workspace menu button** (`AlfLogo` + "ALF" + chevron-down) → dropdown popover (`elevated rim-light`): user identity header · **Settings** (`/settings`) · **Log out** (`useAuth().logout()`). Beside it, a **search IconButton** that opens ⌘K.
+- Nav items: neutral pill selection (`bg-white/[0.06] text-ink`), inactive `text-ink-2`.
+- Bottom: "daemon online" status dot (green).
+- Mobile: a `fixed` drawer (`bg-void`) behind a `bg-black/60` overlay; opens on the `sidebar:open` event.
 
 ---
 
-## 10. Legacy: the `kb-` CSS block
+## 7. Patterns
 
-The `kb-` classes (aurora, grid, rise, sheen) remain in `src/index.css` **only** because unmigrated screens still use them. They are **deprecated** — never use them in new or migrated code. Delete the block when the last Aurora screen migrates (tracked by the migration map above).
+**Stat tiles** (Linear big-number): `rim-light` + `bg-white/[0.02]` + `rounded-panel`, a small uppercase `ink-3` label (+ optional `StatusGlyph`), then a big `text-[26px]/sm:32px` semibold tabular number.
+
+**List panel**: `rim-light overflow-hidden rounded-panel bg-white/[0.015]` with a header strip (uppercase title + count pill + sort button, `border-b`), then rows separated by `border-b border-hairline last:border-b-0` — no gaps, no per-row rounding. Row hover `row-hover`; focus `bg-white/[0.05]`.
+
+**Modal** (`ProjectFormModal` pattern): `glass-panel rim-light rounded-modal`, a clean title + subtitle header, well-defined labeled fields, a `border-t` footer with a ghost Cancel + white primary action.
+
+**Command palette** (`ui/CommandPalette.tsx`): `glass-palette rim-light`, monochrome rows, neutral selection fill, a single amber status dot as the only color.
+
+**Status glyph** (`ui/StatusGlyph.tsx`): active = amber ring + faint amber fill (+ glow); waiting = hollow amber ring; done = solid green; idle = hollow gray.
+
+---
+
+## 8. Amber discipline
+
+Amber is rationed to **signals**. Allowed: `StatusGlyph` active/waiting, live-session counts, warnings. **Not allowed**: buttons, focus rings, hovers, selections, links, avatars, icons-as-decoration. When in doubt, it's white/neutral.
+
+---
+
+## 9. Motion
+
+Restrained. `fadeIn` (120ms) for scrims/menus, `paletteIn` (140ms spring-ish) for modals/palette entrance. `row-hover` 140ms color transition. Respect `prefers-reduced-motion` (`motion-safe:`). No `-translate-y` lifts, no glow pulses except the active status pulse.
+
+---
+
+## 10. Migration status
+
+- **Done** (the reference implementation): tokens, glass + rim, buttons, fields, `AppLayout` framed shell, `Sidebar`, **Projects** screen (header, stat tiles, list panel), New Project modal, command palette, DirectoryPicker.
+- **Pending**: Sessions, Tasks, Files, Templates, Settings — still carry legacy indigo `#5e6ad2` hardcodes (~140 refs) and lack the `pl-[52px]→lg` header gutter. Redesign them against this doc, using Projects as the template. `CanvasToolbar.test.tsx` still asserts the old indigo (update when Canvas is migrated).
+- Dashboard / Emergency are dead screens — skip.

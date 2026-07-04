@@ -69,6 +69,29 @@ const BINARY_EXTENSIONS = new Set([
 
 const MAX_READ_SIZE = 1024 * 1024; // 1 MB
 
+// Directories skipped by the recursive palette file search — vendored, build,
+// and VCS trees that would swamp results and slow the walk.
+const SEARCH_SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.hg',
+  '.svn',
+  'dist',
+  'build',
+  '.next',
+  '.nuxt',
+  '.turbo',
+  '.cache',
+  'coverage',
+  '.venv',
+  'venv',
+  '__pycache__',
+  'target',
+  'vendor',
+  '.idea',
+  '.vscode',
+]);
+
 /* ── Helpers ── */
 
 /** Resolve a project row from the DB by ID. Returns null if not found. */
@@ -195,6 +218,85 @@ export const filesRoutes = new Elysia({ prefix: '/api/projects' }).guard(authGua
       {
         query: t.Object({
           path: t.Optional(t.String()),
+        }),
+      },
+    )
+
+    // ── GET /api/projects/:id/files/search?q= ───────────────────────
+    // Recursive filename search for the ⌘K command palette. Walks the tree
+    // breadth-first, skipping heavy/vendored directories, capped so a huge
+    // repo can never stall the request. Returns project-relative file paths.
+    .get(
+      '/:id/files/search',
+      ({ params: { id }, query, set }) => {
+        const project = getProjectById(id);
+        if (!project) {
+          set.status = 404;
+          return { error: 'project not found' };
+        }
+
+        const root = project.directory as string;
+        const q = (query.q || '').trim().toLowerCase();
+        const limit = Math.min(Math.max(Number(query.limit) || 40, 1), 100);
+        const MAX_SCAN = 20000; // hard ceiling on entries visited
+
+        const results: { path: string; name: string }[] = [];
+        const queue: string[] = ['']; // relative dirs to visit, BFS
+        let scanned = 0;
+
+        try {
+          while (queue.length > 0 && results.length < limit && scanned < MAX_SCAN) {
+            const rel = queue.shift() as string;
+            const abs = rel ? join(root, rel) : root;
+            let names: string[];
+            try {
+              names = readdirSync(abs);
+            } catch {
+              continue;
+            }
+            for (const name of names) {
+              if (scanned >= MAX_SCAN) break;
+              scanned++;
+              if (SEARCH_SKIP_DIRS.has(name)) continue;
+              const childRel = rel ? `${rel}/${name}` : name;
+              let st;
+              try {
+                st = statSync(join(root, childRel));
+              } catch {
+                continue;
+              }
+              if (st.isDirectory()) {
+                queue.push(childRel);
+              } else if (results.length < limit) {
+                // Empty query → return the first files found (a "recent-ish"
+                // sample); otherwise match on the relative path.
+                if (!q || childRel.toLowerCase().includes(q)) {
+                  results.push({ path: childRel, name });
+                }
+              }
+            }
+          }
+        } catch (err) {
+          set.status = 500;
+          return { error: `search failed: ${(err as Error).message}` };
+        }
+
+        // Rank exact-name and shallower matches first when a query is present.
+        if (q) {
+          results.sort((a, b) => {
+            const an = a.name.toLowerCase() === q ? 0 : a.name.toLowerCase().startsWith(q) ? 1 : 2;
+            const bn = b.name.toLowerCase() === q ? 0 : b.name.toLowerCase().startsWith(q) ? 1 : 2;
+            if (an !== bn) return an - bn;
+            return a.path.split('/').length - b.path.split('/').length;
+          });
+        }
+
+        return results;
+      },
+      {
+        query: t.Object({
+          q: t.Optional(t.String()),
+          limit: t.Optional(t.String()),
         }),
       },
     )
