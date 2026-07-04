@@ -159,7 +159,7 @@ export default function AgentCard({
         {renaming ? (
           <input
             ref={renameInputRef}
-            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(179,229,2,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] text-[12px] text-[#f0f0f0] outline-none"
+            className="flex-1 min-w-0 rounded-[4px] border border-[rgba(94, 106, 210,0.3)] bg-[#0a0a0f] px-[6px] py-[1px] text-[12px] text-[#f0f0f0] outline-none"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
@@ -209,7 +209,7 @@ export default function AgentCard({
             navigate('/tasks');
           }}
         >
-          <span className="text-[11px] text-[#b3e502] hover:underline">
+          <span className="text-[11px] text-[#5e6ad2] hover:underline">
             {'📋 '}
             {agent.linkedTaskTitle}
           </span>
@@ -220,7 +220,7 @@ export default function AgentCard({
       <div className="mt-[6px] flex items-center gap-[4px]">
         {showCreateTask && !isFinished && !isEmergency && (
           <button
-            className="flex items-center gap-[3px] rounded-[4px] border border-white/[0.07] px-[6px] py-[2px] text-[10px] text-[#9aa3ad] hover:border-[rgba(179,229,2,0.3)] hover:text-[#b3e502] transition-colors"
+            className="flex items-center gap-[3px] rounded-[4px] border border-white/[0.07] px-[6px] py-[2px] text-[10px] text-[#9aa3ad] hover:border-[rgba(94, 106, 210,0.3)] hover:text-[#5e6ad2] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onCreateTask?.(agent);

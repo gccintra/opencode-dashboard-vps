@@ -71,7 +71,7 @@ function VSep() {
       className="flex items-center justify-center cursor-col-resize group/vsep"
       style={{ width: '8px', flexShrink: 0 }}
     >
-      <div className="w-[2px] h-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/vsep:bg-[#b3e502]/50" />
+      <div className="w-[2px] h-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/vsep:bg-[#5e6ad2]/50" />
     </Separator>
   );
 }
@@ -82,7 +82,7 @@ function HSep() {
       className="flex items-center justify-center cursor-row-resize group/hsep"
       style={{ height: '8px', flexShrink: 0 }}
     >
-      <div className="h-[2px] w-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/hsep:bg-[#b3e502]/50" />
+      <div className="h-[2px] w-[40px] rounded-full bg-white/[0.08] transition-colors duration-150 group-hover/hsep:bg-[#5e6ad2]/50" />
     </Separator>
   );
 }
@@ -494,7 +494,7 @@ export function CanvasGrid({
         {activeDragSlot && (
           <div
             style={{ transform: 'rotate(2deg) scale(1.04)', willChange: 'transform', width: 220 }}
-            className="rounded-[8px] border border-[#b3e502]/25 pointer-events-none overflow-hidden shadow-[0_28px_64px_-12px_rgba(0,0,0,0.9),0_0_0_1px_rgba(179,229,2,0.10)] opacity-95"
+            className="rounded-[8px] border border-[#5e6ad2]/25 pointer-events-none overflow-hidden shadow-[0_28px_64px_-12px_rgba(0,0,0,0.9),0_0_0_1px_rgba(94, 106, 210,0.10)] opacity-95"
           >
             {/* Clean labeled card — never a snapshot of the live terminal. The
                 WebGL canvas can't be reliably drawImage'd (cleared buffer) and
@@ -505,7 +505,7 @@ export function CanvasGrid({
                 className="inline-block size-[7px] shrink-0 rounded-full"
                 style={{
                   backgroundColor:
-                    activeDragSessionObj?.status === 'active' ? '#b3e502'
+                    activeDragSessionObj?.status === 'active' ? '#5e6ad2'
                     : activeDragSessionObj?.status === 'waiting' ? '#4ade80'
                     : '#5a626c',
                 }}

@@ -169,7 +169,7 @@ export default function AgentPanel({
       {effectiveFilter && (
         <div className="px-[16px] pb-[4px]">
           <button
-            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(179,229,2,0.08)] px-[8px] py-[2px] text-[11px] text-[#b3e502] hover:bg-[rgba(179,229,2,0.12)] transition-colors"
+            className="inline-flex items-center gap-[4px] rounded-[4px] bg-[rgba(94, 106, 210,0.08)] px-[8px] py-[2px] text-[11px] text-[#5e6ad2] hover:bg-[rgba(94, 106, 210,0.12)] transition-colors"
             onClick={() => handleFilterClick(null)}
           >
             {effectiveFilter === 'waiting'
@@ -186,7 +186,7 @@ export default function AgentPanel({
       <div className="flex-1 overflow-y-auto px-[16px] pb-[16px]">
         {loading && agents.length === 0 ? (
           <div className="flex items-center justify-center py-[32px]">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#5e6ad2] border-t-transparent" />
           </div>
         ) : error ? (
           <div className="py-[16px] text-center text-[12px] text-[#f54]">
@@ -259,7 +259,7 @@ export default function AgentPanel({
                     key={agent.id}
                     className={`flex cursor-pointer items-center gap-[10px] px-[16px] py-[10px] transition-colors ${
                       idx === searchIndex
-                        ? 'bg-[rgba(179,229,2,0.08)]'
+                        ? 'bg-[rgba(94, 106, 210,0.08)]'
                         : 'hover:bg-[rgba(255,255,255,0.03)]'
                     }`}
                     onClick={() => {

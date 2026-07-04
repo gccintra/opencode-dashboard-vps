@@ -221,7 +221,7 @@ function MobileSlot({
   }, [editValue, sessionName, onRename]);
 
   const statusColor =
-    sessionStatus === 'active' ? '#2d8' : sessionStatus === 'waiting' ? '#fa0' : '#5a626c';
+    sessionStatus === 'active' ? '#5e6ad2' : sessionStatus === 'waiting' ? '#8a8f98' : '#5a626c';
 
   return (
     <div
@@ -237,7 +237,7 @@ function MobileSlot({
       <div
         className={`flex shrink-0 w-full overflow-hidden items-center gap-[10px] px-[14px] h-[52px] transition-colors cursor-pointer select-none ${
           isFocused
-            ? 'bg-[rgba(179,229,2,0.07)]'
+            ? 'bg-[rgba(94, 106, 210,0.07)]'
             : 'bg-[#0a0a0f] active:bg-[rgba(255,255,255,0.04)]'
         }`}
         onClick={() => onToggleFocus(slotIndex)}
@@ -265,7 +265,7 @@ function MobileSlot({
             }}
             onBlur={saveEdit}
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[6px] py-[2px] text-[12px] text-[#f0f0f0] focus:outline-none"
+            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(94, 106, 210,0.3)] rounded-[3px] px-[6px] py-[2px] text-[12px] text-[#f0f0f0] focus:outline-none"
           />
         ) : (
           <span
@@ -285,7 +285,7 @@ function MobileSlot({
         {isFocused && !editing && onRename && (
           <button
             onClick={startEdit}
-            className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#5a626c] active:text-[#b3e502] active:bg-[rgba(179,229,2,0.1)] transition-colors"
+            className="shrink-0 flex items-center justify-center size-[26px] rounded-[4px] text-[#5a626c] active:text-[#5e6ad2] active:bg-[rgba(94, 106, 210,0.1)] transition-colors"
             aria-label="Renomear sessão"
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
@@ -299,7 +299,7 @@ function MobileSlot({
           </button>
         )}
         {isFocused && !editing && (
-          <span className="shrink-0 h-[14px] w-[2px] rounded-full bg-[#b3e502]" />
+          <span className="shrink-0 h-[14px] w-[2px] rounded-full bg-[#5e6ad2]" />
         )}
         {/* Reconectar */}
         <button
@@ -449,7 +449,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
                   className="shrink-0 size-[7px] rounded-full"
                   style={{
                     backgroundColor:
-                      s.status === 'active' ? '#2d8' : s.status === 'waiting' ? '#fa0' : '#5a626c',
+                      s.status === 'active' ? '#5e6ad2' : s.status === 'waiting' ? '#8a8f98' : '#5a626c',
                   }}
                 />
                 <span className="flex-1 min-w-0 truncate text-[13px] text-[#ccd]">
@@ -466,7 +466,7 @@ function AddDropdown({ availableSessions, onAssign, onCreate, onDismiss }: AddDr
           <div className="px-[8px] pb-[10px]">
             <button
               onClick={onCreate}
-              className="flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-[#b3e502] py-[10px] text-[13px] font-semibold text-black active:bg-[#c2f516] transition-colors"
+              className="flex w-full items-center justify-center gap-[6px] rounded-[6px] bg-[#5e6ad2] py-[10px] text-[13px] font-semibold text-white active:bg-[#6e79de] transition-colors"
               data-testid="dropdown-new-session-btn"
             >
               <span className="text-[16px] leading-none font-light">+</span>
@@ -554,8 +554,8 @@ function TopBar({
           aria-label="Adicionar terminal"
           className={`flex items-center gap-[4px] rounded-[6px] px-[8px] py-[5px] text-[12px] font-medium transition-colors shrink-0 ${
             showDropdown
-              ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502]'
-              : 'bg-[rgba(179,229,2,0.08)] text-[#b3e502] active:bg-[rgba(179,229,2,0.15)]'
+              ? 'bg-[rgba(94, 106, 210,0.15)] text-[#5e6ad2]'
+              : 'bg-[rgba(94, 106, 210,0.08)] text-[#5e6ad2] active:bg-[rgba(94, 106, 210,0.15)]'
           }`}
           data-testid="canvas-mobile-add-btn"
         >
@@ -598,7 +598,7 @@ function GroupDots({
             style={{
               width: i === activeGroup ? '18px' : '6px',
               height: '6px',
-              backgroundColor: i === activeGroup ? '#b3e502' : 'rgba(255,255,255,0.2)',
+              backgroundColor: i === activeGroup ? '#5e6ad2' : 'rgba(255,255,255,0.2)',
             }}
           />
         </button>
@@ -832,7 +832,7 @@ export const CanvasMobile = forwardRef<CanvasMobileHandle, CanvasMobileProps>(fu
           {(availableSessions.length > 0 || onCreateSession) && (
             <button
               onClick={() => setShowDropdown(true)}
-              className="flex items-center gap-[6px] rounded-[8px] bg-[#b3e502] px-[20px] py-[11px] text-[14px] font-semibold text-black active:bg-[#c2f516] transition-colors"
+              className="flex items-center gap-[6px] rounded-[8px] bg-[#5e6ad2] px-[20px] py-[11px] text-[14px] font-semibold text-white active:bg-[#6e79de] transition-colors"
               data-testid="canvas-mobile-empty-add-btn"
             >
               <span className="text-[18px] leading-none font-light">+</span>

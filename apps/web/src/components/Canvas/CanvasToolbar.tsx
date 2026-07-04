@@ -84,7 +84,7 @@ export function CanvasToolbar({ templateId, onTemplateChange, onResetLayout }: C
               title={t.label}
               className={`rounded-[5px] px-[8px] py-[5px] transition-colors ${
                 isActive
-                  ? 'bg-[rgba(179,229,2,0.15)] text-[#b3e502] border border-[rgba(179,229,2,0.3)]'
+                  ? 'bg-[rgba(94, 106, 210,0.15)] text-[#5e6ad2] border border-[rgba(94, 106, 210,0.3)]'
                   : 'border border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
               }`}
               data-testid={`layout-btn-${t.id}`}

@@ -97,7 +97,7 @@ function SlotHeader({
               if (e.key === 'Escape') setEditing(false);
             }}
             onBlur={saveEdit}
-            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(179,229,2,0.3)] rounded-[3px] px-[5px] py-[1px] text-[11px] text-[#f0f0f0] focus:outline-none"
+            className="flex-1 min-w-0 bg-[rgba(255,255,255,0.06)] border border-[rgba(94, 106, 210,0.3)] rounded-[3px] px-[5px] py-[1px] text-[11px] text-[#f0f0f0] focus:outline-none"
           />
         ) : (
           <span
@@ -117,7 +117,7 @@ function SlotHeader({
               sessionStatus === 'active'
                 ? 'bg-[#2d8]'
                 : sessionStatus === 'waiting'
-                  ? 'bg-[#fa0]'
+                  ? 'bg-[#8a8f98]'
                   : 'bg-[#445]'
             }`}
           />
@@ -216,7 +216,7 @@ function EmptySlotPlaceholder({
             e.target.value = '';
           }}
           defaultValue=""
-          className="w-full max-w-[160px] rounded-[5px] border border-white/[0.07] bg-[#0a0a0f] px-[8px] py-[5px] text-[12px] text-[#9aa3ad] focus:outline-none focus:border-[rgba(179,229,2,0.3)]"
+          className="w-full max-w-[160px] rounded-[5px] border border-white/[0.07] bg-[#0a0a0f] px-[8px] py-[5px] text-[12px] text-[#9aa3ad] focus:outline-none focus:border-[rgba(94, 106, 210,0.3)]"
           aria-label="Selecionar sessão"
           data-testid={`slot-session-select-${slotIndex}`}
         >
@@ -232,7 +232,7 @@ function EmptySlotPlaceholder({
       {onCreateSession && (
         <button
           onClick={onCreateSession}
-          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(179,229,2,0.1)] border border-[rgba(179,229,2,0.2)] px-[12px] py-[6px] text-[12px] font-medium text-[#b3e502] hover:bg-[rgba(179,229,2,0.16)] transition-colors"
+          className="flex items-center gap-[5px] rounded-[5px] bg-[rgba(94, 106, 210,0.1)] border border-[rgba(94, 106, 210,0.2)] px-[12px] py-[6px] text-[12px] font-medium text-[#5e6ad2] hover:bg-[rgba(94, 106, 210,0.16)] transition-colors"
           data-testid={`slot-new-session-btn-${slotIndex}`}
         >
           <span className="text-[14px] leading-none font-light">+</span>
@@ -321,12 +321,12 @@ export function CanvasSlot({
 
   const borderStyle = sessionId
     ? isOver
-      ? 'border-[#b3e502]'
+      ? 'border-[#5e6ad2]'
       : isFocused
-        ? 'border-[rgba(179,229,2,0.35)]'
+        ? 'border-[rgba(94, 106, 210,0.35)]'
         : 'border-white/[0.07]'
     : isOver
-      ? 'border-[#b3e502] border-solid'
+      ? 'border-[#5e6ad2] border-solid'
       : 'border-dashed border-[rgba(255,255,255,0.1)]';
 
   return (

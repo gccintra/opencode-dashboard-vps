@@ -42,6 +42,6 @@ describe('CanvasToolbar', () => {
   it('active button has highlighted styles', () => {
     render(<CanvasToolbar templateId="right-stack" onTemplateChange={vi.fn()} />);
     const active = screen.getByTestId('layout-btn-right-stack');
-    expect(active.className).toContain('text-[#b3e502]');
+    expect(active.className).toContain('text-[#5e6ad2]');
   });
 });
