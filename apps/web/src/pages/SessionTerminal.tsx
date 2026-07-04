@@ -18,6 +18,7 @@ import { getThemeId, saveThemeId, getThemeById } from '../lib/terminalThemes';
 import { useSessionEvents } from '../hooks/useSessionEvents';
 import RecoverConversationModal from '../components/RecoverConversationModal';
 import CanvasPickerModal from '../components/CanvasPickerModal';
+import { StatusGlyph, type GlyphStatus } from '../components/ui';
 
 /* ── Types ── */
 
@@ -134,12 +135,13 @@ function estimateDims() {
   };
 }
 
-/* ── Status dot for the rail ── */
-
-function statusDot(status: string): { color: string; pulse: boolean } {
-  if (status === 'active') return { color: '#28c840', pulse: true };
-  if (status === 'waiting') return { color: '#febc2e', pulse: false };
-  return { color: '#4a4a52', pulse: false };
+/* ── Session status → rail glyph ──
+   active = amber ring+fill (live/working), waiting = hollow amber (needs
+   input), everything else = idle gray. Green stays reserved for done/success. */
+function sessionGlyph(status: string): GlyphStatus {
+  if (status === 'active') return 'active';
+  if (status === 'waiting') return 'waiting';
+  return 'idle';
 }
 
 /* ── Session rail (master list) ── */
@@ -198,7 +200,7 @@ function SessionRail({
   }, [renamingId, renameValue, renameOriginal, onRename]);
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-surface">
+    <div className="flex h-full min-h-0 w-full flex-col bg-void">
       <div className="flex shrink-0 items-center justify-between border-b border-hairline px-[14px] py-[12px]">
         <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
           Sessions
@@ -261,7 +263,7 @@ function SessionRail({
               </div>
             </div>
             {g.sessions.map((s) => {
-              const d = statusDot(s.status);
+              const glyph = sessionGlyph(s.status);
               const isActive = s.sessionId === activeSessionId && !showCanvas;
               const isRenaming = renamingId === s.sessionId;
               return isRenaming ? (
@@ -271,10 +273,7 @@ function SessionRail({
                     isActive ? 'border-accent bg-accent/[0.08]' : 'border-transparent'
                   }`}
                 >
-                  <span
-                    className={`size-[6px] shrink-0 rounded-full ${d.pulse ? 'animate-pulse' : ''}`}
-                    style={{ backgroundColor: d.color }}
-                  />
+                  <StatusGlyph status={glyph} size="sm" pulse={glyph === 'active'} />
                   <input
                     ref={renameInputRef}
                     value={renameValue}
@@ -300,10 +299,7 @@ function SessionRail({
                     onClick={() => onSelect(s)}
                     className="flex min-w-0 flex-1 items-center gap-[8px] text-left"
                   >
-                    <span
-                      className={`size-[6px] shrink-0 rounded-full ${d.pulse ? 'animate-pulse' : ''}`}
-                      style={{ backgroundColor: d.color }}
-                    />
+                    <StatusGlyph status={glyph} size="sm" pulse={glyph === 'active'} />
                     <span className="min-w-0 flex-1 truncate">{s.name}</span>
                   </button>
                   <button
@@ -933,7 +929,7 @@ export default function SessionTerminalPage() {
     >
 
       {/* ══ Header — adapts to mode: terminal / canvas-hub / canvas-embed ══ */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-[8px] border-b border-hairline bg-surface px-[12px] py-[10px] sm:px-[18px]">
+      <header className="vibrancy relative z-10 flex shrink-0 items-center justify-between gap-[8px] border-b border-hairline px-[12px] py-[10px] sm:px-[18px]">
         {/* Left: back + rail toggle + mode-specific breadcrumb */}
         <div className="flex min-w-0 items-center gap-[8px]">
           <button
@@ -1058,7 +1054,7 @@ export default function SessionTerminalPage() {
               {sessionId && (
                 <span
                   className={`size-[6px] shrink-0 rounded-full transition-colors ${
-                    isConnected ? 'bg-success' : isConnecting ? 'bg-warning animate-pulse' : 'bg-ink-4'
+                    isConnected ? 'bg-success' : isConnecting ? 'bg-ink-3 animate-pulse' : 'bg-ink-4'
                   }`}
                                   />
               )}
@@ -1158,7 +1154,7 @@ export default function SessionTerminalPage() {
               <button
                 onClick={handleCreateCanvas}
                 disabled={canvasCreating}
-                className="flex items-center gap-[5px] rounded-control bg-accent px-[10px] py-[4px] text-[12px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
+                className="flex items-center gap-[5px] rounded-control bg-accent px-[10px] py-[4px] text-[12px] font-semibold text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
               >
                 {canvasCreating ? (
                   <div className="size-[10px] animate-spin rounded-full border-[1.5px] border-black border-t-transparent" />
@@ -1422,7 +1418,7 @@ export default function SessionTerminalPage() {
                 <div className="mt-[20px] flex flex-wrap items-center justify-center gap-[10px]">
                   <button
                     onClick={() => setShowProjectPicker(true)}
-                    className="flex items-center gap-[6px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover"
+                    className="flex items-center gap-[6px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-accent-hover"
                   >
                     <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
                       <path d="M5 1.5v7M1.5 5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

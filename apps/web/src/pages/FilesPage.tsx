@@ -5,6 +5,7 @@ import FileTree from '../components/FileManager/FileTree';
 import CodeEditor from '../components/FileManager/CodeEditor';
 import type { FileTreeHandle } from '../components/FileManager/FileTree';
 import type { CodeEditorHandle } from '../components/FileManager/CodeEditor';
+import { Button, EmptyState } from '../components/ui';
 
 /* ── Types ── */
 
@@ -20,58 +21,13 @@ type MobileView = 'projects' | 'tree' | 'editor';
 
 function FolderOpenIcon() {
   return (
-    <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
+    <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
       <path
         d="M6 12v26a2 2 0 002 2h32a2 2 0 002-2V18a2 2 0 00-2-2H24l-4-4H8a2 2 0 00-2 2z"
-        stroke="#b3e502"
+        stroke="currentColor"
         strokeWidth="2"
       />
     </svg>
-  );
-}
-
-/* ── Atmosphere layer ── */
-
-function Atmosphere() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        className="kb-aurora"
-        style={{
-          top: '-180px',
-          left: '-120px',
-          width: 620,
-          height: 620,
-          opacity: 0.5,
-          background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
-        }}
-      />
-      <div
-        className="kb-aurora"
-        style={{
-          top: '-220px',
-          left: '38%',
-          width: 680,
-          height: 680,
-          opacity: 0.4,
-          animationDelay: '-7s',
-          background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
-        }}
-      />
-      <div
-        className="kb-aurora"
-        style={{
-          top: '-160px',
-          right: '-160px',
-          width: 560,
-          height: 560,
-          opacity: 0.38,
-          animationDelay: '-13s',
-          background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
-        }}
-      />
-      <div className="kb-grid" />
-    </div>
   );
 }
 
@@ -103,10 +59,10 @@ function ProjectCard({
   return (
     <button
       onClick={onSelect}
-      className={`w-full rounded-[12px] border p-[14px] text-left backdrop-blur-md transition-all active:scale-[0.99] ${
+      className={`w-full rounded-panel border p-[14px] text-left transition-colors active:scale-[0.99] ${
         isSelected
-          ? 'border-[#b3e502]/40 bg-[rgba(179,229,2,0.08)]'
-          : 'border-white/[0.06] bg-white/[0.04] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] hover:border-white/[0.12] hover:bg-white/[0.05]'
+          ? 'border-accent/40 bg-accent/[0.08]'
+          : 'border-hairline bg-surface hover:border-hairline-strong'
       }`}
       data-testid={`project-card-${project.id}`}
     >
@@ -116,7 +72,7 @@ function ProjectCard({
           height="14"
           viewBox="0 0 14 14"
           fill="none"
-          className="shrink-0 text-[#b3e502]"
+          className="shrink-0 text-accent"
         >
           <path
             d="M2 4v7a1 1 0 001 1h8a1 1 0 001-1V5a1 1 0 00-1-1H7L5.5 3H3a1 1 0 00-1 1z"
@@ -124,11 +80,11 @@ function ProjectCard({
             strokeWidth="1.2"
           />
         </svg>
-        <span className="flex-1 truncate text-[13px] font-medium text-[#f0f0f0]">
+        <span className="flex-1 truncate text-[13px] font-medium text-ink">
           {project.name}
         </span>
         {isSelected && (
-          <span className="shrink-0 rounded-[3px] bg-[#b3e502] px-1.5 py-px text-[10px] font-medium text-[#0a0a0f]">
+          <span className="shrink-0 rounded-[3px] bg-accent px-1.5 py-px text-[10px] font-medium text-bg">
             selected
           </span>
         )}
@@ -137,7 +93,7 @@ function ProjectCard({
           height="12"
           viewBox="0 0 12 12"
           fill="none"
-          className="shrink-0 text-[#5a626c]"
+          className="shrink-0 text-ink-3"
         >
           <path
             d="M4.5 2.5L8 6L4.5 9.5"
@@ -147,7 +103,7 @@ function ProjectCard({
           />
         </svg>
       </div>
-      <div className="mt-1 truncate font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
+      <div className="mt-1 truncate font-['JetBrains_Mono'] text-[10px] text-ink-3">
         {project.directory}
       </div>
     </button>
@@ -245,21 +201,20 @@ export default function FilesPage() {
 
   if (loadingProjects) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#0a0a0f]">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+      <div className="flex h-full items-center justify-center bg-bg">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
       </div>
     );
   }
 
   if (projectsError) {
     return (
-      <div className="relative flex h-full flex-col items-center justify-center gap-3 overflow-hidden bg-[#0a0a0f]">
-        <Atmosphere />
-        <div className="relative z-10 rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] text-[13px] text-red-400 backdrop-blur-md">
+      <div className="flex h-full flex-col items-center justify-center gap-3 bg-bg">
+        <div className="rounded-control border border-danger/30 bg-danger/10 px-[16px] py-[12px] text-[13px] text-danger">
           {projectsError}
           <button
             onClick={() => window.location.reload()}
-            className="ml-[8px] underline hover:text-red-300"
+            className="ml-[8px] underline hover:text-danger/80"
           >
             Retry
           </button>
@@ -270,47 +225,43 @@ export default function FilesPage() {
 
   if (projects.length === 0) {
     return (
-      <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-[#0a0a0f]">
-        <Atmosphere />
-        <div className="kb-rise relative z-10 flex flex-col items-center text-center">
-          <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
-            <FolderOpenIcon />
-          </div>
-          <h3 className="text-[20px] font-bold text-white">No projects yet</h3>
-          <p className="mt-[6px] max-w-[280px] text-[13px] leading-relaxed text-[#7a828c]">
-            Create a project to start managing files.
-          </p>
-          <button
-            onClick={() => navigate('/projects')}
-            className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
-            data-testid="create-project-cta"
-          >
-            Create Project
-          </button>
-        </div>
+      <div className="flex h-full flex-col items-center justify-center bg-bg">
+        <EmptyState
+          icon={<FolderOpenIcon />}
+          title="No projects yet"
+          description="Create a project to start managing files."
+          action={
+            <Button
+              variant="primary"
+              onClick={() => navigate('/projects')}
+              data-testid="create-project-cta"
+            >
+              Create Project
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#0a0a0f]"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-bg"
       data-testid="files-page"
     >
-      <Atmosphere />
       {/* ═══════════════════════════════
           MOBILE layout  (< 640px / sm)
           Three-view: projects → tree → editor
           ═══════════════════════════════ */}
-      <div className="relative z-10 flex h-full flex-col sm:hidden">
+      <div className="flex h-full flex-col sm:hidden">
         {/* ── View: project list ── */}
         {mobileView === 'projects' && (
           <div className="flex h-full flex-col">
-            <div className="shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 px-[16px] py-[13px] backdrop-blur-md">
-              <h1 className="text-[24px] font-extrabold tracking-[-0.5px] text-white">
+            <div className="shrink-0 border-b border-hairline bg-bg px-[16px] py-[13px]">
+              <h1 className="text-[20px] font-semibold tracking-[-0.2px] text-ink">
                 Files
               </h1>
-              <p className="mt-[2px] text-[12px] text-[#7a828c]">Select a project</p>
+              <p className="mt-[2px] text-[12px] text-ink-3">Select a project</p>
             </div>
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
               {projects.map((p) => (
@@ -328,17 +279,17 @@ export default function FilesPage() {
         {/* ── View: file tree ── */}
         {mobileView === 'tree' && selectedProjectId && (
           <div className="flex h-full flex-col">
-            <div className="shrink-0 flex min-h-[44px] items-center gap-2 border-b border-white/[0.07] bg-[#0a0a0f] px-3 py-2">
+            <div className="shrink-0 flex min-h-[44px] items-center gap-2 border-b border-hairline bg-bg px-3 py-2">
               <button
                 onClick={() => setMobileView('projects')}
-                className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-[6px] px-2 text-[12px] text-[#9aa3ad] active:bg-[rgba(255,255,255,0.06)] active:text-[#ccd]"
+                className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-control px-2 text-[12px] text-ink-2 active:bg-white/[0.06] active:text-ink"
                 data-testid="mobile-back-to-projects"
               >
                 <ArrowLeftIcon />
                 <span>Projects</span>
               </button>
-              <span className="text-[#5a626c]">/</span>
-              <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#f0f0f0]">
+              <span className="text-ink-3">/</span>
+              <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">
                 {selectedProject?.name}
               </span>
             </div>
@@ -372,11 +323,11 @@ export default function FilesPage() {
           DESKTOP layout  (≥ 640px / sm)
           Project tabs bar + split view
           ═══════════════════════════════ */}
-      <div className="relative z-10 hidden h-full min-h-0 flex-col sm:flex">
+      <div className="hidden h-full min-h-0 flex-col sm:flex">
         {/* Project tab bar */}
-        <div className="shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 px-4 py-2.5 backdrop-blur-md">
+        <div className="shrink-0 border-b border-hairline bg-bg px-4 py-2.5">
           <div className="flex items-center gap-3">
-            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.5px] text-[#5a626c]">
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.5px] text-ink-3">
               Project
             </span>
             <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
@@ -384,10 +335,10 @@ export default function FilesPage() {
                 <button
                   key={p.id}
                   onClick={() => handleProjectSelect(p.id)}
-                  className={`shrink-0 rounded-[5px] border px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                  className={`shrink-0 rounded-control border px-2.5 py-1 text-[12px] font-medium transition-colors ${
                     selectedProjectId === p.id
-                      ? 'border-[rgba(179,229,2,0.3)] bg-[rgba(179,229,2,0.1)] text-[#b3e502]'
-                      : 'border-white/[0.07] text-[#9aa3ad] hover:border-white/[0.12] hover:text-[#e6e8eb]'
+                      ? 'border-accent/30 bg-accent/10 text-accent'
+                      : 'border-hairline text-ink-2 hover:border-hairline-strong hover:text-ink'
                   }`}
                   data-testid={`project-tab-${p.id}`}
                 >
@@ -396,7 +347,7 @@ export default function FilesPage() {
               ))}
             </div>
             {selectedProject && (
-              <span className="ml-2 shrink-0 max-w-[240px] truncate font-['JetBrains_Mono'] text-[10px] text-[#5a626c]">
+              <span className="ml-2 shrink-0 max-w-[240px] truncate font-['JetBrains_Mono'] text-[10px] text-ink-3">
                 {selectedProject.directory}
               </span>
             )}
@@ -406,7 +357,7 @@ export default function FilesPage() {
         {/* Content area */}
         {!selectedProjectId ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-[13px] text-[#5a626c]">Select a project above</p>
+            <p className="text-[13px] text-ink-3">Select a project above</p>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
@@ -421,7 +372,7 @@ export default function FilesPage() {
               </div>
               {/* Drag handle */}
               <div
-                className="w-[4px] shrink-0 cursor-col-resize bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(179,229,2,0.3)] transition-colors active:bg-[rgba(179,229,2,0.5)]"
+                className="w-[4px] shrink-0 cursor-col-resize bg-white/[0.04] hover:bg-accent/30 transition-colors active:bg-accent/50"
                 onMouseDown={handleSidebarDragStart}
                 onTouchStart={handleSidebarDragStart}
                 title="Drag to resize"

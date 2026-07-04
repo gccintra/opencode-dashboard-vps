@@ -278,7 +278,7 @@ function SessionsSidebar({
         <button
           onClick={onCreateSession}
           disabled={creating}
-          className="flex w-full items-center justify-center gap-[6px] rounded-control bg-accent py-[7px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-[6px] rounded-control bg-accent py-[7px] text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {creating ? (
             <svg className="animate-spin" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -336,9 +336,9 @@ function SessionsSidebar({
               const dotColor = isDead
                 ? '#4a4a52'
                 : session.status === 'active'
-                  ? '#28c840'
+                  ? '#5e6ad2'
                   : session.status === 'waiting'
-                    ? '#febc2e'
+                    ? '#8a8f98'
                     : '#4a4a52';
               const dotPulse = session.status === 'active' && !isDead;
 
@@ -526,10 +526,10 @@ function TerminalHeader({
             {hasActiveSession && (
               <span className="ml-[6px] hidden sm:flex items-center gap-[4px] shrink-0">
                 <span
-                  className={`size-[7px] rounded-[3.5px] ${isConnected ? 'bg-success' : 'bg-warning'}`}
+                  className={`size-[7px] rounded-full ${isConnected ? 'bg-success' : 'bg-ink-4 animate-pulse'}`}
                                   />
                 <span
-                  className={`text-[11px] font-medium ${isConnected ? 'text-success' : 'text-warning'}`}
+                  className={`text-[11px] font-medium ${isConnected ? 'text-success' : 'text-ink-3'}`}
                 >
                   {isConnected
                     ? 'Connected'
@@ -783,7 +783,7 @@ function EmptyTerminalState({ creating, onCreate }: { creating: boolean; onCreat
       <button
         onClick={onCreate}
         disabled={creating}
-        className="flex items-center gap-[8px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-black transition-colors duration-150 hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center gap-[8px] rounded-control bg-accent px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
         data-testid="new-session-button"
       >
         {creating ? (
@@ -858,6 +858,29 @@ export default function ProjectDetailPage() {
   // File navigation within the canvas view (desktop only)
   const [canvasShowFiles, setCanvasShowFiles] = useState(false);
   const [canvasFilesOpenPath, setCanvasFilesOpenPath] = useState<string | null>(null);
+
+  // Deep-link from the ⌘K command palette: `?view=canvas` opens the canvas,
+  // `?tab=files` opens the files tab. Read once on mount — the session-resolver
+  // effect later rewrites the query string, but the view/tab state persists.
+  const deepLinkAppliedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkAppliedRef.current) return;
+    deepLinkAppliedRef.current = true;
+    const view = searchParams.get('view');
+    const tab = searchParams.get('tab');
+    const file = searchParams.get('file');
+    if (view === 'canvas') {
+      setShowCanvas(true);
+    } else if (file) {
+      setShowCanvas(false);
+      setActiveTab('files');
+      setFilesOpenPath(file);
+    } else if (tab === 'files' || tab === 'terminal') {
+      setShowCanvas(false);
+      setActiveTab(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const terminalRef = useRef<XTermTerminalHandle | null>(null);
   const canvasMobileRef = useRef<CanvasMobileHandle | null>(null);
@@ -1436,8 +1459,8 @@ export default function ProjectDetailPage() {
                     {creating && (
                       <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-bg/80">
                         <svg className="animate-spin size-5" viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="9" stroke="rgba(179,229,2,0.2)" strokeWidth="2" />
-                          <path d="M21 12a9 9 0 00-9-9" stroke="#b3e502" strokeWidth="2" strokeLinecap="round" />
+                          <circle cx="12" cy="12" r="9" stroke="rgba(94, 106, 210,0.2)" strokeWidth="2" />
+                          <path d="M21 12a9 9 0 00-9-9" stroke="#5e6ad2" strokeWidth="2" strokeLinecap="round" />
                         </svg>
                         <span className="font-['JetBrains_Mono'] text-[11px] text-accent/60">Criando sessão…</span>
                       </div>

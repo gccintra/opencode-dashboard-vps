@@ -99,11 +99,11 @@ beforeEach(() => {
 
 describe('ProjectsPage', () => {
   describe('loading state', () => {
-    it('shows skeleton cards while loading', () => {
+    it('shows skeleton rows while loading', () => {
       mockFetch.mockReturnValueOnce(new Promise(() => {})); // never resolves
       renderPage();
 
-      const skeletons = document.querySelectorAll('.animate-pulse');
+      const skeletons = document.querySelectorAll('.shimmer');
       expect(skeletons.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -130,7 +130,7 @@ describe('ProjectsPage', () => {
 
       await userEvent.click(screen.getByText('Create your first project'));
 
-      expect(screen.getByRole('heading', { name: 'New Project' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'New Project' })).toBeInTheDocument();
     });
   });
 
@@ -183,15 +183,15 @@ describe('ProjectsPage', () => {
       expect(screen.getByText('/home/user/projects/api-service')).toBeInTheDocument();
     });
 
-    it('renders a live-session indicator on each card', async () => {
+    it('renders a live-session indicator on each row', async () => {
       mockProjectsResponse();
       renderPage();
 
-      // Cards surface only live sessions now — waiting/finished counts were
+      // Rows surface only live sessions now — waiting/finished counts were
       // removed as not meaningful on the projects overview. With no active
-      // sessions in the mock, every card shows the idle indicator.
+      // sessions in the mock, every row shows the idle indicator.
       await waitFor(() => {
-        const idle = screen.getAllByText('No active sessions');
+        const idle = screen.getAllByText('idle');
         expect(idle.length).toBeGreaterThanOrEqual(2);
       });
     });
@@ -315,7 +315,7 @@ describe('ProjectsPage', () => {
       // Click the New Project button in the header
       await userEvent.click(screen.getByRole('button', { name: /New Project/i }));
 
-      expect(screen.getByRole('heading', { name: 'New Project' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'New Project' })).toBeInTheDocument();
     });
 
     it('validates required fields on submit', async () => {
@@ -328,7 +328,7 @@ describe('ProjectsPage', () => {
       });
 
       await userEvent.click(screen.getByRole('button', { name: /New Project/i }));
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       await waitFor(() => {
         expect(screen.getByText('Name is required')).toBeInTheDocument();
@@ -369,7 +369,7 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /New Project/i }));
       await userEvent.type(screen.getByLabelText('Name'), 'new-proj');
       await userEvent.type(screen.getByLabelText('Directory'), '/tmp/test');
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       await waitFor(() => {
         expect(screen.getByText('new-proj')).toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /New Project/i }));
       await userEvent.type(screen.getByLabelText('Name'), 'api-service');
       await userEvent.type(screen.getByLabelText('Directory'), '/tmp/test');
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       await waitFor(() => {
         expect(screen.getByText('Project with this name already exists')).toBeInTheDocument();
@@ -418,12 +418,12 @@ describe('ProjectsPage', () => {
       });
 
       await userEvent.click(screen.getByRole('button', { name: /New Project/i }));
-      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create project' })).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
       await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
       });
     });
   });
@@ -440,7 +440,7 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByLabelText('Edit api-service'));
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Edit Project' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Edit Project' })).toBeInTheDocument();
         const nameInput = screen.getByLabelText('Name') as HTMLInputElement;
         expect(nameInput.value).toBe('api-service');
       });
@@ -470,13 +470,13 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByLabelText('Edit api-service'));
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Edit Project' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Edit Project' })).toBeInTheDocument();
       });
 
       const nameInput = screen.getByLabelText('Name');
       await userEvent.clear(nameInput);
       await userEvent.type(nameInput, 'api-service-v2');
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
       await waitFor(() => {
         expect(screen.getByText('api-service-v2')).toBeInTheDocument();
@@ -616,7 +616,7 @@ describe('ProjectsPage', () => {
       expect(screen.getByText('Node CLI — CLI tool template')).toBeInTheDocument();
 
       // Verify default "None" option
-      expect(screen.getByText('None — empty project')).toBeInTheDocument();
+      expect(screen.getByText('No template — empty project')).toBeInTheDocument();
     });
 
     it('shows loading state for harnesses', async () => {
@@ -692,11 +692,11 @@ describe('ProjectsPage', () => {
       await userEvent.type(screen.getByLabelText('Directory'), '/tmp/test');
 
       // Select harness
-      const select = screen.getByLabelText('Template (optional)') as HTMLSelectElement;
+      const select = screen.getByLabelText('Template') as HTMLSelectElement;
       await userEvent.selectOptions(select, 'react-starter');
 
       // Submit
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       await waitFor(() => {
         expect(screen.getByText('new-proj')).toBeInTheDocument();
@@ -758,7 +758,7 @@ describe('ProjectsPage', () => {
       await userEvent.type(screen.getByLabelText('Directory'), '/tmp/test');
 
       // Submit without selecting harness (default None)
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       await waitFor(() => {
         expect(screen.getByText('no-harness-proj')).toBeInTheDocument();
@@ -806,11 +806,11 @@ describe('ProjectsPage', () => {
       await userEvent.type(screen.getByLabelText('Directory'), '/tmp/test');
 
       // Select harness
-      const select = screen.getByLabelText('Template (optional)') as HTMLSelectElement;
+      const select = screen.getByLabelText('Template') as HTMLSelectElement;
       await userEvent.selectOptions(select, 'react-starter');
 
       // Submit
-      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create project' }));
 
       // Error should be shown in the modal
       await waitFor(() => {
@@ -820,7 +820,7 @@ describe('ProjectsPage', () => {
       });
 
       // Modal should still be open (Save button visible)
-      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create project' })).toBeInTheDocument();
     });
   });
 });

@@ -154,8 +154,7 @@ describe('LoginPage', () => {
     renderLogin();
 
     expect(screen.getByText('ALF')).toBeInTheDocument();
-    expect(screen.getByText('code')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /ALF code/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /ALF logo/i })).toBeInTheDocument();
   });
 
   it('disables button while submitting', async () => {

@@ -9,6 +9,7 @@ import {
   type HarnessDetail,
 } from '../lib/api';
 import { HarnessFormModal } from '../components/Harnesses/HarnessFormModal';
+import { Button, IconButton, Modal, EmptyState } from '../components/ui';
 
 /* ── Icons ── */
 
@@ -52,20 +53,16 @@ function FilesIcon() {
 
 function SkeletonCard() {
   return (
-    <article className="flex animate-pulse flex-col gap-[14px] rounded-[14px] border border-white/[0.06] bg-white/[0.03] p-[20px] backdrop-blur-md">
+    <article className="flex animate-pulse flex-col gap-[14px] rounded-panel border border-hairline bg-surface p-[16px]">
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-[5px]">
-          <div className="h-[17px] w-[140px] rounded-[4px] bg-[rgba(255,255,255,0.06)]" />
-          <div className="mt-[4px] h-[13px] w-[220px] rounded-[4px] bg-[rgba(255,255,255,0.04)]" />
+          <div className="h-[15px] w-[140px] rounded-[4px] bg-white/[0.06]" />
+          <div className="mt-[4px] h-[12px] w-[220px] rounded-[4px] bg-white/[0.04]" />
         </div>
-        <div className="size-[30px] rounded-[6px] bg-[rgba(255,255,255,0.06)]" />
+        <div className="size-[28px] rounded-control bg-white/[0.06]" />
       </div>
-      <div className="flex items-center gap-[8px]">
-        <div className="h-[22px] w-[60px] rounded-full bg-[rgba(255,255,255,0.04)]" />
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="h-[14px] w-[80px] rounded-[4px] bg-[rgba(255,255,255,0.04)]" />
-      </div>
+      <div className="h-[22px] w-[60px] rounded-full bg-white/[0.04]" />
+      <div className="h-[14px] w-[80px] rounded-[4px] bg-white/[0.04]" />
     </article>
   );
 }
@@ -85,38 +82,27 @@ function DeleteDialog({
   onCancel: () => void;
   loading: boolean;
 }) {
-  if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      <div
-        className="mx-4 w-full max-w-[380px] rounded-[14px] border border-white/[0.08] bg-[#111118] p-[24px] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-[18px] font-bold text-white">Delete {harnessName}?</h3>
-        <p className="mt-[8px] text-[13px] leading-[1.5] text-[#9aa3ad]">
-          This template will be permanently removed.
-        </p>
-        <div className="mt-[20px] flex justify-end gap-[10px]">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="rounded-[8px] border border-white/[0.07] px-[16px] py-[8px] text-[13px] font-medium text-[#9aa3ad] hover:border-white/[0.14] hover:text-[#e6e8eb] transition-colors disabled:opacity-50"
-          >
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={`Delete ${harnessName}?`}
+      maxWidth="max-w-[380px]"
+      footer={
+        <>
+          <Button onClick={onCancel} disabled={loading}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="rounded-[8px] bg-red-600 px-[16px] py-[8px] text-[13px] font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={loading}>
+            {loading ? 'Deleting…' : 'Delete'}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-[13px] leading-[1.5] text-ink-2">
+        This template will be permanently removed.
+      </p>
+    </Modal>
   );
 }
 
@@ -244,72 +230,29 @@ export default function HarnessesPage() {
   /* ── Render ── */
 
   return (
-    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#0a0a0f]">
-      {/* Atmosphere */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-180px',
-            left: '-120px',
-            width: 620,
-            height: 620,
-            opacity: 0.5,
-            background: 'radial-gradient(circle, rgba(179,229,2,0.22), rgba(179,229,2,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-220px',
-            left: '38%',
-            width: 680,
-            height: 680,
-            opacity: 0.4,
-            animationDelay: '-7s',
-            background: 'radial-gradient(circle, rgba(45,212,191,0.16), rgba(45,212,191,0) 70%)',
-          }}
-        />
-        <div
-          className="kb-aurora"
-          style={{
-            top: '-160px',
-            right: '-160px',
-            width: 560,
-            height: 560,
-            opacity: 0.38,
-            animationDelay: '-13s',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.18), rgba(139,92,246,0) 70%)',
-          }}
-        />
-        <div className="kb-grid" />
-      </div>
-
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-bg">
       {/* Header */}
-      <header className="sticky top-0 z-20 shrink-0 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-md">
-        <div className="flex items-center justify-between gap-[10px] pl-[52px] pr-[20px] py-[14px] sm:px-[28px] lg:px-[28px]">
-          <h1 className="text-[24px] font-extrabold tracking-[-0.5px] text-white sm:text-[26px]">
+      <header className="vibrancy sticky top-0 z-20 shrink-0 border-b border-hairline">
+        <div className="flex items-center justify-between gap-[10px] py-[10px] pl-[52px] pr-[16px] sm:px-[24px]">
+          <h1 className="text-[17px] font-semibold tracking-[-0.2px] text-ink sm:text-[20px]">
             Templates
           </h1>
 
-          <button
-            onClick={openCreate}
-            className="kb-sheen relative flex h-[34px] shrink-0 items-center gap-[6px] overflow-hidden rounded-[9px] bg-[#b3e502] px-[14px] text-[13px] font-bold text-[#0a0a0f] shadow-[0_4px_16px_-4px_rgba(179,229,2,0.5)] transition-all hover:bg-[#c2f516] hover:shadow-[0_6px_22px_-4px_rgba(179,229,2,0.65)]"
-          >
+          <Button variant="primary" onClick={openCreate}>
             <PlusIcon />
             <span className="hidden sm:inline">New Template</span>
             <span className="sm:hidden">New</span>
-          </button>
+          </Button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[22px] sm:px-[28px] sm:pt-[28px]">
+      <div className="flex-1 overflow-y-auto px-[16px] pb-[40px] pt-[20px] sm:px-[24px]">
         {/* Error */}
         {error && (
-          <div className="mb-[20px] flex items-center gap-[10px] rounded-[10px] border border-red-500/30 bg-red-500/10 px-[16px] py-[12px] text-[13px] text-red-400">
+          <div className="mb-[20px] flex items-center gap-[10px] rounded-control border border-danger/30 bg-danger/10 px-[16px] py-[12px] text-[13px] text-danger">
             <span className="flex-1">{error}</span>
-            <button onClick={loadHarnesses} className="shrink-0 underline hover:text-red-300">
+            <button onClick={loadHarnesses} className="shrink-0 underline hover:text-danger/80">
               Retry
             </button>
           </div>
@@ -326,79 +269,67 @@ export default function HarnessesPage() {
 
         {/* Empty state */}
         {!loading && !error && harnesses.length === 0 && (
-          <div className="kb-rise flex flex-col items-center justify-center py-[80px] text-center">
-            <div className="mb-[16px] flex size-[64px] items-center justify-center rounded-[18px] border border-white/[0.08] bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <rect
-                  x="4"
-                  y="4"
-                  width="16"
-                  height="16"
-                  rx="3"
-                  stroke="#b3e502"
-                  strokeWidth="1.5"
-                />
-                <path d="M8 12h8M12 8v8" stroke="#b3e502" strokeWidth="1.5" strokeLinecap="round" />
+          <EmptyState
+            className="py-[80px]"
+            icon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-            </div>
-            <h3 className="text-[20px] font-bold text-white">No templates yet</h3>
-            <p className="mt-[6px] max-w-[340px] text-[13px] leading-relaxed text-[#7a828c]">
-              Create your first template to bootstrap projects.
-            </p>
-            <button
-              onClick={openCreate}
-              className="kb-sheen relative mt-[22px] overflow-hidden rounded-[10px] bg-[#b3e502] px-[22px] py-[11px] text-[14px] font-bold text-[#0a0a0f] shadow-[0_6px_22px_-6px_rgba(179,229,2,0.6)] transition-all hover:bg-[#c2f516]"
-            >
-              Create your first template
-            </button>
-          </div>
+            }
+            title="No templates yet"
+            description="Create your first template to bootstrap projects."
+            action={
+              <Button variant="primary" onClick={openCreate}>
+                Create your first template
+              </Button>
+            }
+          />
         )}
 
         {/* Harness grid */}
         {!loading && !error && harnesses.length > 0 && (
           <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
-            {harnesses.map((harness, i) => (
+            {harnesses.map((harness) => (
               <article
                 key={harness.id}
-                style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
-                className="kb-rise group relative flex flex-col gap-[14px] overflow-hidden rounded-[14px] border border-white/[0.06] bg-white/[0.04] p-[20px] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-[2px] hover:border-white/[0.12] hover:bg-white/[0.05] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_16px_40px_-16px_rgba(0,0,0,0.7)]"
+                className="group relative flex flex-col gap-[14px] rounded-panel border border-hairline bg-surface p-[16px] transition-colors duration-150 hover:border-hairline-strong"
               >
-                {/* Header row with name + edit gear */}
+                {/* Header row with name + actions */}
                 <div className="flex items-start justify-between gap-[12px]">
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[15px] font-semibold text-[#f0f0f0]">
+                    <h3 className="truncate text-[13px] font-semibold tracking-[-0.1px] text-ink">
                       {harness.name}
                     </h3>
                     {harness.description && (
-                      <p className="mt-[4px] line-clamp-1 text-[13px] text-[#7a828c]">
+                      <p className="mt-[4px] line-clamp-1 text-[12.5px] text-ink-2">
                         {harness.description}
                       </p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-[6px]">
-                    <button
+                    <IconButton
                       onClick={() => navigate(`/templates/${encodeURIComponent(harness.id)}`)}
-                      className="flex size-[30px] items-center justify-center rounded-[8px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#b3e502] transition-colors"
+                      className="hover:text-accent"
                       aria-label={`Manage files for ${harness.name}`}
                       title="Manage files"
                     >
                       <FilesIcon />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton
                       onClick={() => openEdit(harness)}
-                      className="flex size-[30px] items-center justify-center rounded-[8px] border border-white/[0.07] bg-white/[0.03] text-[#5a626c] backdrop-blur-md hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-[#9aa3ad] transition-colors"
                       aria-label={`Edit ${harness.name}`}
                       title="Edit template"
                     >
                       <GearIcon />
-                    </button>
+                    </IconButton>
                   </div>
                 </div>
 
                 {/* File count badge */}
                 {'fileCount' in harness && (
                   <div className="flex items-center gap-[8px]">
-                    <span className="inline-block rounded-full bg-[rgba(179,229,2,0.1)] px-[8px] py-[3px] text-[12px] text-[#b3e502]">
+                    <span className="inline-block rounded-full border border-accent/25 bg-accent/[0.08] px-[8px] py-[3px] text-[11px] font-medium text-accent">
                       {(harness as HarnessDetail).fileCount} file
                       {(harness as HarnessDetail).fileCount !== 1 ? 's' : ''}
                     </span>
@@ -406,11 +337,10 @@ export default function HarnessesPage() {
                 )}
 
                 {/* Footer with delete */}
-                <div className="flex items-center justify-between">
-                  <div />
+                <div className="flex items-center justify-end pt-[2px]">
                   <button
                     onClick={() => setDeleteTarget(harness)}
-                    className="text-[12px] font-medium text-[#5a626c] hover:text-red-400 transition-colors"
+                    className="text-[12px] font-medium text-ink-3 transition-colors hover:text-danger"
                     aria-label={`Delete ${harness.name}`}
                   >
                     Delete

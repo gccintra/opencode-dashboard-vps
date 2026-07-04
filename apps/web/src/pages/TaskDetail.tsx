@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, fetchKanbanColumns, type ApiError, type KanbanColumn } from '../lib/api';
 import type { Task } from '../components/KanbanBoard/KanbanCard';
 import { TaskDetail } from '../components/KanbanBoard/TaskDetail';
+import { Button } from '../components/ui';
 
 /**
  * Full-page route for a single task (`/tasks/:taskId`).
@@ -55,27 +56,24 @@ export default function TaskDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#0a0a0f]">
-        <div className="size-8 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+      <div className="flex h-full items-center justify-center bg-bg">
+        <div className="size-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
       </div>
     );
   }
 
   if (error || !task) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-[14px] bg-[#0a0a0f] px-[24px] text-center">
-        <h2 className="text-[20px] font-bold text-[#f0f0f0]">
+      <div className="flex h-full flex-col items-center justify-center gap-[14px] bg-bg px-[24px] text-center">
+        <h2 className="text-[20px] font-bold text-ink">
           {error ? 'Could not load task' : 'Task not found'}
         </h2>
-        <p className="max-w-[320px] text-[13px] leading-[1.55] text-[#7a828c]">
+        <p className="max-w-[320px] text-[13px] leading-[1.55] text-ink-3">
           {error || 'This task may have been deleted or moved.'}
         </p>
-        <button
-          onClick={goBack}
-          className="rounded-[10px] bg-[#b3e502] px-[18px] py-[9px] text-[13px] font-bold text-[#0a0a0f] transition-colors hover:bg-[#c2f516]"
-        >
+        <Button variant="primary" onClick={goBack}>
           Back to board
-        </button>
+        </Button>
       </div>
     );
   }

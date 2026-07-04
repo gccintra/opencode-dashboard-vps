@@ -196,7 +196,7 @@ export default function EmergencyPage() {
     <div className="relative flex flex-1 min-h-0 flex-col bg-[#0a0a0f]">
       {/* Atmosphere */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.3, background: 'radial-gradient(circle, rgba(179,229,2,0.15), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.3, background: 'radial-gradient(circle, rgba(94, 106, 210,0.15), rgba(94, 106, 210,0) 70%)' }} />
         <div className="kb-grid" />
       </div>
       {/* Header with emergency styling */}

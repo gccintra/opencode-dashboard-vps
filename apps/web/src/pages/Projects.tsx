@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'motion/react';
 import { apiFetch, type ApiError } from '../lib/api';
 import { DirectoryPicker } from '../components/DirectoryPicker';
 import {
@@ -9,8 +10,9 @@ import {
   Input,
   Textarea,
   Select,
-  Panel,
   EmptyState,
+  StatusGlyph,
+  useCommandPalette,
 } from '../components/ui';
 
 /* ── Types ── */
@@ -144,6 +146,22 @@ interface ProjectFormData {
   harnessId: string | null;
 }
 
+/* Small icons for the modal chrome */
+
+function CloseIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/**
+ * New / Edit project modal — Linear "New issue" layout: a breadcrumb header,
+ * a borderless big title + description, then the required fields (directory,
+ * template) as an attribute region, and a footer with the primary action.
+ * Bespoke overlay (not the generic <Modal>) to get the command-palette surface.
+ */
 function ProjectFormModal({
   open,
   title,
@@ -183,6 +201,27 @@ function ProjectFormModal({
     }
   }, [open, initial]);
 
+  // Escape to close (own overlay, so we own the key handling).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const isEdit = /edit/i.test(title);
+  const submitLabel = loading
+    ? isEdit
+      ? 'Saving…'
+      : 'Creating…'
+    : isEdit
+      ? 'Save changes'
+      : 'Create project';
+
   const handleSubmit = () => {
     let valid = true;
     if (!name.trim()) {
@@ -201,125 +240,157 @@ function ProjectFormModal({
     onSubmit({ name: name.trim(), directory: directory.trim(), description: description.trim(), harnessId });
   };
 
-  const labelClass =
-    'mb-[5px] block text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3';
+  const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.6px] text-ink-3';
+  const optionalTag = (
+    <span className="text-[10px] font-medium uppercase tracking-[0.4px] text-ink-4">Optional</span>
+  );
+  const labelRow = 'mb-[8px] flex items-baseline justify-between gap-[8px]';
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      footer={
-        <>
-          <Button onClick={onClose} disabled={loading}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center px-4 py-[7vh] motion-safe:animate-[fadeIn_120ms_ease-out]"
+      onClick={onClose}
+      data-testid="project-form-scrim"
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-panel rim-light flex max-h-full w-full max-w-[500px] flex-col overflow-hidden rounded-modal motion-safe:animate-[paletteIn_140ms_cubic-bezier(0.22,1,0.36,1)]"
+      >
+        {/* Header — clean title block, no ornament */}
+        <div className="flex shrink-0 items-start justify-between gap-[10px] px-[24px] pb-[18px] pt-[22px]">
+          <div className="min-w-0">
+            <h3 className="text-[18px] font-semibold tracking-[-0.35px] text-ink">
+              {isEdit ? 'Edit project' : 'New project'}
+            </h3>
+            <p className="mt-[3px] text-[13px] leading-none text-ink-3">
+              {isEdit ? 'Update this workspace’s settings.' : 'Point a workspace at a directory on disk.'}
+            </p>
+          </div>
+          <IconButton onClick={onClose} disabled={loading} aria-label="Close" className="-mr-[4px] -mt-[2px]">
+            <CloseIcon />
+          </IconButton>
+        </div>
+
+        {/* Body — generous, well-defined fields */}
+        <div className="min-h-0 flex-1 space-y-[20px] overflow-y-auto px-[24px] pb-[4px]">
+          {/* Name */}
+          <div>
+            <div className={labelRow}>
+              <label htmlFor="project-name" className={labelClass}>
+                Name
+              </label>
+            </div>
+            <Input
+              id="project-name"
+              type="text"
+              aria-label="Name"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setNameError(''); }}
+              placeholder="my-project"
+              autoFocus
+              autoComplete="off"
+              className={`!h-[38px] ${nameError ? 'border-danger/60 focus:border-danger/60 focus:ring-danger/30' : ''}`}
+            />
+            {nameError && <p className="mt-[6px] text-[12px] text-danger">{nameError}</p>}
+          </div>
+
+          {/* Directory — the key navigational field, given room + a helper */}
+          <div>
+            <div className={labelRow}>
+              <label htmlFor="project-directory" className={labelClass}>
+                Directory
+              </label>
+            </div>
+            <DirectoryPicker
+              value={directory}
+              onChange={(path) => { setDirectory(path); setDirError(''); }}
+              error={dirError}
+              disabled={loading}
+              placeholder="/home/user/projects/my-project"
+            />
+            {!dirError && (
+              <p className="mt-[6px] text-[12px] leading-[1.4] text-ink-4">
+                Type to autocomplete, or Browse the filesystem.
+              </p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <div className={labelRow}>
+              <label htmlFor="project-description" className={labelClass}>
+                Description
+              </label>
+              {optionalTag}
+            </div>
+            <Textarea
+              id="project-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="resize-none"
+              placeholder="What is this project for?"
+            />
+          </div>
+
+          {/* Template */}
+          <div>
+            <div className={labelRow}>
+              <label htmlFor="project-harness" className={labelClass}>
+                Template
+              </label>
+              {optionalTag}
+            </div>
+            {harnessesLoading ? (
+              <div className="flex h-[34px] items-center rounded-control border border-hairline bg-white/[0.03] px-[11px]">
+                <span className="text-[13px] text-ink-3">Loading templates…</span>
+              </div>
+            ) : (
+              <div className="relative">
+                <Select
+                  id="project-harness"
+                  value={harnessId || ''}
+                  onChange={(e) => setHarnessId(e.target.value || null)}
+                  className="pr-[32px]"
+                >
+                  <option value="" className="bg-surface-2">
+                    No template — empty project
+                  </option>
+                  {harnesses.map((h) => (
+                    <option key={h.id} value={h.id} className="bg-surface-2">
+                      {h.name}
+                      {h.description ? ` — ${h.description}` : ''}
+                    </option>
+                  ))}
+                </Select>
+                <span className="pointer-events-none absolute right-[11px] top-1/2 -translate-y-1/2 text-ink-3">
+                  <ChevronIcon />
+                </span>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <p className="rounded-control border border-danger/30 bg-danger/10 px-[12px] py-[8px] text-[13px] text-danger">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-[20px] flex shrink-0 items-center justify-end gap-[10px] border-t border-hairline px-[24px] py-[16px]">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving…' : 'Save'}
+            {submitLabel}
           </Button>
-        </>
-      }
-    >
-      <div className="space-y-[14px]">
-        <div>
-          <label htmlFor="project-name" className={labelClass}>
-            Name
-          </label>
-          <Input
-            id="project-name"
-            type="text"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setNameError(''); }}
-            placeholder="my-project"
-          />
-          {nameError && (
-            <p className="mt-[4px] text-[12px] text-danger">{nameError}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="project-directory" className={labelClass}>
-            Directory
-          </label>
-          <DirectoryPicker
-            value={directory}
-            onChange={(path) => { setDirectory(path); setDirError(''); }}
-            error={dirError}
-            disabled={loading}
-            placeholder="/home/user/projects/my-project"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="project-description" className={labelClass}>
-            Description{' '}
-            <span className="font-normal normal-case text-ink-3">(optional)</span>
-          </label>
-          <Textarea
-            id="project-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="resize-none"
-            placeholder="Optional description"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="project-harness" className={labelClass}>
-            Template{' '}
-            <span className="font-normal normal-case text-ink-3">(optional)</span>
-          </label>
-          {harnessesLoading ? (
-            <div className="flex h-[28px] items-center rounded-control border border-hairline bg-black/20 px-[10px]">
-              <span className="text-[13px] text-ink-3">Loading templates…</span>
-            </div>
-          ) : (
-            <Select
-              id="project-harness"
-              value={harnessId || ''}
-              onChange={(e) => setHarnessId(e.target.value || null)}
-            >
-              <option value="" className="bg-surface-2">
-                None — empty project
-              </option>
-              {harnesses.map((h) => (
-                <option key={h.id} value={h.id} className="bg-surface-2">
-                  {h.name}
-                  {h.description ? ` — ${h.description}` : ''}
-                </option>
-              ))}
-            </Select>
-          )}
         </div>
       </div>
-
-      {error && (
-        <p className="mt-[14px] rounded-control border border-danger/30 bg-danger/10 px-[12px] py-[8px] text-[13px] text-danger">
-          {error}
-        </p>
-      )}
-    </Modal>
-  );
-}
-
-/* ── Live sessions indicator ── */
-
-function LiveBadge({ live }: { live: number }) {
-  if (live > 0) {
-    return (
-      <div className="flex items-center gap-[8px] rounded-control border border-accent/25 bg-accent/[0.08] px-[12px] py-[8px]">
-        <span className="size-[6px] shrink-0 animate-pulse rounded-full bg-accent" />
-        <span className="text-[12px] font-semibold text-accent">
-          {live} active session{live !== 1 ? 's' : ''}
-        </span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-[8px] rounded-control border border-hairline bg-black/20 px-[12px] py-[8px]">
-      <span className="size-[6px] shrink-0 rounded-full bg-ink-4" />
-      <span className="text-[12px] font-medium text-ink-3">No active sessions</span>
     </div>
   );
 }
@@ -342,11 +413,12 @@ function TrashIcon() {
   );
 }
 
-/* ── Project card ── */
+/* ── Project row (dense list) ── */
 
-function ProjectCard({
+function ProjectRow({
   project,
   stats,
+  reduced,
   onOpen,
   onEdit,
   onDelete,
@@ -355,123 +427,121 @@ function ProjectCard({
 }: {
   project: Project;
   stats: { active: number; waiting: number; finished: number };
+  reduced: boolean;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onSync?: (id: string) => void;
   syncing?: boolean;
-  index?: number;
 }) {
   // Any non-finished session counts as "live" — waiting status is never
   // persisted to session metadata, so active already captures every live one.
   const live = stats.active + stats.waiting;
   const repoShort = project.githubRepo?.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '');
 
-  return (
-    <article
-      className={`group relative flex flex-col gap-[14px] rounded-panel border bg-surface p-[16px] transition-colors duration-150 hover:border-hairline-strong focus-within:border-accent/30 ${
-        live > 0 ? 'border-accent/20' : 'border-hairline'
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-[12px]">
-        <button onClick={onOpen} className="min-w-0 flex-1 text-left outline-none">
-          <h3 className="truncate text-[13px] font-semibold tracking-[-0.1px] text-ink">
-            {project.name}
-          </h3>
-          <p className="mt-[3px] flex items-center gap-[5px] font-['JetBrains_Mono'] text-[11px] text-ink-3">
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="shrink-0">
-              <path d="M1.5 4.2c0-.6.4-1 1-1h2.2l1 1.3h4.8c.6 0 1 .4 1 1v4.3c0 .6-.4 1-1 1H2.5c-.6 0-1-.4-1-1V4.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-            </svg>
-            <span className="truncate">{project.directory}</span>
-          </p>
-        </button>
-        <IconButton onClick={onEdit} aria-label={`Edit ${project.name}`}>
-          <GearIcon />
-        </IconButton>
-      </div>
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
-      {/* Description */}
-      {project.description && (
-        <p className="line-clamp-2 text-[12.5px] leading-[1.5] text-ink-2">
-          {project.description}
-        </p>
+  return (
+    <motion.div
+      layout={!reduced}
+      initial={reduced ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 520, damping: 40, mass: 0.6 }}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="row-hover group flex h-[48px] cursor-pointer items-center gap-[12px] border-b border-hairline px-[14px] outline-none last:border-b-0 focus-visible:bg-white/[0.05] sm:px-[16px]"
+    >
+      {/* Status glyph */}
+      <StatusGlyph
+        status={live > 0 ? 'active' : 'idle'}
+        pulse={live > 0}
+        title={live > 0 ? `${live} active session${live !== 1 ? 's' : ''}` : 'idle'}
+      />
+
+      {/* Name */}
+      <span className="shrink-0 max-w-[38%] truncate text-[13px] font-semibold tracking-[-0.1px] text-ink">
+        {project.name}
+      </span>
+
+      {/* Path (mono, fills, ellipsis) — hidden on mobile */}
+      <span className="mono-meta hidden min-w-0 flex-1 truncate text-[11px] sm:inline" title={project.directory}>
+        {project.directory}
+      </span>
+      <span className="flex-1 sm:hidden" />
+
+      {/* GitHub repo — desktop only */}
+      {repoShort && (
+        <span
+          className="mono-meta hidden shrink-0 max-w-[140px] items-center gap-[4px] truncate text-[11px] md:inline-flex"
+          title={project.githubRepo ?? undefined}
+        >
+          <GitHubIcon />
+          <span className="truncate">{repoShort}</span>
+        </span>
       )}
 
-      {/* Live sessions */}
-      <LiveBadge live={live} />
+      {/* Session count */}
+      <span
+        className={`mono-meta shrink-0 text-[11px] tabular-nums ${live > 0 ? 'text-accent' : 'text-ink-4'}`}
+      >
+        {live > 0 ? `${live} live` : 'idle'}
+      </span>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-[8px] pt-[2px]">
-        <div className="flex min-w-0 items-center gap-[8px]">
-          {repoShort && (
-            <span
-              className="inline-flex max-w-[150px] items-center gap-[4px] rounded-[4px] border border-hairline bg-black/20 px-[6px] py-[2px] text-[11px] font-medium text-ink-2"
-              title={project.githubRepo ?? undefined}
-            >
-              <span className="shrink-0 text-ink-2"><GitHubIcon /></span>
-              <span className="truncate">{repoShort}</span>
-            </span>
-          )}
-          <span className="shrink-0 font-['JetBrains_Mono'] text-[11px] text-ink-3">
-            {relativeTime(project.updatedAt)}
-          </span>
-        </div>
+      {/* Updated (right, mono, tabular) */}
+      <span className="mono-meta hidden w-[64px] shrink-0 text-right text-[11px] tabular-nums sm:inline">
+        {relativeTime(project.updatedAt)}
+      </span>
 
-        <div className="flex shrink-0 items-center gap-[6px]">
-          {project.githubRepo && onSync && (
-            <IconButton
-              onClick={() => onSync(project.id)}
-              disabled={syncing}
-              title={`Sync from ${project.githubRepo}`}
-              aria-label="Sync from GitHub"
-            >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className={syncing ? 'animate-spin' : ''}>
-                <path d="M12 7a5 5 0 1 1-1.46-3.54M12 2v2.5H9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </IconButton>
-          )}
+      {/* Row actions — appear on hover/focus */}
+      <div className="flex shrink-0 items-center gap-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+        {project.githubRepo && onSync && (
           <IconButton
-            onClick={onDelete}
-            className="hover:bg-danger/10 hover:text-danger"
-            aria-label={`Delete ${project.name}`}
+            onClick={(e) => { stop(e); onSync(project.id); }}
+            disabled={syncing}
+            title={`Sync from ${project.githubRepo}`}
+            aria-label="Sync from GitHub"
           >
-            <TrashIcon />
-          </IconButton>
-          <Button variant="primary" size="sm" onClick={onOpen} className="px-[10px]">
-            Open
-            <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
-              <path d="M1 10L10 1M10 1H3.5M10 1v6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className={syncing ? 'animate-spin' : ''}>
+              <path d="M12 7a5 5 0 1 1-1.46-3.54M12 2v2.5H9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </Button>
-        </div>
+          </IconButton>
+        )}
+        <IconButton onClick={(e) => { stop(e); onEdit(); }} aria-label={`Edit ${project.name}`}>
+          <GearIcon />
+        </IconButton>
+        <IconButton
+          onClick={(e) => { stop(e); onDelete(); }}
+          className="hover:bg-danger/10 hover:text-danger"
+          aria-label={`Delete ${project.name}`}
+        >
+          <TrashIcon />
+        </IconButton>
       </div>
-    </article>
+    </motion.div>
   );
 }
 
-/* ── Skeleton card ── */
+/* ── Skeleton row ── */
 
-function SkeletonCard() {
+function SkeletonRow() {
   return (
-    <article className="flex animate-pulse flex-col gap-[16px] rounded-panel border border-hairline bg-surface p-[16px]">
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-[5px]">
-          <div className="h-[15px] w-[140px] rounded-[4px] bg-white/[0.06]" />
-          <div className="h-[12px] w-[220px] rounded-[4px] bg-white/[0.04]" />
-        </div>
-        <div className="size-[28px] rounded-control bg-white/[0.06]" />
-      </div>
-      <div className="h-[34px] rounded-control bg-white/[0.04]" />
-      <div className="flex items-center justify-between">
-        <div className="h-[13px] w-[110px] rounded-[4px] bg-white/[0.04]" />
-        <div className="h-[24px] w-[64px] rounded-control bg-white/[0.06]" />
-      </div>
-    </article>
+    <div className="flex h-[48px] items-center gap-[12px] border-b border-hairline px-[16px] last:border-b-0">
+      <div className="size-[10px] shrink-0 rounded-full bg-white/[0.06]" />
+      <div className="shimmer h-[13px] w-[120px] rounded-[4px] bg-white/[0.05]" />
+      <div className="shimmer h-[11px] flex-1 rounded-[4px] bg-white/[0.03]" />
+      <div className="shimmer h-[11px] w-[48px] rounded-[4px] bg-white/[0.04]" />
+    </div>
   );
 }
 
-/* ── Top stats strip ── */
+/* ── Top stat tiles (Linear-style: big number, small label, light rim) ── */
 
 function StatsStrip({
   projects,
@@ -482,28 +552,28 @@ function StatsStrip({
   activeSessions: number;
   liveProjects: number;
 }) {
+  const tiles = [
+    { label: 'Projects', value: projects, glyph: null as null | 'active' | 'idle' },
+    { label: 'Active sessions', value: activeSessions, glyph: (activeSessions > 0 ? 'active' : 'idle') as 'active' | 'idle' },
+    { label: 'Live projects', value: liveProjects, glyph: (liveProjects > 0 ? 'active' : 'idle') as 'active' | 'idle' },
+  ];
   return (
-    <div className="mb-[24px] grid grid-cols-3 gap-[10px]">
-      {[
-        { label: 'Projects', value: projects, dot: false, pulse: false },
-        { label: 'Active Sessions', value: activeSessions, dot: true, pulse: true },
-        { label: 'Live Projects', value: liveProjects, dot: activeSessions > 0, pulse: false },
-      ].map(({ label, value, dot, pulse }) => (
-        <Panel key={label} padding="md" className="flex flex-col gap-[8px]">
-          <div className="flex items-center gap-[6px]">
-            {dot && (
-              <span
-                className={`size-[6px] shrink-0 rounded-full bg-accent ${pulse ? 'animate-pulse' : ''}`}
-              />
-            )}
-            <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-ink-3">
+    <div className="mb-[22px] grid grid-cols-3 gap-[10px] sm:gap-[14px]">
+      {tiles.map(({ label, value, glyph }) => (
+        <div
+          key={label}
+          className="rim-light flex min-w-0 flex-col gap-[10px] rounded-panel bg-white/[0.02] px-[14px] py-[13px] sm:px-[18px] sm:py-[16px]"
+        >
+          <div className="flex items-center gap-[7px]">
+            {glyph && <StatusGlyph status={glyph} pulse={glyph === 'active'} size="sm" />}
+            <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.7px] text-ink-3">
               {label}
             </span>
           </div>
-          <span className="font-['JetBrains_Mono'] text-[24px] font-bold leading-none tracking-[-0.5px] text-ink">
-            {value}
+          <span className="text-[26px] font-semibold leading-none tracking-[-1px] text-ink tabular-nums sm:text-[32px]">
+            {value.toLocaleString()}
           </span>
-        </Panel>
+        </div>
       ))}
     </div>
   );
@@ -513,6 +583,8 @@ function StatsStrip({
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const cmd = useCommandPalette();
+  const reduced = useReducedMotion() ?? false;
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -700,15 +772,32 @@ export default function ProjectsPage() {
   /* ── Render ── */
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-bg">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 shrink-0 border-b border-hairline bg-bg">
-        <div className="flex items-center justify-between gap-[10px] py-[10px] pl-[52px] pr-[16px] sm:px-[24px]">
-          <h1 className="text-[17px] font-semibold tracking-[-0.2px] text-ink sm:text-[20px]">
-            Projects
-          </h1>
+      <header className="vibrancy sticky top-0 z-10 shrink-0 border-b border-hairline">
+        <div className="flex items-center justify-between gap-[10px] py-[10px] pl-[52px] pr-[16px] sm:pr-[24px] lg:pl-[24px]">
+          <div className="flex items-baseline gap-[9px]">
+            <h1 className="text-[17px] font-semibold tracking-[-0.3px] text-ink sm:text-[20px]">
+              Projects
+            </h1>
+            {!loading && !error && projects.length > 0 && (
+              <span className="font-['JetBrains_Mono'] text-[12px] text-ink-4 tabular-nums">
+                {projects.length}
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-[8px]">
+            {/* ⌘K command palette chip — desktop */}
+            <button
+              onClick={() => cmd.open()}
+              className="hidden items-center gap-[6px] rounded-control border border-hairline bg-surface-2/60 px-[10px] py-[6px] text-[12px] text-ink-3 transition-colors hover:border-hairline-strong hover:text-ink-2 md:flex"
+              aria-label="Open command palette"
+            >
+              <SearchIcon />
+              <span className="mono-meta text-[11px]">⌘K</span>
+            </button>
+
             {/* Search toggle (mobile) / always visible (sm+) */}
             <div className={`relative ${showSearch || search ? 'flex' : 'hidden sm:flex'}`}>
               <div className="pointer-events-none absolute left-[10px] top-1/2 z-10 -translate-y-1/2 text-ink-3">
@@ -766,31 +855,12 @@ export default function ProjectsPage() {
           />
         )}
 
-        {/* Section toolbar */}
-        {!loading && !error && (
-          <div className="mb-[16px] flex items-center justify-between">
-            <div className="flex items-center gap-[8px]">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.9px] text-ink-3">
-                All Projects
-              </h2>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-ink-3">
-                {filtered.length}
-              </span>
-            </div>
-            <Button size="sm" onClick={() => setSort(sort === 'newest' ? 'alpha' : 'newest')}>
-              {sort === 'newest' ? 'Newest' : 'A–Z'}
-              <ChevronIcon />
-            </Button>
-          </div>
-        )}
-
         {/* Loading */}
         {loading && (
-          <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+          <div className="rim-light overflow-hidden rounded-panel bg-white/[0.015]">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} />
+            ))}
           </div>
         )}
 
@@ -824,21 +894,36 @@ export default function ProjectsPage() {
             </p>
             <button
               onClick={() => setSearch('')}
-              className="mt-[10px] text-[13px] font-semibold text-accent hover:underline"
+              className="mt-[10px] text-[13px] font-semibold text-ink-2 hover:text-ink hover:underline"
             >
               Clear search
             </button>
           </div>
         )}
 
-        {/* Project grid */}
+        {/* Project list — framed panel with a header strip */}
         {!loading && !error && filtered.length > 0 && (
-          <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rim-light overflow-hidden rounded-panel bg-white/[0.015]">
+            <div className="flex items-center justify-between border-b border-hairline px-[16px] py-[11px]">
+              <div className="flex items-center gap-[8px]">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.9px] text-ink-2">
+                  All projects
+                </h2>
+                <span className="rounded-full bg-white/[0.06] px-[7px] py-[1px] font-['JetBrains_Mono'] text-[10.5px] text-ink-3 tabular-nums">
+                  {filtered.length}
+                </span>
+              </div>
+              <Button size="sm" onClick={() => setSort(sort === 'newest' ? 'alpha' : 'newest')}>
+                {sort === 'newest' ? 'Newest' : 'A–Z'}
+                <ChevronIcon />
+              </Button>
+            </div>
             {filtered.map((project) => (
-              <ProjectCard
+              <ProjectRow
                 key={project.id}
                 project={project}
                 stats={projectStats[project.id] || { active: 0, waiting: 0, finished: 0 }}
+                reduced={reduced}
                 onOpen={() => navigate(`/projects/${project.id}`)}
                 onEdit={() => { setFormError(null); setEditTarget(project); }}
                 onDelete={() => setDeleteTarget(project)}

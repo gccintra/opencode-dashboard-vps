@@ -30,9 +30,9 @@ type MobileTab = 'kanban' | 'agents' | 'projects';
 function KanbanIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="2" y="2" width="5.5" height="18" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="8.25" y="8" width="5.5" height="12" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="14.5" y="5" width="5.5" height="15" rx="1" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="2" y="2" width="5.5" height="18" rx="1" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="8.25" y="8" width="5.5" height="12" rx="1" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="14.5" y="5" width="5.5" height="15" rx="1" fill={active ? '#5e6ad2' : '#5a626c'} />
     </svg>
   );
 }
@@ -46,19 +46,19 @@ function AgentsIcon({ active }: { active: boolean }) {
         width="18"
         height="11"
         rx="2"
-        stroke={active ? '#b3e502' : '#5a626c'}
+        stroke={active ? '#5e6ad2' : '#5a626c'}
         strokeWidth="1.5"
       />
-      <path d="M7 18h8" stroke={active ? '#b3e502' : '#5a626c'} strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="11" y1="14" x2="11" y2="18" stroke={active ? '#b3e502' : '#5a626c'} strokeWidth="1.5" />
+      <path d="M7 18h8" stroke={active ? '#5e6ad2' : '#5a626c'} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="11" y1="14" x2="11" y2="18" stroke={active ? '#5e6ad2' : '#5a626c'} strokeWidth="1.5" />
       <rect
         x="7"
         y="6"
         width="8"
         height="5"
         rx="1"
-        fill={active ? '#b3e502' : 'none'}
-        stroke={active ? '#b3e502' : '#5a626c'}
+        fill={active ? '#5e6ad2' : 'none'}
+        stroke={active ? '#5e6ad2' : '#5a626c'}
         strokeWidth="0.5"
         opacity="0.4"
       />
@@ -69,15 +69,15 @@ function AgentsIcon({ active }: { active: boolean }) {
 function ProjectsIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="2" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="8.5" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="15" y="2" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="2" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="8.5" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="15" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="2" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="8.5" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
-      <rect x="15" y="15" width="5" height="5" rx="1.25" fill={active ? '#b3e502' : '#5a626c'} />
+      <rect x="2" y="2" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="8.5" y="2" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="15" y="2" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="2" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="8.5" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="15" y="8.5" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="2" y="15" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="8.5" y="15" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
+      <rect x="15" y="15" width="5" height="5" rx="1.25" fill={active ? '#5e6ad2' : '#5a626c'} />
     </svg>
   );
 }
@@ -100,7 +100,7 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
   if (loading)
     return (
       <div className="flex justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#b3e502] border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#5e6ad2] border-t-transparent" />
       </div>
     );
   if (projects.length === 0)
@@ -191,14 +191,14 @@ export default function DashboardPage() {
     <div className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0a0a0f]">
       {/* Atmosphere */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.4, background: 'radial-gradient(circle, rgba(179,229,2,0.2), rgba(179,229,2,0) 70%)' }} />
+        <div className="kb-aurora" style={{ top: '-200px', left: '-140px', width: 600, height: 600, opacity: 0.4, background: 'radial-gradient(circle, rgba(94, 106, 210,0.2), rgba(94, 106, 210,0) 70%)' }} />
         <div className="kb-aurora" style={{ top: '-160px', right: '-160px', width: 560, height: 560, opacity: 0.32, animationDelay: '-9s', background: 'radial-gradient(circle, rgba(139,92,246,0.16), rgba(139,92,246,0) 70%)' }} />
         <div className="kb-grid" />
       </div>
       {/* Header */}
       <header className="relative z-10 shrink-0 flex items-center justify-between border-b border-white/[0.06] px-[16px] py-[10px] backdrop-blur-md">
         <div className="flex items-center gap-[10px]">
-          <span className="font-['JetBrains_Mono'] text-[16px] font-medium text-[#b3e502] opacity-75">
+          <span className="font-['JetBrains_Mono'] text-[16px] font-medium text-[#5e6ad2] opacity-75">
             {'> _'}
           </span>
           <h1 className="text-[17px] font-bold tracking-[-0.5px] text-white hidden sm:block">
@@ -246,7 +246,7 @@ export default function DashboardPage() {
               <button
                 key={key}
                 className={`flex flex-1 flex-col items-center gap-[2px] py-[10px] transition-colors ${
-                  mobileTab === key ? 'text-[#b3e502]' : 'text-[#5a626c] hover:text-[#9aa3ad]'
+                  mobileTab === key ? 'text-[#5e6ad2]' : 'text-[#5a626c] hover:text-[#9aa3ad]'
                 }`}
                 onClick={() => setMobileTab(key)}
                 data-testid={`mobile-tab-${key}`}
